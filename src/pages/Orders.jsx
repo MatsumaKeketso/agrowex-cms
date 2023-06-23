@@ -111,7 +111,7 @@ const Orders = () => {
           style={{ height: "100%" }}
           columns={columns}
           dataSource={data}
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1500, y: 700 }}
         />
       </Stack>
       <Divider />

@@ -5,6 +5,7 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { ConfigProvider } from "antd";
 import { store } from "./services/redux/store";
 import "swiper/css";
 // Supports weights 200-800
@@ -54,9 +55,13 @@ const theme = createTheme({
 root.render(
   <React.StrictMode>
     <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <App />
-      </ThemeProvider>
+      <ConfigProvider
+        theme={{ token: { colorPrimary: theme.palette.primary.main } }}
+      >
+        <ThemeProvider theme={theme}>
+          <App />
+        </ThemeProvider>
+      </ConfigProvider>
     </Provider>
   </React.StrictMode>
 );
