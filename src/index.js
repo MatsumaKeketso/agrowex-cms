@@ -8,8 +8,11 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { ConfigProvider } from "antd";
 import { store } from "./services/redux/store";
 import "swiper/css";
+import { initializeApp } from "firebase/app";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
+import { firebaseConfig } from "./services/fc";
+const app = initializeApp(firebaseConfig);
 const root = ReactDOM.createRoot(document.getElementById("root"));
 const theme = createTheme({
   palette: {

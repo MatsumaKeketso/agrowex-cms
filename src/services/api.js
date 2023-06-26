@@ -213,12 +213,9 @@ export const liveSalesColumns = [
 export const liveSalesData = [
   {
     key: "1",
-    location: "Johannesburg",
-    amount: "R15,000.00",
-    countryCode: "ZA",
+    productName: "Mixed Fruits",
     country: "South Africa",
-    flagImage: "https://example.com/southafrica-flag.png",
-    numberOfSales: 25,
+    saleTime: "5min",
   },
   {
     key: "1",

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Avatar, Button, Stack, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -15,6 +15,7 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
+import { Drawer, Space } from "antd";
 
 const Logo = () => (
   <svg
@@ -81,10 +82,16 @@ const Logo = () => (
 
 const MenuAppBar = ({ links = [], active, onNavigate }) => {
   const handleMenu = (event) => {};
+  const [open, setOpen] = useState(false);
   const navigation = useSelector((state) => state.navigation);
   const dispatch = useDispatch();
   const handleClose = () => {};
-
+  const showDrawer = () => {
+    setOpen(true);
+  };
+  const onClose = () => {
+    setOpen(false);
+  };
   return (
     <AppBar
       // variant="outlined"
@@ -98,6 +105,25 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
       }}
       position="static"
     >
+      <Drawer
+        title="Drawer with extra actions"
+        placement={"left"}
+        width={500}
+        onClose={onClose}
+        open={open}
+        extra={
+          <Space>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="primary" onClick={onClose}>
+              OK
+            </Button>
+          </Space>
+        }
+      >
+        <p>Some contents...</p>
+        <p>Some contents...</p>
+        <p>Some contents...</p>
+      </Drawer>
       <Toolbar variant="dense" sx={{ alignItems: "center" }}>
         <Box
           sx={{
@@ -204,11 +230,11 @@ const Layout = (props) => {
       <MenuAppBar links={navigation.links} active={navigation.active} />
 
       <Stack
-        m={1}
+        m={{ xs: 0, sm: 1, md: 2, lg: 5 }}
         sx={{ overflowY: "auto", borderRadius: 3, bgcolor: "white" }}
         flex={1}
         height={"100%"}
-        borderRadius={5}
+        borderRadius={{ xs: 0, sm: 10, md: 20, lg: 30 }}
       >
         {props.children}
       </Stack>

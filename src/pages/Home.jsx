@@ -14,8 +14,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Tab,
-  Tabs,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
@@ -30,7 +28,7 @@ import {
   salesOvertimeColumns,
   salesOvertimeData,
 } from "../services/api";
-import { Table } from "antd";
+import { Radio, Table } from "antd";
 const salesOvertime = [
   {
     location: "Johannesburg",
@@ -90,10 +88,14 @@ const salesOvertime = [
   },
 ];
 const Home = () => {
-  const [tab, setTab] = React.useState(0);
+  const [tab, setTab] = React.useState("sales");
   const [swiper, setSwiper] = React.useState(null);
   const [checked, setChecked] = React.useState([1]);
+  const [mode, setMode] = useState("sales");
 
+  const handleModeChange = (e) => {
+    setTab(e.target.value);
+  };
   const handleChange = (event, newValue) => {
     setTab(newValue);
   };
@@ -174,22 +176,20 @@ const Home = () => {
   });
   return (
     <Stack height={"100%"} flex={1} p={2} spacing={2}>
-      <Stack direction={"row"} spacing={2} alignItems={"center"}>
+      <Stack direction={"row"} spacing={2}>
         <Typography variant="h5">Dashboard</Typography>
         <Box flex={1}>
-          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              value={tab}
-              onChange={handleChange}
-              aria-label="basic tabs example"
-            >
-              <Tab label="Sales" />
-              <Tab label="Stock" />
-            </Tabs>
-          </Box>
+          <Radio.Group
+            onChange={handleModeChange}
+            value={tab}
+            style={{ marginBottom: 8 }}
+          >
+            <Radio.Button value="sales">Sales</Radio.Button>
+            <Radio.Button value="stock">Stock</Radio.Button>
+          </Radio.Group>
         </Box>
       </Stack>
-      {tab == 0 && (
+      {tab == "sales" && (
         <Stack spacing={2} flex={1} sx={{ width: "100%", height: "100%" }}>
           <Stack direction={"row"} spacing={2} overflow={"auto"} py={1}>
             <StatsCard />
@@ -197,7 +197,11 @@ const Home = () => {
             <StatsCard />
             <StatsCard />
           </Stack>
-          <Stack direction={"row"} flex={1} spacing={2}>
+          <Stack
+            direction={{ xs: "column", sm: "column", md: "column", lg: "row" }}
+            flex={1}
+            spacing={2}
+          >
             {/* Sales Overtime */}
             <Stack spacing={2} p={2} flex={1}>
               <Stack>
@@ -230,12 +234,44 @@ const Home = () => {
                 </Stack>
               </Stack>
             </Stack>
-            {/* Real-Time Sale */}
-            <Stack p={2} flex={1} spacing={2}>
-              <Stack>
-                <Typography variant="h6">Real-Time Sale</Typography>
+            <Stack direction={{ sm: "column", md: "row" }} flex={2}>
+              {/* Real-Time Sale */}
+              <Stack p={2} flex={1} spacing={2}>
+                <Stack>
+                  <Typography variant="h6">Real-Time Sale</Typography>
+                </Stack>
+                <Stack>
+                  <Box
+                    width={"100%"}
+                    height={250}
+                    alignItems={"center"}
+                    justifyItems={"center"}
+                    alignContent={"center"}
+                    justifyContent={"center"}
+                    textAlign={"center"}
+                    bgcolor={"red"}
+                  >
+                    Chart here...
+                  </Box>
+                  <Stack>
+                    <Table
+                      title={() => (
+                        <Typography variant="subtitle1" fontWeight={"bold"}>
+                          Locations
+                        </Typography>
+                      )}
+                      columns={liveSalesColumns}
+                      dataSource={liveSalesData}
+                      // onChange={onChange}
+                    />
+                  </Stack>
+                </Stack>
               </Stack>
-              <Stack>
+              {/* Inventory */}
+              <Stack p={2} flex={1} spacing={2}>
+                <Stack>
+                  <Typography variant="h6">Inventory Quantity</Typography>
+                </Stack>
                 <Box
                   width={"100%"}
                   height={250}
@@ -255,35 +291,17 @@ const Home = () => {
                         Locations
                       </Typography>
                     )}
-                    columns={liveSalesColumns}
-                    dataSource={liveSalesData}
+                    columns={salesOvertimeColumns}
+                    dataSource={salesOvertimeData}
                     // onChange={onChange}
                   />
                 </Stack>
               </Stack>
             </Stack>
-            {/* Inventory */}
-            <Stack p={2} flex={1} spacing={2}>
-              <Stack>
-                <Typography variant="h6">Inventory Quantity</Typography>
-              </Stack>
-              <Box
-                width={"100%"}
-                height={250}
-                alignItems={"center"}
-                justifyItems={"center"}
-                alignContent={"center"}
-                justifyContent={"center"}
-                textAlign={"center"}
-                bgcolor={"red"}
-              >
-                Chart here...
-              </Box>
-            </Stack>
           </Stack>
         </Stack>
       )}
-      {tab == 1 && (
+      {tab == "stock" && (
         <Stack flex={1} sx={{ width: "100%", height: "100%" }}>
           <Typography>Stock</Typography>
         </Stack>

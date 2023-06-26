@@ -8,7 +8,7 @@ function StatsCard() {
       spacing={2}
       bgcolor={"#F6F6F6"}
       p={2}
-      sx={{ maxWidth: 400, minWidth: 400, borderRadius: 2 }}
+      sx={{ maxWidth: 400, minWidth: 250, borderRadius: 2 }}
     >
       <Stack direction={"row"} alignItems={"center"} spacing={1}>
         <Stack flex={1}>

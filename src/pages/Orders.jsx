@@ -15,62 +15,6 @@ import StatsCard from "../components/StatsCard";
 import { Table } from "antd";
 // import type { ColumnsType } from 'antd/es/table';
 
-const columns = [
-  {
-    title: "Order ID",
-    width: 130,
-    dataIndex: "id",
-    key: "id",
-    fixed: "left",
-  },
-  {
-    title: "Customer",
-    width: 100,
-    dataIndex: "customer",
-    key: "customer",
-  },
-  {
-    title: "Location",
-    dataIndex: "location",
-    key: "1",
-    width: 150,
-  },
-  {
-    title: "Amount",
-    dataIndex: "amount",
-    key: "2",
-    width: 150,
-  },
-  {
-    title: "Date",
-    dataIndex: "date",
-    key: "3",
-    width: 150,
-  },
-  {
-    title: "Status",
-    dataIndex: "status",
-    key: "4",
-    width: 150,
-    render: () => (
-      <Stack>
-        <Chip label="status" />
-      </Stack>
-    ),
-  },
-  {
-    title: "Assigned to",
-    key: "operation",
-    width: 150,
-    fixed: "right",
-    render: () => (
-      <Stack>
-        <Button>Assign driver</Button>
-      </Stack>
-    ),
-  },
-];
-
 const data = [];
 for (let i = 0; i < 100; i++) {
   data.push({
@@ -91,6 +35,61 @@ const Orders = () => {
   const handleChange = (event, newValue) => {
     setTab(newValue);
   };
+  const columns = [
+    {
+      title: "Order ID",
+      width: 130,
+      dataIndex: "id",
+      key: "id",
+      fixed: "left",
+    },
+    {
+      title: "Customer",
+      width: 100,
+      dataIndex: "customer",
+      key: "customer",
+    },
+    {
+      title: "Location",
+      dataIndex: "location",
+      key: "1",
+      width: 150,
+    },
+    {
+      title: "Amount",
+      dataIndex: "amount",
+      key: "2",
+      width: 150,
+    },
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "3",
+      width: 150,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "4",
+      width: 150,
+      render: () => (
+        <Stack>
+          <Chip label="status" />
+        </Stack>
+      ),
+    },
+    {
+      title: "Assigned to",
+      key: "operation",
+      width: 150,
+      fixed: "right",
+      render: () => (
+        <Stack>
+          <Button>Assign driver</Button>
+        </Stack>
+      ),
+    },
+  ];
   return (
     <Stack flex={1} p={2} spacing={2}>
       <Stack
