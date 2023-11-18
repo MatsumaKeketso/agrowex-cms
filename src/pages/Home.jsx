@@ -29,6 +29,7 @@ import {
   salesOvertimeData,
 } from "../services/api";
 import { Radio, Table } from "antd";
+import { Area } from "@ant-design/charts";
 const salesOvertime = [
   {
     location: "Johannesburg",
@@ -92,7 +93,22 @@ const Home = () => {
   const [swiper, setSwiper] = React.useState(null);
   const [checked, setChecked] = React.useState([1]);
   const [mode, setMode] = useState("sales");
+  const [data, setData] = useState([]);
 
+  useEffect(() => {
+    asyncFetch();
+  }, []);
+
+  const asyncFetch = () => {
+    fetch(
+      "https://gw.alipayobjects.com/os/bmw-prod/1d565782-dde4-4bb6-8946-ea6a38ccf184.json"
+    )
+      .then((response) => response.json())
+      .then((json) => setData(json))
+      .catch((error) => {
+        console.log("fetch data failed", error);
+      });
+  };
   const handleModeChange = (e) => {
     setTab(e.target.value);
   };
@@ -171,6 +187,20 @@ const Home = () => {
 
     setChecked(newChecked);
   };
+  const config = {
+    data,
+    xField: "Date",
+    yField: "scales",
+    xAxis: {
+      range: [0, 1],
+      tickCount: 5,
+    },
+    areaStyle: () => {
+      return {
+        fill: "l(270) 0:#ffffff 0.5:#7ec2f3 1:#1890ff",
+      };
+    },
+  };
   useEffect(() => {
     // chartData();
   });
@@ -199,12 +229,7 @@ const Home = () => {
               <StatsCard />
             </Stack>
             <Stack
-              direction={{
-                xs: "column",
-                sm: "column",
-                md: "column",
-                lg: "row",
-              }}
+            
               flex={1}
               spacing={2}
             >
@@ -222,9 +247,8 @@ const Home = () => {
                     alignContent={"center"}
                     justifyContent={"center"}
                     textAlign={"center"}
-                    bgcolor={"red"}
                   >
-                    Chart here...
+                    <Area {...config} />
                   </Box>
                   <Stack>
                     <Table
@@ -240,7 +264,7 @@ const Home = () => {
                   </Stack>
                 </Stack>
               </Stack>
-              <Stack direction={{ sm: "column", md: "row" }} flex={2}>
+              <Stack direction={{ sm: "column", md: "row" }} flex={1}>
                 {/* Real-Time Sale */}
                 <Stack p={2} flex={1} spacing={2}>
                   <Stack>
@@ -255,9 +279,8 @@ const Home = () => {
                       alignContent={"center"}
                       justifyContent={"center"}
                       textAlign={"center"}
-                      bgcolor={"red"}
                     >
-                      Chart here...
+                      <Area {...config} />
                     </Box>
                     <Stack>
                       <Table
@@ -286,9 +309,8 @@ const Home = () => {
                     alignContent={"center"}
                     justifyContent={"center"}
                     textAlign={"center"}
-                    bgcolor={"red"}
                   >
-                    Chart here...
+                    <Area {...config} />
                   </Box>
                   <Stack>
                     <Table
@@ -309,7 +331,7 @@ const Home = () => {
         )}
         {tab == "stock" && (
           <Stack flex={1} sx={{ width: "100%", height: "100%" }}>
-            <Typography>Stock</Typography>
+            <Area {...config} />
           </Stack>
         )}
         <Divider />

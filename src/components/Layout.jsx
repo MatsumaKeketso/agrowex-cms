@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
 import { Drawer, Space } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 const Logo = () => (
   <svg
     width="85"
@@ -224,8 +224,14 @@ const Layout = (props) => {
   const navigation = useSelector((state) => state.navigation);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   useEffect(() => {
-    
+    const splitter = location.pathname.split("/");
+    if (splitter[1]) {
+      dispatch(setActiveNav(splitter[1]));
+    } else {
+      dispatch(setActiveNav("home"));
+    }
   }, []);
   return (
     <Stack
