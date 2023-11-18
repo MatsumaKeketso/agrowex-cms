@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Avatar, Button, Stack, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
 import { Drawer, Space } from "antd";
-
+import { useNavigate } from "react-router-dom";
 const Logo = () => (
   <svg
     width="85"
@@ -85,6 +85,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   const [open, setOpen] = useState(false);
   const navigation = useSelector((state) => state.navigation);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const handleClose = () => {};
   const showDrawer = () => {
     setOpen(true);
@@ -156,7 +157,12 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
               return (
                 <Button
                   onClick={() => {
-                    dispatch(setActiveNav(item));
+                    // dispatch(setActiveNav(item));
+                    if (item === "home") {
+                      navigate(`/`);
+                    } else {
+                      navigate(`/${item}`);
+                    }
                   }}
                   variant={active === item ? "contained" : "text"}
                   key={i}
@@ -214,8 +220,13 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   );
 };
 const Layout = (props) => {
+  const { navigateTo } = props;
   const navigation = useSelector((state) => state.navigation);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  useEffect(() => {
+    
+  }, []);
   return (
     <Stack
       // p={2}

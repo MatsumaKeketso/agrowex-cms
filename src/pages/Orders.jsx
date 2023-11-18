@@ -1,18 +1,40 @@
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Avatar,
   Box,
   Button,
   Chip,
   Divider,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemButton,
+  ListItemText,
+  Paper,
   Stack,
   Tab,
   Tabs,
+  TextField,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import Layout from "../components/Layout";
 import StatsCard from "../components/StatsCard";
-import { Table } from "antd";
+import {
+  Breadcrumb,
+  Drawer,
+  Empty,
+  Input,
+  Statistic,
+  Table,
+  Tag,
+  theme,
+} from "antd";
+import { AddRounded } from "@mui/icons-material";
+import Search from "antd/es/input/Search";
 // import type { ColumnsType } from 'antd/es/table';
 
 const data = [];
@@ -27,14 +49,256 @@ for (let i = 0; i < 100; i++) {
     status: "status",
   });
 }
+const AssignDriver = ({ record, open, setOpen }) => {
+  const [drivers, setDrivers] = useState([]);
+
+  const [state, setState] = useState("View Details");
+  useEffect(() => {
+    console.log(record);
+  }, []);
+  return (
+    <Stack>
+      <Button
+        onClick={() => {
+          setOpen(true);
+        }}
+        sx={{ alignSelf: "flex-start" }}
+      >
+        {state}
+      </Button>
+    </Stack>
+  );
+};
+const AssignDriverForm = () => {
+  const [details, setDetails] = useState(false);
+  const generateRandomProfile = () => {
+    const firstNames = ["Jane", "John", "Alice", "Bob", "Eva", "David"];
+    const lastNames = ["Doe", "Smith", "Johnson", "Brown", "Lee", "Garcia"];
+
+    const randomFirstName =
+      firstNames[Math.floor(Math.random() * firstNames.length)];
+    const randomLastName =
+      lastNames[Math.floor(Math.random() * lastNames.length)];
+
+    return {
+      firstName: randomFirstName,
+      lastName: randomLastName,
+    };
+  };
+  return (
+    <Stack gap={2}>
+      <Breadcrumb>
+        <Breadcrumb.Item>Assign Driver</Breadcrumb.Item>
+        <Breadcrumb.Item>to Order AGRO-2312412123 22</Breadcrumb.Item>
+      </Breadcrumb>
+      <Input.Search placeholder="Search Driver...." />
+      <Empty />
+      <Divider />
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+        }}
+      >
+        <Typography variant="subtitle2">
+          Search Results found for: "<b>Thabi</b>"
+        </Typography>
+        <List>
+          {Array(17)
+            .fill()
+            .map(() => (
+              <ListItem divider dense disablePadding disableGutters>
+                <ListItemButton>
+                  <ListItemAvatar>
+                    <Avatar></Avatar>
+                  </ListItemAvatar>
+                  <ListItemText>
+                    {generateRandomProfile().firstName}{" "}
+                    {generateRandomProfile().lastName}
+                  </ListItemText>
+                </ListItemButton>
+              </ListItem>
+            ))}
+        </List>
+      </Paper>
+    </Stack>
+  );
+};
+const ProductItem = () => {
+  return (
+    <Stack direction={"row"}>
+      <Avatar />
+      <Stack>
+        <Typography variant="h6">Ribola Plastics and Nursery</Typography>
+      </Stack>
+    </Stack>
+  );
+};
+const OrderDetails = () => {
+  return (
+    <Stack gap={2}>
+      <Stack direction={"row"} alignItems={"center"}>
+        <Stack flex={1} gap={1}>
+          <Typography variant="h4">Order Details</Typography>
+          <Stack gap={1} direction={"row"} alignItems={"center"}>
+            <Typography variant="body2">AGRO-1678451052830</Typography>
+            <Tag style={{ alignSelf: "flex-start" }} color="red">
+              Status
+            </Tag>
+          </Stack>
+        </Stack>
+        <Button size="small">Defaulted Drivers</Button>
+      </Stack>
+      <Divider />
+      <Stack gap={2}>
+        <Stack direction={"row"} gap={2} alignItems={"center"}>
+          <Typography fontWeight={"bold"}>Invoice Number</Typography>
+          <Divider flexItem orientation="vertical" />
+          <Typography>#323232323123</Typography>
+        </Stack>
+        <Stack direction={"row"} gap={2} alignItems={"center"}>
+          <Typography fontWeight={"bold"}>Date & Time</Typography>
+          <Divider flexItem orientation="vertical" />
+          <Typography>10 Mar 2023 14:24 PM</Typography>
+        </Stack>
+        <Stack direction={"row"} gap={2} alignItems={"center"}>
+          <Typography fontWeight={"bold"}>Assigned Driver</Typography>
+          <Divider flexItem orientation="vertical" />
+          <Button startIcon={<AddRounded />} size="small">
+            Assign Driver
+          </Button>
+        </Stack>
+      </Stack>
+      <Accordion elevation={0}>
+        <AccordionSummary>
+          <Typography variant="h6">Customer Details</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack gap={2}>
+            <Stack direction={"row"} gap={2}>
+              <Typography fontWeight={"bold"} variant="body2">
+                Phone Number
+              </Typography>
+              <Divider flexItem orientation="vertical" />
+              <Typography variant="body2">0123456789</Typography>
+            </Stack>
+            <Stack direction={"row"} gap={2}>
+              <Typography fontWeight={"bold"} variant="body2">
+                Email
+              </Typography>
+              <Divider flexItem orientation="vertical" />
+              <Typography variant="body2">janedoe@gmail.com</Typography>
+            </Stack>
+            <Stack direction={"row"} gap={2}>
+              <Typography fontWeight={"bold"} variant="body2">
+                Location
+              </Typography>
+              <Divider flexItem orientation="vertical" />
+              <Typography variant="body2">
+                162 King Shaka street , South Africa
+              </Typography>
+            </Stack>
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+      <Stack direction={"row"} gap={5} alignItems={"center"}>
+        <Typography variant="h6" flex={1}>
+          Products
+        </Typography>
+        <Input.Search placeholder="Search..." />
+      </Stack>
+      <Stack
+        gap={2}
+        bgcolor={"ButtonShadow"}
+        p={1}
+        direction={"row"}
+        alignItems={"center"}
+        justifyContent={"center"}
+      >
+        <Typography>Items ( 5 )</Typography>
+        <Divider flexItem orientation="vertical" />
+        <Typography>Total - R0.00</Typography>
+      </Stack>
+      {Array(7)
+        .fill()
+        .map((d, i) => {
+          const productColumns = [
+            {
+              title: "Item",
+              dataIndex: "item",
+              key: "1",
+            },
+            {
+              title: "Quanitity",
+              dataIndex: "quantity",
+              key: "2",
+            },
+            {
+              title: "Amount",
+              dataIndex: "amount",
+              key: "3",
+            },
+          ];
+          return (
+            <Stack direction={"row"} flex={1} gap={1}>
+              <Avatar />
+              <Stack  flex={1}>
+                <Typography variant="h6">
+                  Ribola Plastics and Nursery
+                </Typography>
+                <Breadcrumb>
+                  <Breadcrumb.Item>Retailer</Breadcrumb.Item>
+                  <Breadcrumb.Item>Agro</Breadcrumb.Item>
+                </Breadcrumb>
+                <Accordion elevation={0}>
+                  <AccordionSummary>More</AccordionSummary>
+                  <AccordionDetails>
+                    <Table columns={productColumns} />
+                  </AccordionDetails>
+                </Accordion>
+              </Stack>
+            </Stack>
+          );
+        })}
+    </Stack>
+  );
+};
 
 const Orders = () => {
   const [tab, setTab] = React.useState(0);
   const [swiper, setSwiper] = React.useState(null);
-
+  const [open, setOpen] = useState(false);
+  const { token } = theme.useToken();
   const handleChange = (event, newValue) => {
     setTab(newValue);
   };
+
+  function generateRandomState() {
+    const states = [
+      "On Route",
+      "Pending",
+      "Delivered",
+      "Error",
+      "Cancelled",
+      "Idle",
+    ];
+    const colors = [
+      "#3498db",
+      "#f39c12",
+      "#2ecc71",
+      "#e74c3c",
+      "#9b59b6",
+      "#95a5a6",
+    ];
+
+    const randomIndex = Math.floor(Math.random() * states.length);
+
+    return {
+      state: states[randomIndex],
+      color: colors[randomIndex],
+    };
+  }
   const columns = [
     {
       title: "Order ID",
@@ -74,52 +338,87 @@ const Orders = () => {
       width: 150,
       render: () => (
         <Stack>
-          <Chip label="status" />
+          <Tag
+            style={{ alignSelf: "flex-start" }}
+            color={generateRandomState().color}
+          >
+            {generateRandomState().state}
+          </Tag>
         </Stack>
       ),
     },
     {
-      title: "Assigned to",
+      title: "Actions",
       key: "operation",
       width: 150,
       fixed: "right",
-      render: () => (
-        <Stack>
-          <Button>Assign driver</Button>
-        </Stack>
-      ),
+      render: (record) => {
+        return <AssignDriver setOpen={setOpen} record={record} />;
+      },
     },
   ];
   return (
-    <Stack flex={1} p={2} spacing={2}>
-      <Stack
-        position={"sticky"}
-        direction={"row"}
-        spacing={2}
-        alignItems={"center"}
-      >
-        <Typography variant="h5">Orders</Typography>
-        <Box flex={1}></Box>
+    <Layout>
+      <Stack position={"relative"} flex={1} p={2} spacing={2}>
+        <Stack
+          position={"sticky"}
+          direction={"row"}
+          spacing={2}
+          alignItems={"center"}
+        >
+          <Typography variant="h5">Orders</Typography>
+          <Box flex={1}></Box>
+        </Stack>
+        <Stack
+          spacing={2}
+          flex={1}
+          sx={{
+            width: "100%",
+            maxheight: "100%",
+            minheight: "100%",
+          }}
+        >
+          <Drawer
+            title="Details"
+            open={open}
+            onClose={() => setOpen(false)}
+            getContainer={false}
+            width={"50%"}
+          >
+            <OrderDetails />
+          </Drawer>
+          <Stack flex={1} direction={"row"} gap={2}>
+            <Stack flex={1}>
+              <Statistic value={50} title="Total Orders" />
+            </Stack>
+            <Divider orientation="vertical" flexItem />
+            <Statistic
+              value={50}
+              title="Opened"
+              valueStyle={{ color: "green" }}
+            />
+            <Divider orientation="vertical" flexItem />
+            <Statistic
+              value={50}
+              title="Closed"
+              valueStyle={{ color: "red" }}
+            />
+          </Stack>
+          <Table
+            style={{ height: "100%" }}
+            columns={columns}
+            dataSource={data}
+            scroll={{ x: 1500, y: 700 }}
+          />
+        </Stack>
+        <Divider />
+        <Stack>
+          <Button variant="contained" sx={{ alignSelf: "flex-start" }}>
+            export data
+          </Button>
+        </Stack>
       </Stack>
-      <Stack
-        spacing={2}
-        flex={1}
-        sx={{ width: "100%", maxheight: "100%", minheight: "100%" }}
-      >
-        <Table
-          style={{ height: "100%" }}
-          columns={columns}
-          dataSource={data}
-          scroll={{ x: 1500, y: 700 }}
-        />
-      </Stack>
-      <Divider />
-      <Stack>
-        <Button variant="contained" sx={{ alignSelf: "flex-start" }}>
-          export data
-        </Button>
-      </Stack>
-    </Stack>
+    </Layout>
   );
 };
 

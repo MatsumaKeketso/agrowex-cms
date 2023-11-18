@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { useNavigate } from "react-router-dom";
 const initialState = {
-  links: ["home", "orders", "store", "products"],
+  links: ["home", "orders", "store", "products", "warehouse"],
   active: "home",
 };
 

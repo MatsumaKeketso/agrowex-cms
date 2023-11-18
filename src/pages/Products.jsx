@@ -20,21 +20,23 @@ const Products = () => {
     setTab(newValue);
   };
   return (
-    <Stack flex={1} p={2} spacing={2}>
-      <Stack direction={"row"} spacing={2} alignItems={"center"}>
-        <Typography variant="h5">Products</Typography>
-        <Box flex={1}></Box>
+    <Layout>
+      <Stack flex={1} p={2} spacing={2}>
+        <Stack direction={"row"} spacing={2} alignItems={"center"}>
+          <Typography variant="h5">Products</Typography>
+          <Box flex={1}></Box>
+        </Stack>
+        <Stack spacing={2} flex={1} sx={{ width: "100%", height: "100%" }}>
+          content here...
+        </Stack>
+        <Divider />
+        <Stack>
+          <Button variant="contained" sx={{ alignSelf: "flex-start" }}>
+            export data
+          </Button>
+        </Stack>
       </Stack>
-      <Stack spacing={2} flex={1} sx={{ width: "100%", height: "100%" }}>
-        content here...
-      </Stack>
-      <Divider />
-      <Stack>
-        <Button variant="contained" sx={{ alignSelf: "flex-start" }}>
-          export data
-        </Button>
-      </Stack>
-    </Stack>
+    </Layout>
   );
 };
 

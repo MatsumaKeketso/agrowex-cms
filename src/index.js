@@ -12,9 +12,14 @@ import { initializeApp } from "firebase/app";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
 import { firebaseConfig } from "./services/fc";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Home from "./pages/Home";
+import Products from "./pages/Products";
+import Store from "./pages/Store";
+import Orders from "./pages/Orders";
 const app = initializeApp(firebaseConfig);
 const root = ReactDOM.createRoot(document.getElementById("root"));
-const theme = createTheme({
+export const theme = createTheme({
   palette: {
     primary: {
       // light: will be calculated from palette.primary.main,
@@ -30,6 +35,16 @@ const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         borderRadius: 30,
+      },
+    },
+    MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 30,
+        },
       },
     },
   },
@@ -55,14 +70,45 @@ const theme = createTheme({
     },
   },
 });
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Home />,
+  },
+  {
+    path: "/orders",
+    element: <Orders />,
+  },
+  {
+    path: "/store",
+    element: <Store />,
+  },
+  {
+    path: "/products",
+    element: <Products />,
+  },
+  {
+    path: "/account",
+    element: <Home />,
+  },
+]);
 root.render(
   <React.StrictMode>
     <Provider store={store}>
       <ConfigProvider
-        theme={{ token: { colorPrimary: theme.palette.primary.main } }}
+        theme={{
+          token: { colorPrimary: theme.palette.primary.main },
+          components: {
+            Table: {
+              headerBg: theme.palette.primary.main,
+              headerColor: theme.palette.common.white,
+              headerSortActiveBg: theme.palette.primary.light,
+            },
+          },
+        }}
       >
         <ThemeProvider theme={theme}>
-          <App />
+          <RouterProvider router={router} />
         </ThemeProvider>
       </ConfigProvider>
     </Provider>
