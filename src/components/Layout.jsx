@@ -15,9 +15,13 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
-import { Drawer, Space } from "antd";
+import { Drawer, Space, Menu as ANTMenu } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChatBubbleRounded, MessageRounded } from "@mui/icons-material";
+import {
+  ChatBubbleRounded,
+  MailOutlined,
+  MessageRounded,
+} from "@mui/icons-material";
 const Logo = () => (
   <svg
     width="85"
@@ -82,9 +86,11 @@ const Logo = () => (
 );
 
 const MenuAppBar = ({ links = [], active, onNavigate }) => {
-  const handleMenu = (event) => {};
   const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("mail");
+  const [sideNavLinks, setSideNavLinks] = useState([]);
   const navigation = useSelector((state) => state.navigation);
+  const handleMenu = (event) => {};
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const handleClose = () => {};
@@ -94,6 +100,16 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   const onClose = () => {
     setOpen(false);
   };
+  const onClick = (e) => {
+    dispatch(setActiveNav(e.key));
+    if (e.key === "home") {
+      navigate(`/`);
+    } else {
+      navigate(`/${e.key}`);
+    }
+  };
+
+  useEffect(() => {}, []);
   return (
     <AppBar
       // variant="outlined"
@@ -108,23 +124,18 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
       position="static"
     >
       <Drawer
-        title="Drawer with extra actions"
+        title="Agrowex"
         placement={"left"}
         width={500}
         onClose={onClose}
         open={open}
-        extra={
-          <Space>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="primary" onClick={onClose}>
-              OK
-            </Button>
-          </Space>
-        }
       >
-        <p>Some contents...</p>
-        <p>Some contents...</p>
-        <p>Some contents...</p>
+        <ANTMenu
+          onClick={onClick}
+          selectedKeys={[navigation.active]}
+          mode="inline"
+          items={navigation.links}
+        />
       </Drawer>
       <Toolbar variant="dense" sx={{ alignItems: "center" }}>
         <Box
@@ -137,6 +148,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
             edge="start"
             color="inherit"
             aria-label="menu"
+            onClick={() => showDrawer()}
           >
             <MenuIcon />
           </IconButton>
@@ -154,30 +166,13 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
               display: { xs: "none", sm: "none", md: "block", lg: "block" },
             }}
           >
-            {navigation.links.map((item, i) => {
-              return (
-                <Button
-                  onClick={() => {
-                    // dispatch(setActiveNav(item));
-                    if (item === "home") {
-                      navigate(`/`);
-                    } else {
-                      navigate(`/${item}`);
-                    }
-                  }}
-                  variant={active === item ? "contained" : "text"}
-                  key={i}
-                  size="small"
-                  edge="start"
-                  color="primary"
-                  aria-label="menu"
-                  sx={{ mr: 2 }}
-                  startIcon={getNavIcon(item)}
-                >
-                  {item}
-                </Button>
-              );
-            })}
+            <ANTMenu
+              style={{ background: "transparent" }}
+              onClick={onClick}
+              selectedKeys={[navigation.active]}
+              mode="horizontal"
+              items={navigation.links}
+            />
           </Stack>
         </Stack>
 

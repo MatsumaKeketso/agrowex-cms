@@ -369,7 +369,7 @@ const Orders = () => {
         onClose={() => setOpenNewOrderDrawer(false)}
       >
         <Stack gap={2}>
-        <Typography>Invoice Number: AGRO-1664203076594</Typography>
+          <Typography>Invoice Number: AGRO-1664203076594</Typography>
           <Form
             layout="vertical"
             onFinish={(values) => {
@@ -393,7 +393,6 @@ const Orders = () => {
             </Button>
           </Form>
           <Stack gap={2}>
-           
             <Stack gap={1}>
               <Typography fontWeight={"bold"}>Customer Details</Typography>
               <Grid container gap={1} direction={"row"}>
