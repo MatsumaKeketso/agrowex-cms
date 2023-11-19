@@ -254,7 +254,7 @@ const OrderDetails = () => {
                 <Accordion elevation={0}>
                   <AccordionSummary>More</AccordionSummary>
                   <AccordionDetails>
-                    <Table columns={productColumns} />
+                    <Table size="small" columns={productColumns} />
                   </AccordionDetails>
                 </Accordion>
               </Stack>

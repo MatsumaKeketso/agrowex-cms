@@ -18,6 +18,7 @@ import Products from "./pages/Products";
 import Store from "./pages/Store";
 import Orders from "./pages/Orders";
 import Warehouse from "./pages/Warehouse";
+import Messages from "./pages/Messages";
 const app = initializeApp(firebaseConfig);
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -95,6 +96,10 @@ const router = createBrowserRouter([
   {
     path: "/warehouse",
     element: <Warehouse />,
+  },
+  {
+    path: "/messages",
+    element: <Messages />,
   },
 ]);
 root.render(

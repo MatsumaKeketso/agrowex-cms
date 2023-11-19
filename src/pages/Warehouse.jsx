@@ -34,41 +34,41 @@ const Warehouse = () => {
   ];
   return (
     <Layout>
-      <Drawer
-        title="New Warehouse"
-        open={open}
-        onClose={() => {
-          setOpen(false);
-        }}
-      >
-        <Stack>
-          <Form
-            layout="vertical"
-            onFinish={(values) => {
-              console.log(values);
-            }}
-          >
-            {warehouseForm.map((item, i) => (
-              <Form.Item label={item.label} name={item.name}>
-                <Input type={item.type} />
-              </Form.Item>
-            ))}
-            <Stack direction={"row"} gap={1}>
-              <Form.Item name="openingTime" label="Opening Time">
-                <TimePicker />
-              </Form.Item>
-              <Form.Item name="closingTime" label="Closing Time">
-                <TimePicker />
-              </Form.Item>
-            </Stack>
-            <Button type="submit" fullWidth variant="contained">
-              Submit
-            </Button>
-          </Form>
-          <Box></Box>
-        </Stack>
-      </Drawer>
-      <Stack p={2} flex={1}>
+      <Stack p={2} flex={1} position={"relative"}>
+        <Drawer
+          title="New Warehouse"
+          open={open}
+          onClose={() => {
+            setOpen(false);
+          }}
+        >
+          <Stack>
+            <Form
+              layout="vertical"
+              onFinish={(values) => {
+                console.log(values);
+              }}
+            >
+              {warehouseForm.map((item, i) => (
+                <Form.Item label={item.label} name={item.name}>
+                  <Input type={item.type} />
+                </Form.Item>
+              ))}
+              <Stack direction={"row"} gap={1}>
+                <Form.Item name="openingTime" label="Opening Time">
+                  <TimePicker />
+                </Form.Item>
+                <Form.Item name="closingTime" label="Closing Time">
+                  <TimePicker />
+                </Form.Item>
+              </Stack>
+              <Button type="submit" fullWidth variant="contained">
+                Submit
+              </Button>
+            </Form>
+            <Box></Box>
+          </Stack>
+        </Drawer>
         <Stack flex={1} gap={2}>
           <Stack
             position={"sticky"}

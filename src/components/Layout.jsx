@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Avatar, Button, Stack, Typography } from "@mui/material";
+import { Avatar, Badge, Button, Stack, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
@@ -17,6 +17,7 @@ import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
 import { Drawer, Space } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
+import { ChatBubbleRounded, MessageRounded } from "@mui/icons-material";
 const Logo = () => (
   <svg
     width="85"
@@ -180,18 +181,25 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
           </Stack>
         </Stack>
 
-        <Stack spacing={1} direction={"row"}>
+        <Stack spacing={1} direction={"row"} alignItems={"center"}>
+          <Badge badgeContent={5} color="info">
+            <IconButton href="/messages" sx={{ alignSelf: "flex-start" }}>
+              <MessageRounded />
+            </IconButton>
+          </Badge>
+
           <IconButton
             size="large"
             aria-label="account of current user"
             aria-controls="menu-appbar"
             aria-haspopup="true"
+            sx={{ alignSelf: "flex-start", alignItems: "center" }}
             onClick={handleMenu}
             color="inherit"
           >
             <AccountCircle />
           </IconButton>
-          <Stack spacing={-1}>
+          <Stack spacing={-1} alignItems={"center"}>
             <Typography variant="h6">Jane Doe</Typography>
             <Typography color={"GrayText"} variant="overline">
               Procurement

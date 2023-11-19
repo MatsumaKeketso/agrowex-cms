@@ -69,12 +69,7 @@ const ProductForm = ({ open, onClose }) => {
               name={input.name}
               label={input.label}
             >
-              <TextField
-                placeholder={placeholder}
-                fullWidth
-                variant="standard"
-                size="small"
-              />
+              <Input />
             </Form.Item>
           );
         })}
@@ -230,19 +225,12 @@ const Store = () => {
                     <Stack
                       direction={"row"}
                       alignItems={"center"}
-                      px={1}
+                      p={1}
                       gap={1}
                     >
                       <Divider orientation="vertical" flexItem />
 
-                      <TextField
-                        // sx={{ px: 2 }}
-                        focused
-                        label="Search"
-                        fullWidth
-                        variant="standard"
-                        size="small"
-                      />
+                      <Input.Search placeholder="Search..." />
                     </Stack>
                   </Paper>
                 </Stack>
