@@ -14,12 +14,28 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import Layout from "../components/Layout";
 import StatsCard from "../components/StatsCard";
 import { AddRounded, EditRounded, RemoveRounded } from "@mui/icons-material";
-import { Drawer, Form, Input, Select, Table, Upload } from "antd";
+import {
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Segmented,
+  Select,
+  Slider,
+  Table,
+  Upload,
+} from "antd";
 
 const Products = () => {
   const [tab, setTab] = React.useState(0);
   const [swiper, setSwiper] = React.useState(null);
   const [open, setOpen] = useState(false);
+  const [productType, setProduceType] = useState("Fruits/Veggies/Greens");
+  const [inputValue, setInputValue] = useState(1);
+
+  const onChange = (newValue) => {
+    setInputValue(newValue);
+  };
   const handleChange = (event, newValue) => {
     setTab(newValue);
   };
@@ -65,10 +81,7 @@ const Products = () => {
       label: "Product Name",
       name: "name",
     },
-    {
-      label: "Location",
-      name: "location",
-    },
+
     {
       label: "Price",
       name: "price",
@@ -76,40 +89,111 @@ const Products = () => {
   ];
   return (
     <Layout>
-      <Drawer open={open} onClose={() => setOpen(false)}>
+      <Drawer
+        title="Add Produce"
+        open={open}
+        onClose={() => setOpen(false)}
+        extra={
+          <Stack>
+            <Segmented
+              onChange={(e) => {
+                setProduceType(e);
+              }}
+              default={productType}
+              options={["Fruits/Veggies/Grains", "Livestock"]}
+            />
+          </Stack>
+        }
+        width={500}
+        // style={{ width: 400 }}
+      >
         <Stack>
-          <Form layout="vertical">
-            <Upload
-              name="avatar"
-              listType="picture-circle"
-              className="avatar-uploader"
-              showUploadList={false}
-              action="https://run.mocky.io/v3/435e224c-44fb-4773-9faf-380c5e6a2188"
-            >
-              <Avatar />
-            </Upload>
+          {productType === "Livestock" ? (
+            <Form layout="vertical">
+              <Upload
+                name="avatar"
+                listType="picture-circle"
+                className="avatar-uploader"
+                showUploadList={false}
+                action="https://run.mocky.io/v3/435e224c-44fb-4773-9faf-380c5e6a2188"
+              >
+                <Avatar />
+              </Upload>
 
-            {produceForm.map((item) => (
-              <Form.Item label={item.label} name={item.name} key={item.name}>
+              {produceForm.map((item) => (
+                <Form.Item label={item.label} name={item.name} key={item.name}>
+                  <Input />
+                </Form.Item>
+              ))}
+              <Form.Item label="Category">
+                <Select
+                  // style={{ width: 120 }}
+                  options={[
+                    { value: "fruits", label: "Fruits" },
+                    { value: "veggies", label: "Vegetables" },
+                    { value: "grains", label: "Grains" },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item label="Quantity">
+                <Stack direction={"row"}>
+                  <Slider
+                    style={{ width: "100%" }}
+                    min={1}
+                    max={500}
+                    onChange={onChange}
+                    value={typeof inputValue === "number" ? inputValue : 0}
+                  />
+                  <InputNumber
+                    min={1}
+                    max={500}
+                    style={{ margin: "0 16px" }}
+                    value={inputValue}
+                    onChange={onChange}
+                  />
+                </Stack>
+              </Form.Item>
+              <Button variant="contained" fullWidth>
+                Add
+              </Button>
+            </Form>
+          ) : (
+            <Form layout="vertical">
+              <Upload
+                name="avatar"
+                listType="picture-circle"
+                className="avatar-uploader"
+                showUploadList={false}
+                action="https://run.mocky.io/v3/435e224c-44fb-4773-9faf-380c5e6a2188"
+              >
+                <Avatar />
+              </Upload>
+              <Form.Item label="Livestock">
                 <Input />
               </Form.Item>
-            ))}
-            <Form.Item label="Category">
-              <Select
-                defaultValue="lucy"
-                // style={{ width: 120 }}
-                options={[
-                  { value: "jack", label: "Jack" },
-                  { value: "lucy", label: "Lucy" },
-                  { value: "Yiminghe", label: "yiminghe" },
-                  { value: "disabled", label: "Disabled", disabled: true },
-                ]}
-              />
-            </Form.Item>
-            <Button variant="contained" fullWidth>
-              Add
-            </Button>
-          </Form>
+              <Form.Item label="Quantity">
+                <Stack direction={"row"}>
+                  <Slider
+                    style={{ width: "100%" }}
+                    min={1}
+                    max={500}
+                    onChange={onChange}
+                    value={typeof inputValue === "number" ? inputValue : 0}
+                  />
+                  <InputNumber
+                    min={1}
+                    max={500}
+                    style={{ margin: "0 16px" }}
+                    value={inputValue}
+                    onChange={onChange}
+                  />
+                </Stack>
+              </Form.Item>
+              <Button variant="contained" fullWidth>
+                Add
+              </Button>
+            </Form>
+          )}
         </Stack>
       </Drawer>
       <Stack flex={1} p={2} spacing={2}>

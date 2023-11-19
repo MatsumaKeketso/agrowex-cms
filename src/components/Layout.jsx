@@ -129,6 +129,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
         width={500}
         onClose={onClose}
         open={open}
+        extra={<Logo />}
       >
         <ANTMenu
           onClick={onClick}
@@ -178,7 +179,10 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
 
         <Stack spacing={1} direction={"row"} alignItems={"center"}>
           <Badge badgeContent={5} color="info">
-            <IconButton href="/messages" sx={{ alignSelf: "flex-start" }}>
+            <IconButton
+              onClick={() => navigate("/messages")}
+              sx={{ alignSelf: "flex-start" }}
+            >
               <MessageRounded />
             </IconButton>
           </Badge>

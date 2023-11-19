@@ -19,6 +19,13 @@ import Store from "./pages/Store";
 import Orders from "./pages/Orders";
 import Warehouse from "./pages/Warehouse";
 import Messages from "./pages/Messages";
+import Suppliers from "./pages/Suppliers";
+import Market from "./pages/Market";
+import Farms from "./pages/Farms";
+import Drivers from "./pages/Drivers";
+import Reconcile from "./pages/Reconcile";
+import FAQs from "./pages/FAQs";
+import Requests from "./pages/Requests";
 const app = initializeApp(firebaseConfig);
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -100,6 +107,34 @@ const router = createBrowserRouter([
   {
     path: "/messages",
     element: <Messages />,
+  },
+  {
+    path: "/suppliers",
+    element: <Suppliers />,
+  },
+  {
+    path: "/market",
+    element: <Market />,
+  },
+  {
+    path: "/farms",
+    element: <Farms />,
+  },
+  {
+    path: "/drivers",
+    element: <Drivers />,
+  },
+  {
+    path: "/reconcile",
+    element: <Reconcile />,
+  },
+  {
+    path: "/requests",
+    element: <Requests />,
+  },
+  {
+    path: "/faq",
+    element: <FAQs />,
   },
 ]);
 root.render(
