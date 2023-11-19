@@ -7,6 +7,7 @@ import {
   Button,
   Chip,
   Divider,
+  Grid,
   List,
   ListItem,
   ListItemAvatar,
@@ -27,6 +28,7 @@ import {
   Breadcrumb,
   Drawer,
   Empty,
+  Form,
   Input,
   Statistic,
   Table,
@@ -38,7 +40,7 @@ import Search from "antd/es/input/Search";
 // import type { ColumnsType } from 'antd/es/table';
 
 const data = [];
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 1; i++) {
   data.push({
     key: i,
     id: `AGRO-1678451052830 ${i}`,
@@ -220,7 +222,7 @@ const OrderDetails = () => {
         <Divider flexItem orientation="vertical" />
         <Typography>Total - R0.00</Typography>
       </Stack>
-      {Array(7)
+      {Array(1)
         .fill()
         .map((d, i) => {
           const productColumns = [
@@ -243,7 +245,7 @@ const OrderDetails = () => {
           return (
             <Stack direction={"row"} flex={1} gap={1}>
               <Avatar />
-              <Stack  flex={1}>
+              <Stack flex={1}>
                 <Typography variant="h6">
                   Ribola Plastics and Nursery
                 </Typography>
@@ -269,6 +271,8 @@ const Orders = () => {
   const [tab, setTab] = React.useState(0);
   const [swiper, setSwiper] = React.useState(null);
   const [open, setOpen] = useState(false);
+  const [openAssignDriver, setAssignDriver] = useState(false);
+  const [openNewOrderDrawer, setOpenNewOrderDrawer] = useState(false);
   const { token } = theme.useToken();
   const handleChange = (event, newValue) => {
     setTab(newValue);
@@ -301,7 +305,7 @@ const Orders = () => {
   }
   const columns = [
     {
-      title: "Order ID",
+      title: "Invoice Number",
       width: 130,
       dataIndex: "id",
       key: "id",
@@ -359,6 +363,69 @@ const Orders = () => {
   ];
   return (
     <Layout>
+      <Drawer
+        title="New Order"
+        open={openNewOrderDrawer}
+        onClose={() => setOpenNewOrderDrawer(false)}
+      >
+        <Stack gap={2}>
+        <Typography>Invoice Number: AGRO-1664203076594</Typography>
+          <Form
+            layout="vertical"
+            onFinish={(values) => {
+              console.log("Form Values: ", values);
+            }}
+          >
+            <Form.Item label="Delivery Fee Exclusive Total">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Delivery Fee Inclusive Total">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Transport Fare">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Location">
+              <Input />
+            </Form.Item>
+            <Button fullWidth variant="contained">
+              Submit
+            </Button>
+          </Form>
+          <Stack gap={2}>
+           
+            <Stack gap={1}>
+              <Typography fontWeight={"bold"}>Customer Details</Typography>
+              <Grid container gap={1} direction={"row"}>
+                <Grid item>
+                  <Statistic
+                    valueStyle={{ fontSize: 16 }}
+                    title="Phone Number"
+                    value={"0726390088"}
+                    groupSeparator=""
+                  />
+                </Grid>
+                <Grid item>
+                  <Statistic
+                    valueStyle={{ fontSize: 16 }}
+                    title="Email"
+                    value={"agrowex.test@gmail.com"}
+                  />
+                </Grid>
+                <Grid item>
+                  <Statistic
+                    title="Address"
+                    valueStyle={{ fontSize: 16 }}
+                    value={
+                      "V&A Waterfront, East Pier Rd, Cape Town, Western Cape 8001, South Africa, Cape Town, Western Cape, South Africa"
+                    }
+                  />
+                </Grid>
+              </Grid>
+            </Stack>
+          </Stack>
+        </Stack>
+      </Drawer>
       <Stack position={"relative"} flex={1} p={2} spacing={2}>
         <Stack
           position={"sticky"}
@@ -368,14 +435,20 @@ const Orders = () => {
         >
           <Typography variant="h5">Orders</Typography>
           <Box flex={1}></Box>
+          <Button
+            variant="contained"
+            onClick={() => setOpenNewOrderDrawer(true)}
+          >
+            New Order
+          </Button>
         </Stack>
         <Stack
           spacing={2}
           flex={1}
           sx={{
             width: "100%",
-            maxheight: "100%",
-            minheight: "100%",
+            // maxheight: "100%",
+            // minheight: "100%",
           }}
         >
           <Drawer
@@ -387,7 +460,7 @@ const Orders = () => {
           >
             <OrderDetails />
           </Drawer>
-          <Stack flex={1} direction={"row"} gap={2}>
+          <Stack direction={"row"} gap={2}>
             <Stack flex={1}>
               <Statistic value={50} title="Total Orders" />
             </Stack>

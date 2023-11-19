@@ -1,6 +1,7 @@
 import React from "react";
 import Layout from "../components/Layout";
 import {
+  AppBar,
   Avatar,
   Box,
   List,
@@ -16,7 +17,7 @@ import {
 import CustomTabPanel, { a11yProps } from "../components/CustomTabPanel";
 import { green } from "@mui/material/colors";
 import { MessageRounded } from "@mui/icons-material";
-import { Input } from "antd";
+import { Empty, Input } from "antd";
 
 const Messages = () => {
   const [value, setValue] = React.useState(0);
@@ -119,16 +120,29 @@ const Messages = () => {
         </Stack>
         <Stack gap={2} p={2} height={"100%"}>
           <Box sx={{ width: "100%" }}>
-            <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-              <Tabs
-                value={value}
-                onChange={handleChange}
-                aria-label="basic tabs example"
-              >
-                <Tab label="Inbox" {...a11yProps(0)} />
-                <Tab label="Broadcasting" {...a11yProps(1)} />
-              </Tabs>
-            </Box>
+            <AppBar
+              color="inherit"
+              elevation={0}
+              position="sticky"
+              sx={{ borderBottom: 1, borderColor: "divider" }}
+            >
+              <Stack direction={"row"} gap={2}>
+                <Tabs
+                  value={value}
+                  onChange={handleChange}
+                  aria-label="basic tabs example"
+                >
+                  <Tab label="Inbox" {...a11yProps(0)} />
+                  <Tab label="Broadcasting" {...a11yProps(1)} />
+                </Tabs>
+                <Stack pt={1}>
+                  <Input.Search
+                    style={{ width: 250 }}
+                    placeholder="Search..."
+                  />
+                </Stack>
+              </Stack>
+            </AppBar>
             <CustomTabPanel value={value} index={0}>
               <Stack
                 height={"100%"}
@@ -136,7 +150,6 @@ const Messages = () => {
                 direction={"row"}
               >
                 <Stack width={400} height={"100%"} sx={{ overflowY: "auto" }}>
-                  <Input.Search placeholder="Search..." />
                   <List sx={{ height: "100%", overflowY: "auto" }}>
                     {inboxMessages.map((message, i) => {
                       return (
@@ -161,7 +174,7 @@ const Messages = () => {
               </Stack>
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
-              Item Two
+              <Empty />
             </CustomTabPanel>
             <CustomTabPanel value={value} index={2}>
               Item Three
