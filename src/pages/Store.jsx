@@ -4,6 +4,13 @@ import {
   Button,
   ButtonBase,
   Divider,
+  IconButton,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemButton,
+  ListItemText,
+  ListSubheader,
   Paper,
   Stack,
   Tab,
@@ -15,7 +22,13 @@ import React, { useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import Layout from "../components/Layout";
 import StatsCard from "../components/StatsCard";
-import { AddRounded, Search } from "@mui/icons-material";
+import {
+  AddRounded,
+  DeleteRounded,
+  EditRounded,
+  FormatColorResetOutlined,
+  Search,
+} from "@mui/icons-material";
 import {
   ConfigProvider,
   Drawer,
@@ -24,6 +37,7 @@ import {
   Space,
   Statistic,
   Table,
+  Select,
   Upload,
 } from "antd";
 import CustomTabPanel, { a11yProps } from "../components/CustomTabPanel";
@@ -84,7 +98,7 @@ const ProductForm = ({ open, onClose }) => {
 const Store = () => {
   const [tab, setTab] = React.useState(0);
   const [drawer, setDrawer] = React.useState(false);
-  const [swiper, setSwiper] = React.useState(null);
+  const [openCategoryDrawer, setOpenCategoryDrawer] = useState(false);
   const [products, setProducts] = useState([]);
   const handleTabChange = (event, newValue) => {
     setTab(newValue);
@@ -94,7 +108,7 @@ const Store = () => {
   };
   const tableColumns = [
     {
-      title: "Image",
+      // title: "Image",
       dataIndex: "image",
       key: "image",
       render: (text, record) => (
@@ -119,6 +133,7 @@ const Store = () => {
       title: "Description",
       dataIndex: "description",
       key: "description",
+      responsive: ["md"],
     },
     {
       title: "Sizes",
@@ -142,6 +157,16 @@ const Store = () => {
       ),
     },
   ];
+  const onChange = (value) => {
+    console.log(`selected ${value}`);
+  };
+  const onSearch = (value) => {
+    console.log("search:", value);
+  };
+
+  // Filter `option.label` match the user type `input`
+  const filterOption = (input, option) =>
+    (option?.label ?? "").toLowerCase().includes(input.toLowerCase());
   useState(() => {
     const dataSource = [
       // Example data
@@ -188,6 +213,122 @@ const Store = () => {
   return (
     <Layout>
       <Stack flex={1} p={2} spacing={2}>
+        <Drawer
+          title="Add Category/Type"
+          open={openCategoryDrawer}
+          onClose={() => setOpenCategoryDrawer(false)}
+        >
+          <Stack flex={1} gap={1}>
+            <Stack flex={1}>
+              <Input.Search placeholder="Search current categories..." />
+              <List
+                sx={{
+                  width: "100%",
+                  bgcolor: "background.paper",
+                  position: "relative",
+                  overflow: "auto",
+                  maxHeight: 300,
+                  "& ul": { padding: 0 },
+                }}
+                subheader={<li />}
+              >
+                {[0, 1, 2, 3, 4].map((value) => (
+                  <li key={`section-${value}`}>
+                    <ul>
+                      <ListSubheader>
+                        <Stack direction={"row"}>
+                          <Stack flex={1}>{`I'm category ${value}`}</Stack>
+                          <IconButton
+                            sx={{ alignSelf: "flex-end" }}
+                            size="small"
+                          >
+                            <EditRounded />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            sx={{ alignSelf: "flex-end" }}
+                            size="small"
+                          >
+                            <DeleteRounded />
+                          </IconButton>
+                        </Stack>
+                      </ListSubheader>
+                      {[0, 1, 2].map((item) => (
+                        <ListItem key={`item-${value}-${item}`} disablePadding>
+                          <ListItemButton>
+                            <ListItemAvatar>
+                              <Avatar
+                                alt={`Avatar n°${value + 1}`}
+                                src={`/static/images/avatar/${value + 1}.jpg`}
+                              />
+                            </ListItemAvatar>
+                            <ListItemText
+                              id={value}
+                              primary={`I'm product type ${value + 1}`}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </List>
+            </Stack>
+            <Stack gap={2} flex={1}>
+              <Stack gap={1}>
+                <Divider />
+                <Typography variant="h6">Product Category</Typography>
+                <Form layout="vertical">
+                  <Form.Item label="Category">
+                    <Input />
+                  </Form.Item>
+                  <Button variant="outlined">Add Group</Button>
+                </Form>
+                <Divider />
+              </Stack>
+              <Stack>
+                <Typography variant="h6">Product Type</Typography>
+                <Form layout="vertical">
+                  <Form.Item label="Group">
+                    <Select
+                      showSearch
+                      placeholder="Select a person"
+                      optionFilterProp="children"
+                      onChange={onChange}
+                      onSearch={onSearch}
+                      filterOption={filterOption}
+                      options={[
+                        {
+                          value: "jack",
+                          label: "Jack",
+                        },
+                        {
+                          value: "lucy",
+                          label: "Lucy",
+                        },
+                        {
+                          value: "tom",
+                          label: "Tom",
+                        },
+                      ]}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Products Type">
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label="Code">
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label="Store Option">
+                    <Input />
+                  </Form.Item>
+                </Form>
+                <Button variant="outlined">Add Type</Button>
+                <Divider />
+              </Stack>
+            </Stack>
+          </Stack>
+        </Drawer>
         <Stack direction={"row"} gap={3} alignItems={"center"}>
           <ProductForm onClose={() => setDrawer(false)} open={drawer} />
           <Typography variant="h5">Store</Typography>
@@ -202,7 +343,12 @@ const Store = () => {
             >
               New Product
             </Button>
-            <Button startIcon={<AddRounded />}>New Category</Button>
+            <Button
+              startIcon={<AddRounded />}
+              onClick={() => setOpenCategoryDrawer(true)}
+            >
+              New Category/Type
+            </Button>
           </Stack>
         </Stack>
         <Stack spacing={2} flex={1} sx={{ width: "100%", height: "100%" }}>
