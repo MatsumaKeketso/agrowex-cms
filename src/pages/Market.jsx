@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "../components/Layout";
 import {
@@ -18,9 +17,19 @@ import {
 const Market = () => {
   return (
     <Layout>
-      
+      <Stack position={"relative"} flex={1} p={2} spacing={2}>
+        <Stack
+          position={"sticky"}
+          direction={"row"}
+          spacing={2}
+          alignItems={"center"}
+        >
+          <Typography variant="h5">Market</Typography>
+          <Box flex={1}></Box>
+        </Stack>
+      </Stack>
     </Layout>
   );
-}
+};
 
 export default Market;

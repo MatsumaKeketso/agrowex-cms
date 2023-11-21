@@ -15,7 +15,21 @@ import {
 } from "@mui/material";
 
 const Requests = () => {
-  return <Layout></Layout>;
+  return (
+    <Layout>
+      <Stack position={"relative"} flex={1} p={2} spacing={2}>
+        <Stack
+          position={"sticky"}
+          direction={"row"}
+          spacing={2}
+          alignItems={"center"}
+        >
+          <Typography variant="h5">Requests</Typography>
+          <Box flex={1}></Box>
+        </Stack>
+      </Stack>
+    </Layout>
+  );
 };
 
 export default Requests;

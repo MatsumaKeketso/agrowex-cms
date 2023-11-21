@@ -141,7 +141,7 @@ const OrderDetails = () => {
     <Stack gap={2}>
       <Stack direction={"row"} alignItems={"center"}>
         <Stack flex={1} gap={1}>
-          <Typography variant="h4">Order Details</Typography>
+          <Typography variant="h6">Order Details</Typography>
           <Stack gap={1} direction={"row"} alignItems={"center"}>
             <Typography variant="body2">AGRO-1678451052830</Typography>
             <Tag style={{ alignSelf: "flex-start" }} color="red">
@@ -154,26 +154,34 @@ const OrderDetails = () => {
       <Divider />
       <Stack gap={2}>
         <Stack direction={"row"} gap={2} alignItems={"center"}>
-          <Typography fontWeight={"bold"}>Invoice Number</Typography>
+          <Typography fontWeight={"bold"} variant="subtitle2">
+            Invoice Number
+          </Typography>
           <Divider flexItem orientation="vertical" />
           <Typography>#323232323123</Typography>
         </Stack>
         <Stack direction={"row"} gap={2} alignItems={"center"}>
-          <Typography fontWeight={"bold"}>Date & Time</Typography>
+          <Typography fontWeight={"bold"} variant="subtitle2">
+            Date & Time
+          </Typography>
           <Divider flexItem orientation="vertical" />
           <Typography>10 Mar 2023 14:24 PM</Typography>
         </Stack>
         <Stack direction={"row"} gap={2} alignItems={"center"}>
-          <Typography fontWeight={"bold"}>Assigned Driver</Typography>
+          <Typography fontWeight={"bold"} variant="subtitle2">
+            Assigned Driver
+          </Typography>
           <Divider flexItem orientation="vertical" />
           <Button startIcon={<AddRounded />} size="small">
             Assign Driver
           </Button>
         </Stack>
       </Stack>
-      <Accordion elevation={0}>
+      <Accordion variant="outlined">
         <AccordionSummary>
-          <Typography variant="h6">Customer Details</Typography>
+          <Typography variant="subtitle1" fontWeight={"bold"}>
+            Customer Details
+          </Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Stack gap={2}>
@@ -203,7 +211,7 @@ const OrderDetails = () => {
           </Stack>
         </AccordionDetails>
       </Accordion>
-      <Divider />
+      {/* <Divider /> */}
       <Stack direction={"row"} gap={5} alignItems={"center"}>
         <Typography variant="h6" flex={1}>
           Products

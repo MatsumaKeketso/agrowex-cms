@@ -8,7 +8,7 @@ const oldMenu = {
 const initialState = {
   links: [
     // follow ANTD menu structure
-    { label: "Home", key: "home", icon: getNavIcon("home") },
+    { label: "Dashboard", key: "home", icon: getNavIcon("home") },
     { label: "Orders", key: "orders", icon: getNavIcon("orders") },
     { label: "Store", key: "store", icon: getNavIcon("store") },
     { label: "Products", key: "products", icon: getNavIcon("products") },

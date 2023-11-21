@@ -124,7 +124,7 @@ const Messages = () => {
               color="inherit"
               elevation={0}
               position="sticky"
-              sx={{ borderBottom: 1, borderColor: "divider" }}
+              sx={{ borderBottom: 1, borderColor: "divider", zIndex: 5 }}
             >
               <Stack direction={"row"} gap={2}>
                 <Tabs
@@ -150,16 +150,24 @@ const Messages = () => {
                 direction={"row"}
               >
                 <Stack width={400} height={"100%"} sx={{ overflowY: "auto" }}>
+                  <Input.Search placeholder="Search..." />
                   <List sx={{ height: "100%", overflowY: "auto" }}>
                     {inboxMessages.map((message, i) => {
                       return (
-                        <ListItem draggable key={i} divider dense>
-                          <ListItemAvatar>
-                            <Avatar>
-                              <MessageRounded />
-                            </Avatar>
-                          </ListItemAvatar>
+                        <ListItem
+                          draggable
+                          key={i}
+                          divider
+                          disablePadding
+                          dense
+                        >
                           <ListItemButton>
+                            <ListItemAvatar>
+                              <Avatar>
+                                <MessageRounded />
+                              </Avatar>
+                            </ListItemAvatar>
+
                             <ListItemText
                               primary={message.subject}
                               secondary={"Short Message..."}

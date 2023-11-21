@@ -141,7 +141,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
       <Toolbar variant="dense" sx={{ alignItems: "center" }}>
         <Box
           sx={{
-            display: { xs: "block", sm: "block", md: "none", lg: "none" },
+            display: { xs: "block", sm: "block", md: "block", lg: "none" },
           }}
         >
           <IconButton
@@ -164,7 +164,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
             direction={"row"}
             flex={1}
             sx={{
-              display: { xs: "none", sm: "none", md: "block", lg: "block" },
+              display: { xs: "none", sm: "none", md: "none", lg: "block" },
             }}
           >
             <ANTMenu
