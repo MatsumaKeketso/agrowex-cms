@@ -1,4 +1,3 @@
-
 import React from "react";
 import Layout from "../components/Layout";
 import {
@@ -18,7 +17,7 @@ import {
 const Drivers = () => {
   return (
     <Layout>
-       <Stack position={"relative"} flex={1} p={2} spacing={2}>
+      <Stack position={"relative"} flex={1} p={2} spacing={2}>
         <Stack
           position={"sticky"}
           direction={"row"}
@@ -31,6 +30,6 @@ const Drivers = () => {
       </Stack>
     </Layout>
   );
-}
+};
 
 export default Drivers;
