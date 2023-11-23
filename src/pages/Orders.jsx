@@ -486,7 +486,64 @@ const Orders = () => {
           </Stack>
           <Table
             style={{ height: "100%" }}
-            columns={columns}
+            columns={[
+              {
+                title: "Invoice Number",
+                width: 130,
+                dataIndex: "id",
+                key: "id",
+                fixed: "left",
+              },
+              {
+                title: "Customer",
+                width: 100,
+                dataIndex: "customer",
+                key: "customer",
+              },
+              {
+                title: "Location",
+                dataIndex: "location",
+                key: "1",
+                width: 150,
+              },
+              {
+                title: "Amount",
+                dataIndex: "amount",
+                key: "2",
+                width: 150,
+              },
+              {
+                title: "Date",
+                dataIndex: "date",
+                key: "3",
+                width: 150,
+              },
+              {
+                title: "Status",
+                dataIndex: "status",
+                key: "4",
+                width: 150,
+                render: () => (
+                  <Stack>
+                    <Tag
+                      style={{ alignSelf: "flex-start" }}
+                      color={generateRandomState().color}
+                    >
+                      {generateRandomState().state}
+                    </Tag>
+                  </Stack>
+                ),
+              },
+              {
+                title: "Actions",
+                key: "operation",
+                width: 150,
+                fixed: "right",
+                render: (record) => {
+                  return <AssignDriver setOpen={setOpen} record={record} />;
+                },
+              },
+            ]}
             dataSource={data}
             scroll={{ x: 1500, y: 700 }}
           />
