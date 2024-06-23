@@ -21,7 +21,6 @@ const Assign = () => {
             const profile = { ...PManagers[uid], uid: uid }
             setProfiles(prev => [...prev, { profile: profile, label: `${profile.name} | ${profile.department}`, value: profile.name }])
         })
-        console.log(profiles);
     }, [])
 
     return (
@@ -40,7 +39,13 @@ const AssignOM = () => {
 }
 const OfftakeDetails = (props) => {
     const { data } = props;
-    const offtake = useSelector((state) => state.offtake)
+    const offtake = useSelector((state) => state.offtake?.active);
+
+    const dispatch = useDispatch()
+    const unassign = () => {
+        const unassigned = { ...offtake.active, assigned: null }
+        dispatch(setActiveOfftake(unassigned))
+    }
     return (
         <Stack spacing={3}>
             <Stack>
@@ -48,15 +53,16 @@ const OfftakeDetails = (props) => {
                     <Stack flex={1}>
                         <Typography variant='h4'>Offtake Details</Typography>
                     </Stack>
-                    {offtake?.active?.assigned && (<Persona user={offtake?.active?.assigned} />)}
-                    {!offtake?.active?.assigned && (<Assign />)}
+                    {offtake?.assigned && (<Persona user={offtake?.assigned} onUnsasign={unassign} />)}
+                    {!offtake?.assigned && (<Assign />)}
                 </Stack>
             </Stack>
             <Stack spacing={2}>
                 <Stack direction={'row'} gap={2}>
-                    <Statistics inputMode={true} title="Active Users" value={112893} />
-                    <Statistics input={true} title="Active Users" value={112893} />
-                    <Statistics input={true} title="Active Users" value={112893} />
+                    <Statistics inputMode={true} title="Invoice Number" value={112893} />
+                    <Statistics title="Start Date & Time" value={112893} />
+                    <Statistics title="Sue Date & Time" value={112893} />
+                    <Statistics title="Contract Type" value={offtake?.contractType} />
                 </Stack>
 
                 <Stack>
@@ -72,7 +78,7 @@ const OfftakeDetails = (props) => {
                     </Collapse>
                 </Stack>
 
-                <AppBar sx={{ borderRadius: 5 }} variant='outlined' position='sticky' >
+                <AppBar sx={{ borderRadius: 5 }} variant='outlined' position='relative' >
                     <Toolbar variant='dense'  >
                         <Typography>Product details</Typography>
                     </Toolbar>
