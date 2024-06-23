@@ -26,6 +26,7 @@ import Drivers from "./pages/Drivers";
 import Reconcile from "./pages/Reconcile";
 import FAQs from "./pages/FAQs";
 import Requests from "./pages/Requests";
+import Offtake from "./pages/Offtakes";
 const app = initializeApp(firebaseConfig);
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -97,6 +98,10 @@ const router = createBrowserRouter([
     element: <Products />,
   },
   {
+    path: "/offtakes",
+    element: <Offtake />,
+  },
+  {
     path: "/account",
     element: <Home />,
   },
@@ -142,7 +147,7 @@ root.render(
     <Provider store={store}>
       <ConfigProvider
         theme={{
-          token: { colorPrimary: theme.palette.primary.main },
+          token: { colorPrimary: theme.palette.primary.main, "borderRadius": 30 },
           components: {
             Table: {
               headerBg: theme.palette.primary.main,

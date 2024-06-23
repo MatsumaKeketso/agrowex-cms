@@ -24,6 +24,9 @@ export const getNavIcon = (name) => {
     case "store":
       return <StorefrontRoundedIcon />;
       break;
+    case "offtakes":
+      return <StorefrontRoundedIcon />;
+      break;
     case "products":
       return <ShoppingCartRoundedIcon />;
       break;
