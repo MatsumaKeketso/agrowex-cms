@@ -64,7 +64,6 @@ const OfftakeDetails = (props) => {
                     <Statistics title="Sue Date & Time" value={112893} />
                     <Statistics title="Contract Type" value={offtake?.contractType} />
                 </Stack>
-
                 <Stack>
                     <Collapse>
                         <Collapse.Panel header={<Stack direction={'row'} alignItems={'center'} gap={2}><Person2Outlined /> <Typography>Contact Details</Typography></Stack>}>
@@ -104,7 +103,7 @@ const OfftakeDetails = (props) => {
                         </Stack>
                         <Stack gap={2}>
                             <Stack>
-                                <Form.Item name="comment" label="Comments">
+                                <Form.Item rules={[{required: true}]} name="comment" label="Comments">
                                     <Input.TextArea />
                                 </Form.Item>
                             </Stack>

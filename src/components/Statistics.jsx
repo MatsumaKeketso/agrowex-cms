@@ -26,7 +26,7 @@ const Statistics = ({ inputMode, title, value, disabled }) => {
             {inputMode && (
                 <Stack spacing={1}>
                     {/* <Typography color={colors.grey[500]} sx={{ py: 0.3 }} variant=''>{title}</Typography> */}
-                    <Form.Item value={value} name={formatText(title)} label={title}>
+                    <Form.Item rules={[{required: true}]} value={value} name={formatText(title)} label={title}>
                         <Input size='middle' disabled={disabled} />
                     </Form.Item>
                 </Stack>
