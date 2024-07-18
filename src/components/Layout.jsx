@@ -15,7 +15,7 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
-import { Drawer, Space, Menu as ANTMenu } from "antd";
+import { Drawer, Space, Menu as ANTMenu, Tag } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChatBubbleRounded,
@@ -90,10 +90,10 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   const [current, setCurrent] = useState("mail");
   const [sideNavLinks, setSideNavLinks] = useState([]);
   const navigation = useSelector((state) => state.navigation);
-  const handleMenu = (event) => {};
+  const handleMenu = (event) => { };
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const handleClose = () => {};
+  const handleClose = () => { };
   const showDrawer = () => {
     setOpen(true);
   };
@@ -109,7 +109,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
     }
   };
 
-  useEffect(() => {}, []);
+  useEffect(() => { }, []);
   return (
     <AppBar
       // variant="outlined"
@@ -186,54 +186,64 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
               <MessageRounded />
             </IconButton>
           </Badge>
-
-          <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            sx={{ alignSelf: "flex-start", alignItems: "center" }}
-            onClick={handleMenu}
-            color="inherit"
-          >
-            <AccountCircle />
-          </IconButton>
-          <Stack spacing={-1} alignItems={"center"}>
-            <Typography variant="h6">Jane Doe</Typography>
-            <Typography color={"GrayText"} variant="overline">
-              Procurement
-            </Typography>
-          </Stack>
-          {/* <Menu
-            id="menu-appbar"
-            anchorOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-
-            keepMounted
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleClose}>Profile</MenuItem>
-            <MenuItem onClick={handleClose}>My account</MenuItem>
-          </Menu> */}
+          <ProfileMenu />
         </Stack>
       </Toolbar>
     </AppBar>
   );
 };
+const ProfileMenu = () => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return (
+    <Stack direction={'row'} gap={1}>
+      <IconButton
+        sx={{ alignSelf: 'flex-start' }}
+        id="basic-button"
+        aria-controls={open ? 'basic-menu' : undefined}
+        aria-haspopup="true"
+        aria-expanded={open ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        <Avatar />
+      </IconButton>
+      <Stack>
+        <Typography variant="h6">Jane Doe</Typography>
+        <Tag style={{alignSelf: 'flex-start'}}>admin</Tag>
+      </Stack>
+      <Menu
+        id="basic-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        MenuListProps={{
+          'aria-labelledby': 'basic-button',
+        }}
+      >
+        <MenuItem onClick={handleClose}>Profile</MenuItem>
+        <MenuItem onClick={handleClose}>My account</MenuItem>
+        <MenuItem onClick={handleClose}>Logout</MenuItem>
+      </Menu>
+    </Stack>
+  );
+}
 const Layout = (props) => {
-  const { navigateTo } = props;
+  const { navigateTo, scroll = true } = props;
   const navigation = useSelector((state) => state.navigation);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
     const splitter = location.pathname.split("/");
+    console.log(splitter[1]);
+
     if (splitter[1]) {
       dispatch(setActiveNav(splitter[1]));
     } else {
@@ -255,7 +265,7 @@ const Layout = (props) => {
 
       <Stack
         m={{ xs: 0, sm: 1, md: 2, lg: 5 }}
-        sx={{ overflowY: "auto", borderRadius: 3, bgcolor: "white" }}
+        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "white" }}
         flex={1}
         height={"100%"}
         borderRadius={{ xs: 0, sm: 10, md: 20, lg: 30 }}

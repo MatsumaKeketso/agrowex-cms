@@ -1,9 +1,10 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSyD2BKC1Y6DhiQyEvc88R-LV0gEDwqHtcWA",
-  authDomain: "agrowexcms.firebaseapp.com",
-  projectId: "agrowexcms",
-  storageBucket: "agrowexcms.appspot.com",
-  messagingSenderId: "101486281284",
-  appId: "1:101486281284:web:c8625369793baefc413211",
-  measurementId: "G-FW5V3W2YSC",
+  apiKey: "AIzaSyCzjvvN16IZ45NW_dGVR5OggrzG8DM2-ck",
+  authDomain: "agrowex.firebaseapp.com",
+  databaseURL: "https://agrowex.firebaseio.com",
+  projectId: "agrowex",
+  storageBucket: "agrowex.appspot.com",
+  messagingSenderId: "194964999992",
+  appId: "1:194964999992:web:c0939b091d7fc4fc91bbcd",
+  measurementId: "G-YVE960ZMGR"
 };

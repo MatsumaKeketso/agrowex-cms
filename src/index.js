@@ -27,7 +27,8 @@ import Reconcile from "./pages/Reconcile";
 import FAQs from "./pages/FAQs";
 import Requests from "./pages/Requests";
 import Offtake from "./pages/Offtakes";
-const app = initializeApp(firebaseConfig);
+import OfftakeChat from "./pages/OfftakeChat";
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
   palette: {
@@ -102,6 +103,10 @@ const router = createBrowserRouter([
     element: <Offtake />,
   },
   {
+    path: "/offtakes/:offtake_id/negotiation",
+    element: <OfftakeChat />,
+  },
+  {
     path: "/account",
     element: <Home />,
   },
@@ -154,6 +159,9 @@ root.render(
               headerColor: theme.palette.common.white,
               headerSortActiveBg: theme.palette.primary.light,
             },
+            Statistic: {
+              contentFontSize: 18
+            }
           },
         }}
       >

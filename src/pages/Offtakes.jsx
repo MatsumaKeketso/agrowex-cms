@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import {
     Avatar,
@@ -12,21 +12,28 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { Table, Button, Badge, Tag, Drawer } from "antd";
+import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails from "../components/OfftakeDetails";
 import { setActiveOfftake } from "../services/offtake/offtakeSlice";
 import { PManagers } from "../database/db-data";
+import { OfftakeService } from "../db/offtake-service";
+import StatusTag from "../components/StatusTag";
+import { ArrowDownwardRounded, ChatBubble, RefreshRounded } from "@mui/icons-material";
+import { useNavigate, useParams } from "react-router-dom";
 const _columns = [
     {
         title: 'Customer Id',
-        dataIndex: 'customerId',
-        key: 'customerId',
+        dataIndex: 'offtake_id',
+        key: 'offtake_id',
+        render: (v, r) => {
+            return <Typography noWrap={true} variant="body2">{v}</Typography>
+        }
     },
     {
         title: 'Customer',
-        dataIndex: 'customer',
-        key: 'customer',
+        dataIndex: 'name',
+        key: 'name',
     },
     // {
     //     title: 'Amount',
@@ -34,14 +41,14 @@ const _columns = [
     //     key: 'amount',
     // },
     {
-        title: 'Start Date',
-        dataIndex: 'startDate',
-        key: 'startDate',
+        title: 'Delivery Date',
+        dataIndex: 'delivery_date',
+        key: 'delivery_date',
     },
     {
-        title: 'Due Date',
-        dataIndex: 'dueDate',
-        key: 'dueDate',
+        title: 'Order Date',
+        dataIndex: 'order_date',
+        key: 'order_date',
     },
     // { // removing reference, can be searched for (maybe)
     //     title: 'Reference',
@@ -49,101 +56,202 @@ const _columns = [
     //     key: 'refernce',
     // },
     {
-        title: 'ContractType',
-        dataIndex: 'contractType',
-        key: 'contractType',
+        title: 'Contract Type',
+        dataIndex: 'supply_duration',
+        key: 'supply_duration',
     },
+
+
+];
+const formItemLayout = {
+    labelCol: {
+        xs: {
+            span: 5,
+        },
+        sm: {
+            span: 7,
+        },
+    },
+    wrapperCol: {
+        xs: {
+            span: 24,
+        },
+        sm: {
+            span: 24,
+        },
+    },
+};
+const Offtake = () => {
+    const [openOfftake, setOpenOfftake] = useState(false);
+    const [openConfirm, setOpenConfirm] = useState(false);
+    const [offtakes, setOfftakes] = useState([])
+    const [offtakeBackup, setOfftakeBackup] = useState({})
+    const navigate = useNavigate();
+    const params = useParams()
+    const dispatch = useDispatch();
+    const [offtake_id, setOfftake_id] = useState('');
+    const offtake = useSelector((state) => state?.active);
+
+    const [confirmForm] = Form.useForm()
+    const offtakeUpdated = useSelector((state) => state?.updated);
+    const columns = [..._columns,
     {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
         render: (v, r) => {
             return (<Stack sx={{ alignItems: 'flex-start' }}>
-                <Tag >{r.status}</Tag>
+                {r.status ? (<StatusTag status={r.status} />) : (<StatusTag status="inprogress" />)}
             </Stack>);
         }
-    },
-
-];
-const data = [
-    {
-        customerId: 'AGRO-1678451052830',
-        customer: 'Manana Inc',
-        startDate: '02/06/24',
-        dueDate: '02/09/24',
-        contractType: 'On Demand Supply',
-        status: 'New',
-
-    },
-    {
-        customerId: 'AGRO-1678451052831',
-        customer: 'FarmFresh Ltd',
-        startDate: '01/15/24',
-        dueDate: '04/15/24',
-        contractType: 'Fixed Supply',
-        status: 'Pending',
-
-    },
-    {
-        customerId: 'AGRO-1678451052832',
-        customer: 'GreenGrocers Co.',
-        startDate: '03/10/24',
-        dueDate: '06/10/24',
-        contractType: 'On Demand Supply',
-        status: 'Completed',
-
-    },
-    {
-        customerId: 'AGRO-1678451052833',
-        customer: 'Organic Farms LLC',
-        startDate: '05/20/24',
-        dueDate: '08/20/24',
-        contractType: 'Fixed Supply',
-        status: 'In Progress',
-        assigned: PManagers["12AB34XY"]
-
-    },
-    {
-        customerId: 'AGRO-1678451052834',
-        customer: 'HealthyHarvest Inc',
-        startDate: '04/01/24',
-        dueDate: '07/01/24',
-        contractType: 'On Demand Supply',
-        status: 'Cancelled',
-
-    }
-];
-const Offtake = () => {
-    const [openOfftake, setOpenOfftake] = useState(false);
-    const dispatch = useDispatch()
-    const offtake = useSelector((state) => state.offtake)
-    const columns = [..._columns, {
+    }, {
         title: 'Actions',
         dataIndex: 'actions',
         fixed: 'right',
+        width: 130,
         key: 'actions',
         render: (v, r) => {
-            return <Stack>
+            return (<Stack>
                 <Button onClick={() => {
                     dispatch(setActiveOfftake(r))
+                    dispatch(setActiveOfftake(r))
+                    setOfftakeBackup(r)
                     setOpenOfftake(true)
                 }}>View More</Button>
-            </Stack>
+            </Stack>)
         }
     },]
+    const closeDrawer = (id) => {
+        setOpenOfftake(false)
+        refresh()
+    }
+    const setOfftakeId = (id) => {
+        setOfftake_id(id)
+    }
+    const refresh = () => {
+        setOfftakes([])
+        OfftakeService.getOfftakes().then(data => {
+            setOfftakes(data)
+        })
+    }
+    useEffect(() => {
+        console.log('====================================');
+        console.log(offtake);
+        console.log('====================================');
+        OfftakeService.getOfftakes().then(data => {
+            setOfftakes(data)
+            setOpenOfftake(false)
+        })
+    }, [offtake])
     return (
         <Layout>
-            <Drawer size="large" title={offtake?.active?.status || ""} onClose={() => {
-                dispatch(setActiveOfftake({}))
+
+
+
+
+            {/* Confirm Assessment */}
+            <Modal title="Confirm Assessment" open={openConfirm} onOk={() => {
+                confirmForm.submit()
+            }} onCancel={() => {
+                setOpenConfirm(false)
+            }}>
+                <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+                    <Typography variant="h4">Assessment confirmation</Typography>
+                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+                        <StatusTag status={'inprogress'} />
+                    </Stack>
+                    <ArrowDownwardRounded />
+                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+                        <StatusTag status={'negotiation'} />
+                    </Stack>
+                    <Typography variant="subtitle2">
+                        Please complete the checklist to confirm the required assessment requirements for the offtake opportunity
+                    </Typography>
+                    <Stack flex={1} alignItems={'start'}>
+                        <Form layout="horizontal" form={confirmForm} onFinish={(v) => {
+                            // "/offtakes/:offtake_id/negotiation"
+                            OfftakeService.getOfftake(offtake_id).then(offtake => {
+                                OfftakeService.updateOfftake(offtake_id, { ...offtake, confirmed: v, status: 'negotiation' }).then(() => {
+                                    navigate(`/offtakes/${offtake_id}/negotiation`);
+                                })
+                            })
+                        }}>
+
+                            <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value) {
+                                        return Promise.reject('Please confirm offtake details before proceeding.');
+                                    }
+                                    return Promise.resolve();
+                                },
+                            }),]} name="confirm_details" label="Offtake details">
+                                <Switch />
+                            </Form.Item>
+                            <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value) {
+                                        return Promise.reject('Confirm required documents');
+                                    }
+                                    return Promise.resolve();
+                                },
+                            }),]} name="confirm_required_documents" label="Required documents">
+                                <Switch />
+                            </Form.Item>
+                            <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value) {
+                                        return Promise.reject('Confirm that\n the Offtake has met the assessment requirements."');
+                                    }
+                                    return Promise.resolve();
+                                },
+                            }),]} name="successfuly_met_requirements" tooltip="I confirm that the Offtake has met the assessment requirements." label="Requirements met">
+                                <Switch />
+                            </Form.Item>
+
+                        </Form>
+                    </Stack>
+
+                </Stack>
+            </Modal>
+            {/* End Confirm assessment */}
+
+
+
+
+            {/* Offtake Details */}
+            <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)
+                setTimeout(() => {
+                    dispatch(setActiveOfftake({}));
+                }, 1000);
             }} open={openOfftake} extra={
                 <Stack direction={'row'} gap={1}>
-                    <Button type="link" danger={true} onClick={() => { }}>Cancel Request</Button>
-                    <Button onClick={() => { }}>
+                    <Popconfirm title="Not Viable" description="Mark this offtake as non viable, meaning we cannot accommodate this request, proceed?" onConfirm={() => {
+
+                    }}>
+                        <Button type='text' danger>Not Viable</Button>
+                    </Popconfirm>{/* <Button onClick={() => { }}>
                         Pipeline
-                    </Button>
-                </Stack>
-            } ><OfftakeDetails /></Drawer>
+                    </Button> */}
+                    {offtakeBackup?.status === 'negotiation' ? (<Button type="primary" onClick={() => {
+                        navigate(`/offtakes/${offtakeBackup.offtake_id}/negotiation`);
+                    }} > Open Chat</Button>) : null}
+                    {!offtakeBackup?.status && (<Button onClick={() => {
+                        setOpenOfftake(false)
+                        setOpenConfirm(true)
+
+                    }
+                    } type="primary">Confirm Assessment</Button>
+                    )}
+
+                </Stack>}>
+                <OfftakeDetails closeDrawer={closeDrawer} setOfftakeId={setOfftakeId} />
+            </Drawer >
+
+
+            {/* End Offtake details */}
             <Stack position={"relative"} flex={1} p={2} spacing={2}>
                 <Stack
                     position={"sticky"}
@@ -153,16 +261,17 @@ const Offtake = () => {
                 >
                     <Typography variant="h5">Offtakes</Typography>
                     <Box flex={1}></Box>
+
                 </Stack>
                 <Table
                     size="small"
                     style={{ height: "100%" }}
                     columns={columns}
-                    dataSource={data}
-                    scroll={{ x: 1500, y: 700 }}
+                    dataSource={offtakes}
+                    scroll={{ y: 700 }}
                 />
             </Stack>
-        </Layout>
+        </Layout >
     );
 };
 

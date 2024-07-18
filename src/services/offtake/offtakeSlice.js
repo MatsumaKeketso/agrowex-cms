@@ -1,5 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
-const initialState = {};
+const initialState = {
+  active: {},
+  updated: false
+};
 export const offtakeSlice = createSlice({
   name: "offtake",
   initialState,
@@ -7,8 +10,11 @@ export const offtakeSlice = createSlice({
     setActiveOfftake: (state, action) => {
       state.active = action.payload;
     },
+    offtakeUpdateSuccess: (state, action) => {
+      state.updated = action;
+    }
   },
 });
 
-export const { setActiveOfftake } = offtakeSlice.actions;
+export const { setActiveOfftake, offtakeUpdateSuccess } = offtakeSlice.actions;
 export default offtakeSlice.reducer;
