@@ -1,11 +1,9 @@
 import { getDoc, getDocs, getFirestore, onSnapshot, query } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
-import { firebaseConfig } from "../services/fc";
-import { initializeApp } from "firebase/app";
+
 import { useSelector } from "react-redux";
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const offtakesCollection = collection(db, "offtakes");
+import { firestoreDB } from "../services/authService";
+const offtakesCollection = collection(firestoreDB, "offtakes");
 
 
 export const OfftakeService = {
@@ -22,7 +20,7 @@ export const OfftakeService = {
     return offtakes
   },
   getOfftake: async (offtake_id) => {
-    const docRef = doc(db, "offtakes", offtake_id);
+    const docRef = doc(firestoreDB, "offtakes", offtake_id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data()
@@ -37,7 +35,7 @@ export const OfftakeService = {
    * @param {*} offtake_data 
    */
   updateOfftake: async (offtake_id, offtake_data) => {
-    const offtakeRef = doc(db, 'offtakes', offtake_id);
+    const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
   }
 }

@@ -21,6 +21,7 @@ import { OfftakeService } from "../db/offtake-service";
 import StatusTag from "../components/StatusTag";
 import { ArrowDownwardRounded, ChatBubble, RefreshRounded } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
+import { AuthService } from "../services/authService";
 const _columns = [
     {
         title: 'Customer Id',
@@ -135,17 +136,18 @@ const Offtake = () => {
         })
     }
     useEffect(() => {
-        console.log('====================================');
         console.log(offtake);
-        console.log('====================================');
         OfftakeService.getOfftakes().then(data => {
             setOfftakes(data)
             setOpenOfftake(false)
+        }).catch(err => {
+            console.log('====================================');
+            console.log(err);
+            console.log('====================================');
         })
     }, [offtake])
     return (
         <Layout>
-
 
 
 
@@ -172,9 +174,11 @@ const Offtake = () => {
                     <Stack flex={1} alignItems={'start'}>
                         <Form layout="horizontal" form={confirmForm} onFinish={(v) => {
                             // "/offtakes/:offtake_id/negotiation"
-                            OfftakeService.getOfftake(offtake_id).then(offtake => {
-                                OfftakeService.updateOfftake(offtake_id, { ...offtake, confirmed: v, status: 'negotiation' }).then(() => {
-                                    navigate(`/offtakes/${offtake_id}/negotiation`);
+                            AuthService.getUser().then(user => {
+                                OfftakeService.getOfftake(offtake_id).then(offtake => {
+                                    OfftakeService.updateOfftake(offtake_id, { ...offtake, confirmed: v, status: 'negotiation', pm: user.uid }).then(() => {
+                                        navigate(`/offtakes/${offtake_id}/negotiation`);
+                                    })
                                 })
                             })
                         }}>
@@ -219,7 +223,6 @@ const Offtake = () => {
 
 
 
-
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)
@@ -238,6 +241,9 @@ const Offtake = () => {
                     {offtakeBackup?.status === 'negotiation' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/negotiation`);
                     }} > Open Chat</Button>) : null}
+                    {offtakeBackup?.status === 'planning' ? (<Button type="primary" onClick={() => {
+                        navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
+                    }} > Open Production Schedule</Button>) : null}
                     {!offtakeBackup?.status && (<Button onClick={() => {
                         setOpenOfftake(false)
                         setOpenConfirm(true)
@@ -249,9 +255,10 @@ const Offtake = () => {
                 </Stack>}>
                 <OfftakeDetails closeDrawer={closeDrawer} setOfftakeId={setOfftakeId} />
             </Drawer >
-
-
             {/* End Offtake details */}
+
+
+
             <Stack position={"relative"} flex={1} p={2} spacing={2}>
                 <Stack
                     position={"sticky"}
@@ -271,6 +278,9 @@ const Offtake = () => {
                     scroll={{ y: 700 }}
                 />
             </Stack>
+
+
+
         </Layout >
     );
 };

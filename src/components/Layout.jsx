@@ -22,7 +22,10 @@ import {
   MailOutlined,
   MessageRounded,
 } from "@mui/icons-material";
-const Logo = () => (
+import { AuthService } from "../services/authService";
+import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
+import { ProfileService } from "../services/profileService";
+export const Logo = () => (
   <svg
     width="85"
     height="49"
@@ -109,7 +112,8 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
     }
   };
 
-  useEffect(() => { }, []);
+  useEffect(() => {
+  }, []);
   return (
     <AppBar
       // variant="outlined"
@@ -193,7 +197,10 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   );
 };
 const ProfileMenu = () => {
+  const { online, profile } = useSelector((state) => state.user)
   const [anchorEl, setAnchorEl] = useState(null);
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -212,11 +219,11 @@ const ProfileMenu = () => {
         aria-expanded={open ? 'true' : undefined}
         onClick={handleClick}
       >
-        <Avatar />
+        <Avatar src={profile.img} />
       </IconButton>
       <Stack>
-        <Typography variant="h6">Jane Doe</Typography>
-        <Tag style={{alignSelf: 'flex-start'}}>admin</Tag>
+        <Typography variant="h6">{profile.fullnames}</Typography>
+        <Tag style={{ alignSelf: 'flex-start' }}>{profile.role}</Tag>
       </Stack>
       <Menu
         id="basic-menu"
@@ -227,9 +234,15 @@ const ProfileMenu = () => {
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem onClick={handleClose}>Profile</MenuItem>
-        <MenuItem onClick={handleClose}>My account</MenuItem>
-        <MenuItem onClick={handleClose}>Logout</MenuItem>
+        <MenuItem onClick={handleClose}>My Account</MenuItem>
+        <MenuItem onClick={() => {
+          AuthService.signout().then(() => {
+            dispatch(updateProfile({}))
+            dispatch(updateAuth({}))
+            dispatch(toggleOnline(false))
+            navigate('/');
+          })
+        }}>Logout</MenuItem>
       </Menu>
     </Stack>
   );
@@ -237,12 +250,19 @@ const ProfileMenu = () => {
 const Layout = (props) => {
   const { navigateTo, scroll = true } = props;
   const navigation = useSelector((state) => state.navigation);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
+    AuthService.getUser().then((user) => {
+      dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }))
+      ProfileService.getProfile(user.uid).then(profile => {
+        dispatch(updateProfile(profile))
+        dispatch(toggleOnline(true))
+      })
+    })
     const splitter = location.pathname.split("/");
-    console.log(splitter[1]);
 
     if (splitter[1]) {
       dispatch(setActiveNav(splitter[1]));
@@ -264,7 +284,7 @@ const Layout = (props) => {
       <MenuAppBar links={navigation.links} active={navigation.active} />
 
       <Stack
-        m={{ xs: 0, sm: 1, md: 2, lg: 5 }}
+        m={{ xs: 0, sm: 1 }}
         sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "white" }}
         flex={1}
         height={"100%"}

@@ -12,6 +12,7 @@ import { CardMembership, Person2Outlined } from '@mui/icons-material';
 import Documents from './Documents';
 import StatusTag from './StatusTag';
 import { OfftakeService } from '../db/offtake-service';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
     const offtake = useSelector((state) => state.offtake)
@@ -42,7 +43,11 @@ const AssignOM = () => {
 const OfftakeDetails = (props) => {
     const [disableForm, setdisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const [page, setPage] = useState("")
+    const navigate = useNavigate()
     const dispatch = useDispatch();
+    const location = useLocation();
+    const { offtake_id } = useParams()
     const [offtakeForm] = Form.useForm();
     const { data, setOfftake, closeDrawer, setOfftakeId } = props;
     const offtake = useSelector((state) => state.offtake?.active);
@@ -61,7 +66,7 @@ const OfftakeDetails = (props) => {
         delivery_frequency,
         supply_duration,
         quality_grade,
-        offtake_id,
+        // offtake_id,
         price,
         comment
     } = useSelector((state) => state.offtake?.active);
@@ -71,6 +76,16 @@ const OfftakeDetails = (props) => {
     }
 
     useEffect(() => {
+        const locations = location.pathname.split('/')
+        console.log(locations);
+        locations.map((_, i) => {
+            if (i === 3) {
+                setPage(locations[i])
+            }
+        })
+        if (!offtake_id) {
+            navigate('/offtakes')
+        }
         setOfftakeId(offtake_id)
         offtakeForm.setFieldValue(formatText("Quantity"), quantity)
         offtakeForm.setFieldValue(formatText("Delivery Frequency"), delivery_frequency)
@@ -99,6 +114,20 @@ const OfftakeDetails = (props) => {
                 </Stack>
             </Stack>
             <Stack spacing={2}>
+
+                {page === 'schedule' && (
+                    <Stack gap={2}>
+                        <Divider >Production</Divider>
+                        <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                            <Button>Production Cost</Button>
+                            <Button type='primary'>Production Plan</Button>
+                            <Button onClick={() => {
+                                 navigate(`/offtakes/${offtake_id}/negotiation`);
+                            }}>Negotiation Chats</Button>
+                        </Stack>
+                        <Divider />
+                    </Stack>
+                )}
                 <Stack direction={'row'} gap={2}>
                     {/* <Statistics inputMode={true} title="Invoice Number" value={112893} /> */}
                     <Statistics title="Start Date & Time" value={order_date} />
@@ -129,6 +158,8 @@ const OfftakeDetails = (props) => {
                     <Statistics title={'Production Method'} value={production_method} />
                     <Statistics title={'Country of Origin'} value={country} />
                 </Stack>
+
+
                 <Form form={offtakeForm} layout='vertical' onFinish={(v) => {
                     // v = new form properties, default set to merge
                     const a = { ...offtake, ...v }
@@ -136,7 +167,9 @@ const OfftakeDetails = (props) => {
 
                     OfftakeService.updateOfftake(offtake_id, a).then(() => {
                         // OfftakeService.getOfftake(offtake_id).then(data => {
-                        closeDrawer(offtake_id)
+                        if (closeDrawer) {
+                            closeDrawer(offtake_id)
+                        }
                         // })
                         dispatch(offtakeUpdateSuccess(true))
                         setTimeout(() => {
