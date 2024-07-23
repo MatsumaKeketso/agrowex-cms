@@ -30,6 +30,7 @@ import Offtake from "./pages/Offtakes";
 import OfftakeChat from "./pages/OfftakeChat";
 import ProductionSceduling from "./pages/ProductionScheduling";
 import Signin from "./pages/Signin";
+import ProductionCost from "./pages/ProductionCost";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -109,12 +110,16 @@ const router = createBrowserRouter([
     element: <Offtake />,
   },
   {
-    path: "/offtakes/:offtake_id/negotiation",
+    path: "/offtakes/:offtake_id/chat",
     element: <OfftakeChat />,
   },
   {
     path: "/offtakes/:offtake_id/schedule",
     element: <ProductionSceduling />,
+  },
+  {
+    path: "/offtakes/:offtake_id/costing",
+    element: <ProductionCost />,
   },
   {
     path: "/account",

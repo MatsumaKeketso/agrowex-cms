@@ -6,7 +6,8 @@ const colors = {
   planning: '#62ABF5',
   active: 'success',
   published: '#54B054',
-  notViable: '#3F1011'
+  notViable: '#3F1011',
+  submitted: '#EAA300'
 }
 const StatusTag = (props) => {
   const { status } = props;

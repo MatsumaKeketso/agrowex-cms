@@ -5,7 +5,7 @@ import React from 'react'
 const { Dragger } = Upload;
 function Documents({ upload }) {
     return (
-        <Stack overflow={'hidden'} borderRadius={2} >
+        <Stack minWidth={200} maxWidth={200} overflow={'hidden'} borderRadius={2} >
             {upload ? (
                 <Dragger style={{ maxWidth: 225, height: 176, objectFit: 'cover' }} >
                     <IconButton disabled>
@@ -19,7 +19,7 @@ function Documents({ upload }) {
                 </Dragger>
             ) : (
                 <Image src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
-                    style={{ minWidth: 125, maxWidth: 125, height: 176, objectFit: 'cover' }} />
+                    style={{ minWidth: '100%', height: 176, objectFit: 'cover' }} />
             )}
 
         </Stack>

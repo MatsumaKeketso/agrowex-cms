@@ -43,6 +43,7 @@ const AssignOM = () => {
 const OfftakeDetails = (props) => {
     const [disableForm, setdisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const [offtakeBackup, setOfftakeBackup] = useState({})
     const [page, setPage] = useState("")
     const navigate = useNavigate()
     const dispatch = useDispatch();
@@ -70,6 +71,7 @@ const OfftakeDetails = (props) => {
         price,
         comment
     } = useSelector((state) => state.offtake?.active);
+    const ot = useSelector((state) => state.offtake?.active);
     const unassign = () => {
         const unassigned = { ...offtake.active, assigned: null }
         dispatch(setActiveOfftake(unassigned))
@@ -95,6 +97,11 @@ const OfftakeDetails = (props) => {
         offtakeForm.setFieldValue("comment", comment || null)
 
     }, [offtake])
+    useEffect(() => {
+        console.log('====================================');
+        console.log(ot);
+        console.log('====================================');
+    }, [])
     return (
         <Stack spacing={3}>
             {contextHolder}
@@ -106,7 +113,7 @@ const OfftakeDetails = (props) => {
                             <Typography variant='caption'>{offtake_id}</Typography>
 
                         </Stack>
-                        {status ? (<StatusTag status={status} />) : (<StatusTag status="inprogress" />)}
+                        {ot.status ? (<StatusTag status={ot.status} />) : (<StatusTag status="inprogress" />)}
 
                     </Stack>
                     {/* {offtake?.assigned && (<Persona user={offtake?.assigned} onUnsasign={unassign} />)} */}
@@ -115,15 +122,19 @@ const OfftakeDetails = (props) => {
             </Stack>
             <Stack spacing={2}>
 
-                {page === 'schedule' && (
+                {status === 'planning' && (
                     <Stack gap={2}>
                         <Divider >Production</Divider>
                         <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                            <Button>Production Cost</Button>
-                            <Button type='primary'>Production Plan</Button>
-                            <Button onClick={() => {
-                                 navigate(`/offtakes/${offtake_id}/negotiation`);
-                            }}>Negotiation Chats</Button>
+                            <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/costing`);
+                            }}>Production Cost</Button>
+                            <Button type={page === 'negotiation' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                            }}>Production Plan</Button>
+                            <Button type={page === 'negotiation' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/chat`);
+                            }}>Chat</Button>
                         </Stack>
                         <Divider />
                     </Stack>
@@ -202,7 +213,7 @@ const OfftakeDetails = (props) => {
                     </Stack>
                 </Form>
                 <Divider></Divider>
-                <Stack direction={'row'} alignItems={'center'} gap={1}>
+                <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
                     <Documents />
                     <Documents />
                     <Documents />

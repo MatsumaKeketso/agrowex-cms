@@ -7,84 +7,51 @@ import { OfftakeService } from '../db/offtake-service'
 import { useDispatch } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Space } from 'antd'
-import { CloseOutlined, CloseRounded } from '@mui/icons-material'
+import { Card, DatePicker, Form, Input, message, Modal, Space } from 'antd'
+import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
+import StatusTag from '../components/StatusTag'
 dayjs.extend(toObject);
 const ProductionScheduling = () => {
   const [offtake, setOfftake] = useState({})
+  const [next, setNext] = useState(false)
   const { offtake_id } = useParams()
-  const [steps, setSteps] = useState([]);
-  const [newStep, setNewStep] = useState('');
   const [scheduleForm] = Form.useForm()
   const [messageApi, contextHolder] = message.useMessage();
-  const handleDateChange = (date, dateString, key) => {
-    console.log(date, dateString, key);
-  };
-  const addStep = () => {
-    if (newStep) {
-      setSteps([...steps, { name: newStep, startWeek: 1, endWeek: 2 }]);
-      setNewStep('');
-    }
-  };
-  const updateStep = (index, key, value) => {
-    const updatedSteps = [...steps];
-    updatedSteps[index][key] = value;
-    setSteps(updatedSteps);
-  };
-  const generateOutputObject = () => {
-    return {
-      steps,
-      // closingDate: dayjs(closingDate).format('MMMM YYYY'),
-      // startDate: dayjs(startDate).format('MMMM YYYY'),
-    };
-  };
-
   useEffect(() => {
-    
-    
     OfftakeService.getOfftake(offtake_id).then(o => {
       // dispatch(setActiveOfftake(offtake))
-      setOfftake(o)
-      if (o.schedule) {
+      if (o) {
+        setOfftake(o)
+      }
+      if (o?.schedule) { // schedule exists?
         var s = o.schedule
         var schedule = {}
+        // set form fields
         Object.keys(o.schedule).map(section => {
           switch (section) {
             case "submissionClosingDate":
               schedule[section] = dayjs(s[section])
-              scheduleForm.setFieldsValue({
-                submissionClosingDate: dayjs(s[section]),
-              });
+              scheduleForm.setFieldValue(
+                "submissionClosingDate", dayjs(s[section])
+              );
               break;
             case "steps":
-              var sD = []
-              var steps = []
               scheduleForm.setFieldsValue({
                 steps: s.steps.map(step => ({
                   name: step.name,
                   stepDuration: [dayjs(step.stepDuration[0]), dayjs(step.stepDuration[1])]
                 }))
-
               });
-              return
-              s[section].map((_, step) => {
-                const name = s[section][step].name
-                const stepDuration = s[section][step].stepDuration
-                stepDuration.map((_, d) => {
-                  const date = dayjs(s[section][step][d])
-                  sD.push(date)
-                })
-
-                steps.push({ name: name, stepDuration: sD })
-              })
-              schedule[section] = steps
               break;
             case "offtakeStartAndEndDate":
-              scheduleForm.setFieldsValue({
-                offtakeStartAndEndDate: [dayjs(s[section][0]), dayjs(s[section][1])],
-              });
+              scheduleForm.setFieldValue(
+                "offtakeStartAndEndDate", [
+                dayjs(s[section][0]),
+                dayjs(s[section][1])
+              ],
+              );
               break;
           }
         })
@@ -94,6 +61,43 @@ const ProductionScheduling = () => {
 
   return (
     <Layout>
+
+
+
+      <Modal title="Submit Offtake" open={next} onOk={() => {
+
+      }} onCancel={() => {
+        setNext(false)
+      }}>
+        <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+          <Typography variant="h4">Submission </Typography>
+          <Stack sx={{ opacity: 3 }} direction={'row'} alignSelf={'center'} gap={1}>
+            <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+            <StatusTag status={'planning'} />
+          </Stack>
+          <ArrowDownwardRounded />
+          <Stack direction={'row'} alignSelf={'center'} gap={1}>
+            <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+            <StatusTag status={'submitted'} />
+          </Stack>
+          <Typography variant="subtitle2">
+            This offtake will be submitted to OP Manager, continue?
+          </Typography>
+
+
+        </Stack>
+      </Modal>
+
+
+
+
+
+
+
+
+
+
+
       <Stack gap={0} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
         {contextHolder}
         <Stack flex={1}>
@@ -103,13 +107,13 @@ const ProductionScheduling = () => {
               Object.keys(schedule).map(section => {
                 switch (section) {
                   case "submissionClosingDate":
-                    schedule[section] = dayjs(schedule[section]).format()
+                    schedule[section] = dayjs(schedule[section]).toISOString()
                     break;
                   case "steps":
                     schedule[section].map((_, step) => {
                       console.log(schedule[section][step]);
                       try {
-                        schedule[section][step].stepDuration = [dayjs(schedule[section][step].stepDuration[0]).format(), dayjs(schedule[section][step].stepDuration[1]).format()]
+                        schedule[section][step].stepDuration = [dayjs(schedule[section][step].stepDuration[0]).toISOString(), dayjs(schedule[section][step].stepDuration[1]).toISOString()]
                       } catch (error) {
                         console.log(error);
                       }
@@ -117,7 +121,7 @@ const ProductionScheduling = () => {
                     break;
                   case "offtakeStartAndEndDate":
                     schedule[section].map((_, i) => {
-                      schedule[section][i] = dayjs(v[section][i]).format()
+                      schedule[section][i] = dayjs(v[section][i]).toISOString()
                     })
                     break;
                 }
@@ -182,7 +186,9 @@ const ProductionScheduling = () => {
               <Button sx={{ alignSelf: 'start' }} variant='text'>Production Cost</Button>
             </Stack>
             <Button variant='outlined' onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
-            <Button variant='contained'>Continue</Button>
+            <Button variant='contained' onClick={() => {
+              setNext(true)
+            }}>Continue</Button>
           </Stack>
         </Stack>
         <Stack flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto' }}>

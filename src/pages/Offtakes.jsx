@@ -239,7 +239,7 @@ const Offtake = () => {
                         Pipeline
                     </Button> */}
                     {offtakeBackup?.status === 'negotiation' ? (<Button type="primary" onClick={() => {
-                        navigate(`/offtakes/${offtakeBackup.offtake_id}/negotiation`);
+                        navigate(`/offtakes/${offtakeBackup.offtake_id}/chat`);
                     }} > Open Chat</Button>) : null}
                     {offtakeBackup?.status === 'planning' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
