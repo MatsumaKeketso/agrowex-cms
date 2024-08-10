@@ -134,7 +134,7 @@ const OfftakeChat = () => {
                 }}>
                   <Button type='text' danger>Not Viable</Button>
                 </Popconfirm>
-                <Button  icon={<Call />} size='large'></Button>
+                <Button icon={<Call />} size='large'></Button>
                 {offtakeBackup?.status !== 'planning' && (
                   <Button type='primary' size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
                     setPlanning(true)

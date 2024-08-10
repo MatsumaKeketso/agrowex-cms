@@ -23,6 +23,18 @@ const generateStepId = () => {
 
   return result;
 }
+const checkStepsProperty = (schedule) => {
+  // Check if schedule is an object and if the steps property exists
+  return schedule && typeof schedule === 'object' && 'steps' in schedule;
+};
+const checkStepsAndIdProperty = (schedule) => {
+  // First, check if the 'steps' property exists and is an array
+  if (schedule && typeof schedule === 'object' && Array.isArray(schedule.steps)) {
+    // Now check if any object in the 'steps' array has an 'id' property
+    return schedule.steps.some(step => step && typeof step === 'object' && 'id' in step);
+  }
+  return false; // Return false if 'steps' does not exist or is not an array
+};
 function checkType(expression) {
   try {
     // Evaluate the expression to get the value it points to
@@ -46,12 +58,19 @@ const ProductionScheduling = () => {
     setLoading(true)
     schedule.submissionClosingDate = dayjs(schedule.submissionClosingDate).toString()
     schedule.steps.map((_, step) => {
-      console.log(step);
-
+      console.log(offtake.schedule);
       // assign prev step id or generate a new one
-      const stepsExist = offtake.schedule?.steps ? true : false
-      const stepsIdExist = offtake.schedule?.steps[step]?.id
-      const stepId = stepsExist ? stepsIdExist ? generateStepId() : offtake.schedule?.steps[step]?.id : null;
+      console.log();
+
+      const stepsExist = checkStepsProperty(offtake?.schedule)
+      const stepsIdExist = checkStepsAndIdProperty(offtake?.schedule)
+      const stepId = stepsExist ?
+        stepsIdExist ?
+          offtake.schedule?.steps[step]?.id
+          :
+          generateStepId()
+        :
+        null;
       if (stepsExist) {
         schedule.steps[step].id = stepId
       }
@@ -183,12 +202,14 @@ const ProductionScheduling = () => {
                           key={field.key}
                           extra={
                             <Stack>
-                              {fields.length > 1 ? (<IconButton disabled={disableForm} size='small' onClick={() => {
+                              {field.name !== 0 ? (<IconButton disabled={disableForm} size='small' onClick={() => {
                                 remove(field.name);
-                                const stepId = offtake.schedule.steps[field.name].id
-                                OfftakeService.removeCostingStep(offtake_id, stepId).then(() => {
-                                  console.log('costing step removed');
-                                })
+                                const stepId = offtake?.schedule.steps[field.name]?.id
+                                if (stepId) {
+                                  OfftakeService.removeCostingStep(offtake_id, stepId).then(() => {
+                                    console.log('costing step removed');
+                                  })
+                                }
                               }}>
                                 <CloseRounded />
                               </IconButton>) : null}
@@ -222,7 +243,7 @@ const ProductionScheduling = () => {
             </Stack>
             <Stack direction={'row'} gap={1} p={1} >
               <Stack flex={1}>
-                
+
               </Stack>
               <Button variant='outlined' disabled={disableForm} onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
               {/* <Button variant='contained' onClick={() => {
