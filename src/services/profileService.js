@@ -1,5 +1,5 @@
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { firestoreDB } from "./authService";
 
 const auth = getAuth();
@@ -14,9 +14,15 @@ export const ProfileService = {
       return {}
     }
   },
-  updateAccountProfile: (data) => {
-    return new Promise((res, rej) => {
-      // user
+  updateAccountProfile: async (data) => {
+    const docRef = doc(firestoreDB, "agents", auth.currentUser.uid);
+    await updateDoc(docRef, data).then((data) => {
+      return (true)
+    }).catch(err => {
+      console.log(err);
+
+      return false
     })
+
   }
 }

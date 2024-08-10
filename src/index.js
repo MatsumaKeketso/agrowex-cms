@@ -31,6 +31,8 @@ import OfftakeChat from "./pages/OfftakeChat";
 import ProductionSceduling from "./pages/ProductionScheduling";
 import Signin from "./pages/Signin";
 import ProductionCost from "./pages/ProductionCost";
+import Account from "./pages/Account";
+import { colors } from "@mui/material";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -123,7 +125,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/account",
-    element: <Home />,
+    element: <Account />,
   },
   {
     path: "/warehouse",
@@ -176,6 +178,19 @@ root.render(
             },
             Statistic: {
               contentFontSize: 18
+            },
+            Segmented: {
+              borderRadius: 16,
+              borderRadiusSM: 16,
+              borderRadiusLG: 16,
+              borderRadiusXS: 16,
+              itemSelectedBg: theme.palette.primary.main,
+              itemSelectedColor: 'white',
+              itemColor: theme.palette.primary.main
+            },
+            Input: {
+              colorTextDisabled: "rgb(0,0,0)",
+              colorTextPlaceholder: "rgb(84,82,82)"
             }
           },
         }}

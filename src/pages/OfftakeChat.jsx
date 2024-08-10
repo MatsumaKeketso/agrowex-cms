@@ -134,13 +134,17 @@ const OfftakeChat = () => {
                 }}>
                   <Button type='text' danger>Not Viable</Button>
                 </Popconfirm>
-                <Button icon={<Call />} size='large'></Button>
-                {offtakeBackup?.status !== 'planning' && (<Button size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
-                  setPlanning(true)
-                }}>Begin Planning</Button>)}
-                {offtakeBackup?.status === 'planning' && (<Button size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
-                  navigate(`/offtakes/${offtake_id}/schedule`)
-                }}>Production Planning</Button>)}
+                <Button  icon={<Call />} size='large'></Button>
+                {offtakeBackup?.status !== 'planning' && (
+                  <Button type='primary' size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
+                    setPlanning(true)
+                  }}>Begin Planning</Button>
+                )}
+                {offtakeBackup?.status === 'planning' && (
+                  <Button size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
+                    navigate(`/offtakes/${offtake_id}/schedule`)
+                  }}>Production Planning</Button>
+                )}
               </Stack>
             </Toolbar>
           </AppBar>

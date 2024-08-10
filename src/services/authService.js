@@ -3,9 +3,11 @@ import { firebaseConfig } from "../services/fc";
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
 const app = initializeApp(firebaseConfig);
 export const firestoreDB = getFirestore(app);
 export const realtimeDB = getDatabase()
+export const storage = getStorage(app)
 const auth = getAuth();
 export const AuthService = {
   signin: async (email, password) => {
@@ -32,6 +34,7 @@ export const AuthService = {
       });
     })
   },
+
   signout: () => {
     return new Promise((res, rej) => {
       signOut(auth).then(() => {

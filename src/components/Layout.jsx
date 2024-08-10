@@ -21,6 +21,7 @@ import {
   ChatBubbleRounded,
   MailOutlined,
   MessageRounded,
+  MoreVertRounded,
 } from "@mui/icons-material";
 import { AuthService } from "../services/authService";
 import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
@@ -88,11 +89,11 @@ export const Logo = () => (
   </svg>
 );
 
-const MenuAppBar = ({ links = [], active, onNavigate }) => {
+const MenuAppBar = ({ links = [], active }) => {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("mail");
   const [sideNavLinks, setSideNavLinks] = useState([]);
-  const navigation = useSelector((state) => state.navigation);
+  const navigation = useSelector((state: any) => state.navigation);
   const handleMenu = (event) => { };
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -100,6 +101,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   const showDrawer = () => {
     setOpen(true);
   };
+
   const onClose = () => {
     setOpen(false);
   };
@@ -197,7 +199,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
   );
 };
 const ProfileMenu = () => {
-  const { online, profile } = useSelector((state) => state.user)
+  const { online, profile } = useSelector((state: any) => state.user)
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -208,9 +210,18 @@ const ProfileMenu = () => {
   const handleClose = () => {
     setAnchorEl(null);
   };
+  useEffect(() => {
+    console.log(profile.img);
 
+  }, [])
   return (
     <Stack direction={'row'} gap={1}>
+      <Avatar src={profile.img || ""} alt={profile.fullnames} />
+
+      <Stack>
+        <Typography variant="h6">{profile.fullnames}</Typography>
+        <Tag style={{ alignSelf: 'flex-start' }}>{profile.role}</Tag>
+      </Stack>
       <IconButton
         sx={{ alignSelf: 'flex-start' }}
         id="basic-button"
@@ -219,12 +230,9 @@ const ProfileMenu = () => {
         aria-expanded={open ? 'true' : undefined}
         onClick={handleClick}
       >
-        <Avatar src={profile.img} />
+
+        <MoreVertRounded />
       </IconButton>
-      <Stack>
-        <Typography variant="h6">{profile.fullnames}</Typography>
-        <Tag style={{ alignSelf: 'flex-start' }}>{profile.role}</Tag>
-      </Stack>
       <Menu
         id="basic-menu"
         anchorEl={anchorEl}
@@ -234,7 +242,9 @@ const ProfileMenu = () => {
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem onClick={handleClose}>My Account</MenuItem>
+        <MenuItem onClick={() => {
+          navigate("/account");
+        }}>My Account</MenuItem>
         <MenuItem onClick={() => {
           AuthService.signout().then(() => {
             dispatch(updateProfile({}))
@@ -249,8 +259,7 @@ const ProfileMenu = () => {
 }
 const Layout = (props) => {
   const { navigateTo, scroll = true } = props;
-  const navigation = useSelector((state) => state.navigation);
-
+  const navigation = useSelector((state: any) => state.navigation);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();

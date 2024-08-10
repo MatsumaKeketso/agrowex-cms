@@ -1,4 +1,4 @@
-import { getDoc, getDocs, getFirestore, onSnapshot, query } from "firebase/firestore";
+import { arrayRemove, getDoc, getDocs, getFirestore, onSnapshot, query, updateDoc } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
 
 import { useSelector } from "react-redux";
@@ -14,8 +14,11 @@ export const OfftakeService = {
     querySnapshot.forEach((doc) => {
       // doc.data() is never undefined for query doc snapshots
       const offtake = { ...doc.data(), offtake_id: doc.id };
-
-      offtakes.push(offtake)
+      if (!offtake.status) {
+        offtakes.push(offtake)
+      } else {
+        offtakes.unshift(offtake)
+      }
     });
     return offtakes
   },
@@ -37,5 +40,35 @@ export const OfftakeService = {
   updateOfftake: async (offtake_id, offtake_data) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
+  },
+  removeCostingStep: async (offtake_id, stepId) => {
+    const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+
+    // Fetch the current document
+    const docSnap = await getDoc(offtakeRef);
+    if (docSnap.exists()) {
+      const currentSteps = docSnap.data().costing.steps;
+      const currentSchedule = docSnap.data().schedule.steps;
+
+      // Filter out the step with the matching id
+      const updatedSteps = currentSteps.filter(step => step.id !== stepId);
+      const updatedSchedule = currentSchedule.filter(step => step.id !== stepId);
+
+      // Update the document with the modified array
+      await updateDoc(offtakeRef, {
+        'costing.steps': updatedSteps,
+        'schedule.steps': updatedSchedule
+      });
+      const success = {
+        message: 'Document updated'
+      }
+      return success
+    } else {
+      const error = {
+        message: 'Document not found'
+      }
+      return error
+    }
   }
+
 }

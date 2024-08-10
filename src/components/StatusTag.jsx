@@ -1,7 +1,7 @@
 import { Tag } from 'antd';
 import React from 'react'
 const colors = {
-  inprogress: '#EAA300',
+  inprogress: 'yellow',
   negotiation: '#061724',
   planning: '#62ABF5',
   active: 'success',
@@ -11,7 +11,7 @@ const colors = {
 }
 const StatusTag = (props) => {
   const { status } = props;
-  return <Tag color={colors[status]} >{status.toUpperCase()}</Tag>
+  return <Tag color={colors[status]}  >{status.toUpperCase()}</Tag>
 }
 
 export default StatusTag

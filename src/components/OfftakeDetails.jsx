@@ -41,7 +41,7 @@ const AssignOM = () => {
 
 }
 const OfftakeDetails = (props) => {
-    const [disableForm, setdisableForm] = useState(false);
+    const [disableForm, setDisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
     const [offtakeBackup, setOfftakeBackup] = useState({})
     const [page, setPage] = useState("")
@@ -80,11 +80,7 @@ const OfftakeDetails = (props) => {
     useEffect(() => {
         const locations = location.pathname.split('/')
         console.log(locations);
-        locations.map((_, i) => {
-            if (i === 3) {
-                setPage(locations[i])
-            }
-        })
+        setPage(locations[3])
         if (!offtake_id) {
             navigate('/offtakes')
         }
@@ -121,19 +117,36 @@ const OfftakeDetails = (props) => {
                 </Stack>
             </Stack>
             <Stack spacing={2}>
-
+                {/* Offtake is in planning */}
                 {status === 'planning' && (
                     <Stack gap={2}>
                         <Divider >Production</Divider>
                         <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                            <Button type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                            }}>Production Plan</Button>
                             <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
                                 navigate(`/offtakes/${ot.offtake_id}/costing`);
                             }}>Production Cost</Button>
-                            <Button type={page === 'negotiation' ? 'primary' : 'default'} onClick={() => {
+                            <Button type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/chat`);
+                            }}>Chat</Button>
+                        </Stack>
+                        <Divider />
+                    </Stack>
+                )}
+                {status === 'submitted' && (
+                    <Stack gap={2}>
+                        <Divider >Production</Divider>
+                        <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                            <Button type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
                                 navigate(`/offtakes/${ot.offtake_id}/schedule`);
                             }}>Production Plan</Button>
-                            <Button type={page === 'negotiation' ? 'primary' : 'default'} onClick={() => {
-                                navigate(`/offtakes/${ot.offtake_id}/chat`);
+                            <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
+                                navigate(`/offtakes/${ot.offtake_id}/costing`);
+                            }}>Production Cost</Button>
+                            <Button type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+
                             }}>Chat</Button>
                         </Stack>
                         <Divider />
@@ -171,7 +184,7 @@ const OfftakeDetails = (props) => {
                 </Stack>
 
 
-                <Form form={offtakeForm} layout='vertical' onFinish={(v) => {
+                <Form form={offtakeForm} disabled={disableForm} layout='vertical' onFinish={(v) => {
                     // v = new form properties, default set to merge
                     const a = { ...offtake, ...v }
 
