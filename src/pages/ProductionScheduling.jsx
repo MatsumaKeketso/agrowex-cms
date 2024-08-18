@@ -125,7 +125,7 @@ const ProductionScheduling = () => {
          * 
          */
 
-        if (o.status === 'submitted') {
+        if (o.status === 'submitted' || o.status === 'published') {
           setDisableForm(true)
         }
         setOfftake(o)

@@ -1,18 +1,21 @@
-import { AppBar, CardHeader, Divider, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Collapse, Form, Input, message, Select, Spin, Statistic } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardHeader, Chip, Divider, Stack, Toolbar, Typography, colors } from '@mui/material';
+import { Button, Collapse, Form, Input, message, Modal, Select, Spin, Statistic, Table } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
 import Persona from './Persona';
 // import debounce from 'lodash/debounce';
 import { PManagers } from '../database/db-data';
-import { offtakeUpdateSuccess, setActiveOfftake } from '../services/offtake/offtakeSlice';
-import { CardMembership, Person2Outlined } from '@mui/icons-material';
+import { offtakeUpdateSuccess, setActiveOfftake, setPublishState } from '../services/offtake/offtakeSlice';
+import { ArrowDownwardRounded, CardMembership, FaceOutlined, Person2Outlined } from '@mui/icons-material';
 import Documents from './Documents';
 import StatusTag from './StatusTag';
 import { OfftakeService } from '../db/offtake-service';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import OfftakeProgress from './OfftakeProgress';
+import { FarmSubmissionColumns } from '../pages/FarmSubmissions';
+
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
     const offtake = useSelector((state) => state.offtake)
@@ -40,9 +43,63 @@ const Assign = () => {
 const AssignOM = () => {
 
 }
+const PublishOfftake = () => {
+    const offtake = useSelector((state) => state.offtake.active)
+    const publish = useSelector((state) => state.offtake.publish)
+    const [openDrawer, setOpenDrawer] = useState(false);
+    const [loading, setLoading] = useState(false)
+    const [messageApi, contextHolder] = message.useMessage();
+    const dispatch = useDispatch();
+    const UpdateStatus = () => {
+        setLoading(true)
+        OfftakeService.getOfftake(offtake.offtake_id).then(ot => {
+            OfftakeService.updateOfftake(offtake.offtake_id, {
+                ...ot, status: "published"
+            }).then(() => {
+                messageApi.success('Offtake Updated!');
+                dispatch(setPublishState(false))
+                setLoading(false)
+            }).catch(err => {
+                console.log(err);
+                messageApi.error('Update Error')
+                setLoading(false)
+            })
+        })
+    }
+    useEffect(() => {
+        setOpenDrawer(publish)
+    }, [publish])
+    return (
+        <Stack>
+            {/* Confirm Assessment */}
+            <Modal title="Status Update" open={openDrawer} onOk={() => {
+                UpdateStatus()
+            }} okButtonProps={{ loading: loading }} onCancel={() => {
+                dispatch(setPublishState(false))
+            }}>
+                <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+                    <Typography variant="h4">Approve Offtake</Typography>
+                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">AGRO-{offtake.offtake_id}</Typography>
+                        <StatusTag status={'submitted'} />
+                    </Stack>
+                    <ArrowDownwardRounded />
+                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">AGRO-{offtake.offtake_id}</Typography>
+                        <StatusTag status={'published'} />
+                    </Stack>
+                    <Typography variant="subtitle2">
+                        This offtake will be put into active, continue?
+                    </Typography>
+                </Stack>
+            </Modal>
+        </Stack>
+    )
+}
 const OfftakeDetails = (props) => {
     const [disableForm, setDisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const [farms, setFarms] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
     const [page, setPage] = useState("")
     const navigate = useNavigate()
@@ -50,7 +107,7 @@ const OfftakeDetails = (props) => {
     const location = useLocation();
     const { offtake_id } = useParams()
     const [offtakeForm] = Form.useForm();
-    const { data, setOfftake, closeDrawer, setOfftakeId } = props;
+    const { data, setOfftake, closeDrawer, setOfftakeId, showSubmissions = true } = props;
     const offtake = useSelector((state) => state.offtake?.active);
 
     const {
@@ -94,14 +151,15 @@ const OfftakeDetails = (props) => {
 
     }, [offtake])
     useEffect(() => {
-        console.log('====================================');
-        console.log(ot);
-        console.log('====================================');
+        OfftakeService.getFarmSubmissions().then(f => {
+            setFarms(f)
+        })
     }, [])
     return (
         <Stack spacing={3}>
+            <PublishOfftake />
             {contextHolder}
-            <Stack>
+            <Stack gap={4}>
                 <Stack direction={'row'}>
                     <Stack flex={1} direction={'row'} gap={2} alignItems={'center'}>
                         <Stack>
@@ -115,43 +173,91 @@ const OfftakeDetails = (props) => {
                     {/* {offtake?.assigned && (<Persona user={offtake?.assigned} onUnsasign={unassign} />)} */}
                     {/* {!offtake?.assigned && (<Assign />)} */}
                 </Stack>
+                <Stack sx={{ overflowX: 'auto' }} py={2}>
+                    <OfftakeProgress currentStage={ot.status ? ot.status : "inprogress"} />
+                </Stack>
             </Stack>
             <Stack spacing={2}>
                 {/* Offtake is in planning */}
-                {status === 'planning' && (
-                    <Stack gap={2}>
-                        <Divider >Production</Divider>
-                        <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                            <Button type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
-                                navigate(`/offtakes/${ot.offtake_id}/schedule`);
-                            }}>Production Plan</Button>
-                            <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
-                                navigate(`/offtakes/${ot.offtake_id}/costing`);
-                            }}>Production Cost</Button>
-                            <Button type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                <Stack gap={2}>
+                    <Divider >Production</Divider>
+                    <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                        <Button type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
+                            navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                        }}>Production Plan</Button>
+                        <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
+                            navigate(`/offtakes/${ot.offtake_id}/costing`);
+                        }}>Production Cost</Button>
+                        <Button type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                            if (status === 'planning') {
                                 navigate(`/offtakes/${ot.offtake_id}/chat`);
-                            }}>Chat</Button>
-                        </Stack>
-                        <Divider />
-                    </Stack>
-                )}
-                {status === 'submitted' && (
-                    <Stack gap={2}>
-                        <Divider >Production</Divider>
-                        <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                            <Button type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
-                                navigate(`/offtakes/${ot.offtake_id}/schedule`);
-                            }}>Production Plan</Button>
-                            <Button type={page === 'costing' ? 'primary' : 'default'} onClick={() => {
-                                navigate(`/offtakes/${ot.offtake_id}/costing`);
-                            }}>Production Cost</Button>
-                            <Button type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                            }
+                            else if (status === 'submitted') {
+                                navigate(`/offtakes/${ot.offtake_id}/published-chat`)
+                            }
 
-                            }}>Chat</Button>
-                        </Stack>
-                        <Divider />
+                        }}>Chat {status === "published" && "with Sibanyoni"}</Button>
                     </Stack>
-                )}
+                    <Divider />
+                    {ot.status === 'published' && showSubmissions && (<Stack>
+                        <Stack p={2} direction={'row'}>
+                            <Stack flex={1}>
+                                <Typography>Farmers who are Interested</Typography>
+                            </Stack>
+                            <Button type='primary' onClick={() => {
+                                "/offtakes/:offtake_id/submissions"
+                                navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                            }}>View More</Button>
+                        </Stack>
+                        <Table dataSource={farms} columns={[
+                            {
+                                title: 'Farm Name',
+                                dataIndex: 'name',
+                                key: 'name',
+                            },
+                            {
+                                title: 'Suggested Offer',
+                                dataIndex: ['offers', 'suggestedOffer'], // Accessing nested property
+                                key: 'suggestedOffer',
+                            },
+                            {
+                                title: 'Requested Offer',
+                                dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
+                                key: 'requestedOffer',
+                            },
+
+                        ]} />
+                    </Stack>)}
+                    {ot.status === 'finalstage' && showSubmissions && (<Stack>
+                        <Stack p={2} direction={'row'}>
+                            <Stack flex={1}>
+                                <Typography>Farmers who are Interested</Typography>
+                            </Stack>
+                            <Button type='primary' onClick={() => {
+                                "/offtakes/:offtake_id/submissions"
+                                navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                            }}>View More</Button>
+                        </Stack>
+                        <Table dataSource={farms} columns={[
+                            {
+                                title: 'Farm Name',
+                                dataIndex: 'name',
+                                key: 'name',
+                            },
+                            {
+                                title: 'Suggested Offer',
+                                dataIndex: ['offers', 'suggestedOffer'], // Accessing nested property
+                                key: 'suggestedOffer',
+                            },
+                            {
+                                title: 'Requested Offer',
+                                dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
+                                key: 'requestedOffer',
+                            },
+
+                        ]} />
+                    </Stack>)}
+                </Stack>
                 <Stack direction={'row'} gap={2}>
                     {/* <Statistics inputMode={true} title="Invoice Number" value={112893} /> */}
                     <Statistics title="Start Date & Time" value={order_date} />
@@ -159,23 +265,21 @@ const OfftakeDetails = (props) => {
                     <Statistics title="Contract Type" value={contract_type} />
                 </Stack>
                 <Stack>
-                    <Collapse>
-                        <Collapse.Panel header={<Stack direction={'row'} alignItems={'center'} gap={2}><Person2Outlined /> <Typography>Contact Details</Typography></Stack>}>
+                    <Accordion variant='elevation' elevation={0}>
+                        <AccordionSummary>
+                            <Chip icon={<FaceOutlined />} label="Contact Details" />
+                        </AccordionSummary>
+                        <AccordionDetails>
                             <Stack p={0} direction={'row'} gap={3}>
                                 <Statistics title={'Phone Number'} value={phone_number} />
                                 <Statistics title={'Email'} value={email} />
                                 <Statistics title={'Location'} value={country} />
                             </Stack>
-                        </Collapse.Panel>
-
-                    </Collapse>
+                        </AccordionDetails>
+                    </Accordion>
                 </Stack>
 
-                <AppBar sx={{ borderRadius: 5 }} variant='outlined' position='relative' >
-                    <Toolbar variant='dense'  >
-                        <Typography>Product details</Typography>
-                    </Toolbar>
-                </AppBar>
+
                 <Stack p={0} direction={'row'} flexWrap={'wrap'} gap={3}>
                     <Statistics title={'Category Type'} value={commodity_name} />
                     <Statistics title={'Product Name'} value={commodity_name} />
@@ -189,7 +293,11 @@ const OfftakeDetails = (props) => {
                     const a = { ...offtake, ...v }
 
 
-                    OfftakeService.updateOfftake(offtake_id, a).then(() => {
+                    OfftakeService.updateOfftake(
+                        offtake_id ?
+                            offtake_id :
+                            offtake.offtake_id, a
+                    ).then(() => {
                         // OfftakeService.getOfftake(offtake_id).then(data => {
                         if (closeDrawer) {
                             closeDrawer(offtake_id)
@@ -203,6 +311,8 @@ const OfftakeDetails = (props) => {
                     }).catch(err => {
                         messageApi.error("Something went wrong");
                         console.log(err);
+                        console.log({ offtake_id, a });
+
                     })
                 }} >
                     <Stack bgcolor={colors.grey[100]} p={3} borderRadius={4} gap={3}>
@@ -218,14 +328,15 @@ const OfftakeDetails = (props) => {
                         <Stack gap={2}>
                             <Stack>
                                 <Form.Item rules={[{ required: true }]} name="comment" label="Comments">
-                                    <Input.TextArea />
+                                    <Input.TextArea placeholder='Send message...' />
                                 </Form.Item>
                             </Stack>
-                            <Button htmlType='submit' style={{ alignSelf: 'flex-end' }} type='primary'>Submit</Button>
+                            <Button disabled={!ot.status} htmlType='submit' style={{ alignSelf: 'flex-end' }} type='primary'>Submit</Button>
                         </Stack>
                     </Stack>
                 </Form>
                 <Divider></Divider>
+
                 <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
                     <Documents />
                     <Documents />

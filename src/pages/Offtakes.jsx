@@ -18,7 +18,7 @@ import {
 import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails from "../components/OfftakeDetails";
-import { setActiveOfftake } from "../services/offtake/offtakeSlice";
+import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
 import { PManagers } from "../database/db-data";
 import { OfftakeService } from "../db/offtake-service";
 import StatusTag from "../components/StatusTag";
@@ -86,6 +86,7 @@ const formItemLayout = {
         },
     },
 };
+
 const Offtake = () => {
     const [openOfftake, setOpenOfftake] = useState(false);
     const [openConfirm, setOpenConfirm] = useState(false);
@@ -129,7 +130,6 @@ const Offtake = () => {
             return (<Stack>
                 <Button onClick={() => {
                     console.log(r);
-
                     setOfftakeId(r.offtake_id)
                     dispatch(setActiveOfftake(r))
                     dispatch(setActiveOfftake(r))
@@ -163,7 +163,7 @@ const Offtake = () => {
     };
 
     const closeDrawer = (id) => {
-        setOpenOfftake(false)
+        // setOpenOfftake(false)
         refresh()
     }
     const setOfftakeId = (id) => {
@@ -191,7 +191,7 @@ const Offtake = () => {
     }, [offtake])
     return (
         <Layout>
-
+         
             {/* Confirm Assessment */}
             <Modal title="Confirm Assessment" open={openConfirm} onOk={() => {
                 confirmForm.submit()
@@ -215,13 +215,10 @@ const Offtake = () => {
                     <Stack flex={1} alignItems={'start'}>
                         <Form layout="horizontal" form={confirmForm} onFinish={(v) => {
                             // "/offtakes/:offtake_id/negotiation"
-
                             OfftakeService.updateOfftake(offtakeBackup.offtake_id, { ...offtakeBackup, confirmed: v, status: "negotiation" }).then(Res => {
                                 confirmForm.resetFields()
                                 setOpenConfirm(false)
                             })
-
-
                         }}>
 
                             <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
@@ -286,8 +283,11 @@ const Offtake = () => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
                     }} > Open Production Schedule</Button>) : null}
                     {offtakeBackup?.status === 'submitted' ? (<Button type="primary" onClick={() => {
-                        // navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
-                    }} > Approve and Publish Offtake</Button>) : null}
+                        dispatch(setPublishState(true))
+                    }} > Publish Offtake</Button>) : null}
+                     {offtakeBackup?.status === 'finalstage' ? (<Button type="primary" onClick={() => {
+                        dispatch(setPublishState(true))
+                    }} >Activate Offtake</Button>) : null}
                     {!offtakeBackup?.status && (<Button onClick={() => {
                         setOpenOfftake(false)
                         setOpenConfirm(true)

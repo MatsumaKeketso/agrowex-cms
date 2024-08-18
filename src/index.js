@@ -33,6 +33,8 @@ import Signin from "./pages/Signin";
 import ProductionCost from "./pages/ProductionCost";
 import Account from "./pages/Account";
 import { colors } from "@mui/material";
+import PMChat from "./pages/PMChat";
+import FarmSubmissions from "./pages/FarmSubmissions";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
@@ -116,8 +118,16 @@ const router = createBrowserRouter([
     element: <OfftakeChat />,
   },
   {
+    path: "/offtakes/:offtake_id/published-chat",
+    element: <PMChat />,
+  },
+  {
     path: "/offtakes/:offtake_id/schedule",
     element: <ProductionSceduling />,
+  },
+  {
+    path: "/offtakes/:offtake_id/submissions",
+    element: <FarmSubmissions />,
   },
   {
     path: "/offtakes/:offtake_id/costing",

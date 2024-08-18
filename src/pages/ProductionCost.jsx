@@ -7,7 +7,7 @@ import { OfftakeService } from '../db/offtake-service'
 import { useDispatch } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, ConfigProvider, DatePicker, Empty, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, Timeline } from 'antd'
+import { Card, ConfigProvider, DatePicker, Drawer, Empty, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, Timeline } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded, DeleteRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -18,6 +18,7 @@ dayjs.extend(toObject);
 const ProductionCost = () => {
   const [disableForm, setDisableForm] = useState(false);
   const [loading, setLoading] = useState(false)
+  const [openDrawer, setOpenDrawer] = useState(false)
   const [offtake, setOfftake] = useState({})
   const { offtake_id } = useParams()
   const [costingForm] = Form.useForm()
@@ -46,6 +47,8 @@ const ProductionCost = () => {
       if (o) {
         setOfftake(o)
         if (o.status === 'submitted') {
+          setDisableForm(true)
+        } else if (o.status === 'published') {
           setDisableForm(true)
         }
       }
@@ -137,6 +140,9 @@ const ProductionCost = () => {
           </Typography>
         </Stack>
       </Modal>
+      <Drawer title="Offtake Details" size='large' open={openDrawer} placement='right' onClose={() => { setOpenDrawer(false) }}>
+        <OfftakeDetails setOfftakeId={() => { }} />
+      </Drawer>
       <Stack gap={0} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
         {contextHolder}
         <Stack flex={1}>
@@ -288,6 +294,11 @@ const ProductionCost = () => {
               }}>Approve and Publish Offtake</Button>
             )}
           </Stack>
+        </Stack>
+        <Stack gap={2} p={1} py={2} sx={{ overflowY: 'auto', display: { xs: 'flex', sm: 'flex', md: 'none', lg: 'none' } }}>
+          <Button variant='outlined' onClick={() => {
+            setOpenDrawer(true)
+          }}>View Offtake</Button>
         </Stack>
         <Stack flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto', display: { xs: 'none', sm: 'none', md: 'flex', lg: 'flex' } }}>
           <OfftakeDetails setOfftakeId={() => { }} />

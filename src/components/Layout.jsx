@@ -15,9 +15,10 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
-import { Drawer, Space, Menu as ANTMenu, Tag } from "antd";
+import { Drawer, Space, Menu as ANTMenu, Tag, Modal } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  ArrowDownwardRounded,
   ChatBubbleRounded,
   MailOutlined,
   MessageRounded,
@@ -26,6 +27,7 @@ import {
 import { AuthService } from "../services/authService";
 import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
 import { ProfileService } from "../services/profileService";
+import StatusTag from "./StatusTag";
 export const Logo = () => (
   <svg
     width="85"
@@ -257,6 +259,7 @@ const ProfileMenu = () => {
     </Stack>
   );
 }
+
 const Layout = (props) => {
   const { navigateTo, scroll = true } = props;
   const navigation = useSelector((state: any) => state.navigation);
@@ -281,6 +284,7 @@ const Layout = (props) => {
   }, []);
   return (
     <Stack
+      sx={{ background: 'url(https://images.unsplash.com/photo-1484759288640-783b22c95d54?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)' }}
       // p={2}
       flex={1}
       sx={{

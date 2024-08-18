@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useSelector } from "react-redux";
-import { Card, Form, Image, Input, Menu, message, Progress, Select, Upload } from "antd";
+import { Card, Form, Image, Input, Menu, message, Progress, Select, Upload, Typography as ANTDTypo } from "antd";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from "../services/authService";
 import { UploadOutlined } from "@mui/icons-material";
@@ -27,7 +27,7 @@ const Account = () => {
   const profile = useSelector((state) => state.user.profile)
   const [uploadImage, setUploadImage] = useState(0)
   const [messageApi, contextHolder] = message.useMessage();
-
+  const img = Form.useWatch('img', form);
   const onFinish = (values) => {
     if (uploadImage >= 1 && uploadImage <= 98) {
       messageApi.info("Please wait for upload to finish.")
@@ -94,7 +94,7 @@ const Account = () => {
         </Stack>
         <Stack direction={'row'} gap={2}>
           <Stack gap={1}>
-            <Card cover={<Image src={profile.img} />}>
+            <Card cover={<Image style={{ maxWidth: 200 }} src={profile.img} alt={profile.fullnames} />}>
               <Card.Meta title={profile.fullnames} description={profile.email} />
             </Card>
             <Divider />
@@ -136,6 +136,7 @@ const Account = () => {
                 >
                   <Button icon={<UploadOutlined />}>Click to Upload</Button>
                 </Upload>
+                <ANTDTypo.Text keyboard>{img }</ANTDTypo.Text>
               </Form.Item>
 
               <Form.Item
