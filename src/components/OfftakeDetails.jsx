@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardHeader, Chip, Divider, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Collapse, Form, Input, message, Modal, Select, Spin, Statistic, Table } from 'antd';
+import { Button, Collapse, Form, Input, message, Modal, Select, Spin, Statistic, Steps, Table } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
@@ -101,15 +101,17 @@ const OfftakeDetails = (props) => {
     const [messageApi, contextHolder] = message.useMessage();
     const [farms, setFarms] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
+    const [activeSuppliers, setActiveSuppliers] = useState([])
     const [page, setPage] = useState("")
     const navigate = useNavigate()
     const dispatch = useDispatch();
     const location = useLocation();
+    const [productionProgress, setProductionProgress] = useState([])
     const { offtake_id } = useParams()
     const [offtakeForm] = Form.useForm();
     const { data, setOfftake, closeDrawer, setOfftakeId, showSubmissions = true } = props;
     const offtake = useSelector((state) => state.offtake?.active);
-
+    const description = 'This is a description.';
     const {
         order_date,
         delivery_date,
@@ -152,8 +154,33 @@ const OfftakeDetails = (props) => {
     }, [offtake])
     useEffect(() => {
         OfftakeService.getFarmSubmissions().then(f => {
-            setFarms(f)
+            if (f) {
+                setFarms(f)
+            }
         })
+        if (offtake.schedule) {
+            try {
+                if (offtake.schedule.steps) {
+                    const a = []
+                    offtake.schedule.steps.forEach(step => {
+                        a.push({ title: step.name })
+                    });
+                    setProductionProgress(a)
+                    console.log(a);
+
+                }
+            } catch (error) {
+                console.log(error);
+
+            }
+        }
+        if (offtake.suppliers) {
+            var a = []
+            offtake.suppliers.forEach(supplier => {
+                a.push(supplier)
+            });
+            setActiveSuppliers(a)
+        }
     }, [])
     return (
         <Stack spacing={3}>
@@ -257,6 +284,56 @@ const OfftakeDetails = (props) => {
 
                         ]} />
                     </Stack>)}
+                    {ot.status === 'active' && showSubmissions && (
+                        <Stack>
+                            <Stack p={2} direction={'row'}>
+                                <Stack flex={1}>
+                                    <Typography>Suppliers</Typography>
+                                </Stack>
+                                <Button type='primary' onClick={() => {
+                                    "/offtakes/:offtake_id/submissions"
+                                    navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                                }}>View More</Button>
+                            </Stack>
+                            <Stack direction={'row'}>
+                                <Stack flex={1}>
+                                    <Table dataSource={activeSuppliers} columns={[
+                                        {
+                                            title: 'Farm Name',
+                                            dataIndex: 'name',
+                                            key: 'name',
+                                        },
+                                        {
+                                            title: 'Suggested Offer',
+                                            dataIndex: ['offers', 'suggestedOffer'], // Accessing nested property
+                                            key: 'suggestedOffer',
+                                        },
+                                        {
+                                            title: 'Requested Offer',
+                                            dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
+                                            key: 'requestedOffer',
+                                        },
+
+                                    ]} />
+                                </Stack>
+                            </Stack>
+
+                        </Stack>
+                    )}
+                    {ot.status === 'active' && (
+                        <Stack >
+                            <Stack p={2}>
+                                <Typography variant='subtitle1' fontWeight={'bold'}>Production Tracker</Typography>
+                            </Stack>
+                            <Stack p={2}>
+                                <Steps
+                                    direction="vertical"
+                                    current={1}
+                                    items={productionProgress}
+                                />
+                            </Stack>
+                        </Stack>
+                    )}
                 </Stack>
                 <Stack direction={'row'} gap={2}>
                     {/* <Statistics inputMode={true} title="Invoice Number" value={112893} /> */}

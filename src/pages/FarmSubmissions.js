@@ -347,7 +347,7 @@ const FarmSubmissions = () => {
         })
       }} okButtonProps={{ loading: loading }}
         onCancel={() => {
-          setFinalStage(false)
+          setActive(false)
         }}>
         <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
           <Typography variant="h4">Activate Offtake</Typography>
@@ -375,7 +375,7 @@ const FarmSubmissions = () => {
               <Typography variant='body2' flex={1}>Closing Date : { }</Typography>
             </Stack>
             <Typography variant='h6' p={2} flex={1}>{tonsSelected}t / {tonsSelected < required ? required : tonsSelected}t</Typography>
-            {offtake.status !== 'finalstage' && (<Button onClick={() => {
+            {offtake.status !== 'finalstage' && offtake.status !== 'active' && (<Button onClick={() => {
               setFinalStage(true)
             }} disabled={tonsSelected < required} size='large' type='primary'>Final Stage</Button>)}
             {offtake.status === 'finalstage' && (<Button onClick={() => {
