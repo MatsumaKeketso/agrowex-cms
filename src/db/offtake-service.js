@@ -112,11 +112,6 @@ export const OfftakeService = {
       console.log("No such document!");
     }
   },
-  /**
-   * 
-   * @param {*} offtake_id 
-   * @param {*} offtake_data 
-   */
   updateOfftake: async (offtake_id, offtake_data) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
@@ -163,5 +158,9 @@ export const OfftakeService = {
   },
   getFarmSubmissions: async () => {
     return farms
+  },
+  updateContractModel: async (offtake_id, contract_model) => {
+    const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+    await updateDoc(offtakeRef, { contract_model: contract_model })
   }
 }

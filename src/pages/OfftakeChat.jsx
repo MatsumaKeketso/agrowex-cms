@@ -180,8 +180,6 @@ const OfftakeChat = () => {
               </Stack>
             </Form>
           </Stack>
-
-
         </Stack>
       </Stack>
 
