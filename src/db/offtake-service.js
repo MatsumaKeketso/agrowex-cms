@@ -1,9 +1,7 @@
-import { arrayRemove, getDoc, getDocs, getFirestore, onSnapshot, query, updateDoc } from "firebase/firestore";
+import { getDoc, getDocs, query, updateDoc } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
-
-import { useSelector } from "react-redux";
 import { firestoreDB, realtimeDB } from "../services/authService";
-import { push, ref, set } from "firebase/database";
+import { push, ref } from "firebase/database";
 const offtakesCollection = collection(firestoreDB, "offtakes");
 
 const farms = [
@@ -83,8 +81,6 @@ const farms = [
     address: "89 Riverbend Road, Franschhoek, Western Cape 7690, South Africa",
   }
 ];
-
-console.log(farms);
 
 export const OfftakeService = {
   getOfftakes: async () => {

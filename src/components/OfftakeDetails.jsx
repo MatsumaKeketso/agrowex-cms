@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardHeader, Chip, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Collapse, Form, Input, message, Modal, Segmented, Select, Spin, Statistic, Steps, Switch, Table } from 'antd';
+import { Button, Collapse, Empty, Form, Input, message, Modal, Segmented, Select, Spin, Statistic, Steps, Switch, Table } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
@@ -155,6 +155,7 @@ const OfftakeDetails = (props) => {
         supply_duration,
         quality_grade,
         permissions,
+        documents,
         // offtake_id,
         price,
         comment
@@ -503,12 +504,12 @@ const OfftakeDetails = (props) => {
                     </Stack>
                 </Form>
                 <Divider></Divider>
+                {!documents && (<Empty description="No Documents" />)}
 
                 <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
-                    <Documents />
-                    <Documents />
-                    <Documents />
-                    <Documents upload={true} />
+                    {documents?.map((document) => {
+                        return (<Documents url={document.url} type="pdf" />)
+                    })}
                 </Stack>
             </Stack>
         </Stack>
