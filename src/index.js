@@ -201,6 +201,8 @@ root.render(
             Input: {
               colorTextDisabled: "rgb(0,0,0)",
               colorTextPlaceholder: "rgb(84,82,82)"
+            }, Progress: {
+              defaultColor: theme.palette.primary.main
             }
           },
         }}

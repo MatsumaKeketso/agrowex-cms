@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
 import { realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, List, Modal, Skeleton, Statistic, Table } from 'antd';
+import { Avatar, Button, Divider, List, Modal, Progress, Skeleton, Statistic, Table, Tooltip } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -94,9 +94,65 @@ const produceColumns = [
     key: 'type',
   },
 ];
+const deliveryColumns = [
+  {
+    title: 'Delivery Date',
+    dataIndex: 'DeliveryDate',
+    key: 'DeliveryDate',
+  },
+  {
+    title: 'Size',
+    dataIndex: 'Size',
+    key: 'Size',
+  },
+  {
+    title: 'Comment',
+    dataIndex: 'Comment',
+    key: 'Comment',
+    render: (text) => {
+      const truncatedText = text.substring(0, 48).trim();
+      return (
+        <Tooltip title={text}>
+          <div style={{ maxHeight: '48px', overflow: 'hidden' }}>
+            {truncatedText}
+            {text.length > 48 && '...'}</div>
+        </Tooltip>
+      )
+    }
+  },
+  {
+    title: 'Produce',
+    dataIndex: 'Produce',
+    key: 'Produce',
+  },
+  {
+    title: 'Image',
+    dataIndex: 'Image',
+    key: 'Image',
+  },
+];
 const FarmerView = ({ record }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
+  const offtake = useSelector((state) => state.offtake.active)
+  const deliveryUpdates = [
+    {
+      key: '1',
+      DeliveryDate: '02 Jan 2024',
+      Size: '2 ton',
+      Comment: 'We Are Currently Preparing A Land Of 15 Hectors Using A Tractor And Disk Harrow And Grass Slasher. We Should Be Completing On The 15th Of May 2024',
+      Produce: 'Tomato',
+      Image: 'View',
+    },
+    {
+      key: '2',
+      DeliveryDate: '02 Apr 2024',
+      Size: '2 ton',
+      Comment: 'We Are Currently Preparing A Land Of 15 Hectors Using A Tractor And Disk Harrow And Grass Slasher. We Should Be Completing On The 15th Of May 1034',
+      Produce: 'Tomato',
+      Image: 'View',
+    },
+  ];
   const loadMoreData = () => {
     if (loading) {
       return;
@@ -112,7 +168,10 @@ const FarmerView = ({ record }) => {
         setLoading(false);
       });
   };
+
   useEffect(() => {
+    console.log(offtake);
+
     loadMoreData();
   }, []);
   return (<Stack direction={'row'} >
@@ -191,6 +250,18 @@ const FarmerView = ({ record }) => {
       </Stack>
     </Stack>
     <Stack flex={1}>
+      {offtake.status == 'active' && (
+        <Stack py={3} alignItems={'center'}>
+          <Progress type="dashboard" percent={75} gapDegree={30} />
+          <Typography variant='caption'>Delivered</Typography>
+          <Typography variant='subtitle1'>Cherry Tomato</Typography>
+          <Typography variant='h6'>10tons</Typography>
+          <Stack>
+            <Table columns={deliveryColumns} dataSource={deliveryUpdates} />
+          </Stack>
+        </Stack>
+      )}
+
       <Stack p={2}>
         <Typography variant='subtitle1' fontWeight={'bold'}>Farm Produce</Typography>
       </Stack>
@@ -266,11 +337,11 @@ const FarmSubmissions = () => {
     return farms
       .filter(farm => keysArray.includes(farm.key)) // Filter the farms by the keys in the array
       .reduce((total, farm) => total + farm.offers.requestedOffer, 0); // Sum the requestedOffer values
-  }
+  };
   const getSelectedFarms = (keysArray) => {
     return farms
       .filter(farm => keysArray.includes(farm.key)) // Filter the farms by the keys in the array
-  }
+  };
   const listenForFarmSubmissions = () => {
     if (offtake.suppliers) {
       setFarms(offtake.suppliers)
@@ -295,7 +366,7 @@ const FarmSubmissions = () => {
         console.log(data);
       }
     });
-  }
+  };
 
   useEffect(() => {
     listenForFarmSubmissions()

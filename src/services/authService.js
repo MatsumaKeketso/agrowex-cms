@@ -29,7 +29,7 @@ export const AuthService = {
         if (user) {
           res(user)
         } else {
-          rej(false)
+          rej(null)
         }
       });
     })

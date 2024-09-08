@@ -8,7 +8,7 @@ import Persona from './Persona';
 // import debounce from 'lodash/debounce';
 import { PManagers } from '../database/db-data';
 import { offtakeUpdateSuccess, setActiveOfftake, setPublishState } from '../services/offtake/offtakeSlice';
-import { ArrowDownwardRounded, CardMembership, CheckRounded, CloseRounded, FaceOutlined, Person2Outlined } from '@mui/icons-material';
+import { ArrowDownwardRounded, CardMembership, ChatBubble, CheckRounded, CloseRounded, FaceOutlined, Person2Outlined } from '@mui/icons-material';
 import Documents from './Documents';
 import StatusTag from './StatusTag';
 import { OfftakeService } from '../db/offtake-service';
@@ -122,9 +122,25 @@ const PermissionControl = ({ label, name, form, value }) => {
         </Form.Item>
     )
 }
+const MasterContractDialog = () => {
+    return (
+        <Modal title="Upload Contract">
+            <Stack alignItems={'center'} gap={4}>
+                <Typography variant='h4'>Attach Master Contract</Typography>
+                <Stack textAlign={'center'} gap={2}>
+                    <Button type='primary'>Upload document</Button>
+                </Stack>
+
+                <Typography>This offtake Master Contract will be part of the offtake details, continue?</Typography>
+            </Stack>
+        </Modal>
+    )
+
+}
 const OfftakeDetails = (props) => {
     const [disableForm, setDisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const [masterContractDialog, setMasterContractDialog] = useState(false)
     const [farms, setFarms] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
     const [activeSuppliers, setActiveSuppliers] = useState([])
@@ -376,12 +392,21 @@ const OfftakeDetails = (props) => {
                         </Stack>
                     )}
                 </Stack>
-                <Stack direction={'row'} gap={2}>
-                    {/* <Statistics inputMode={true} title="Invoice Number" value={112893} /> */}
-                    <Statistics title="Start Date & Time" value={order_date} />
-                    <Statistics title="Sue Date & Time" value={delivery_date} />
-                    <Statistics title="Contract Type" value={contract_type} />
-                </Stack>
+                <Grid container spacing={1}>
+                    <Grid item flex={1} p={1} >
+                        <Statistics title="Order date" value={order_date} />
+                    </Grid>
+                    <Grid item flex={1} p={1} >
+                        <Statistics title="Delivery Date" value={delivery_date} />
+                    </Grid>
+                    <Grid item flex={1} p={1} >
+                        <Statistics title="Contract Type" value={contract_type} />
+                    </Grid>
+                    <Grid item flex={1} p={1} >
+
+                        <Statistics title={'Country of Origin'} value={country} />
+                    </Grid>
+                </Grid>
                 <Stack>
                     <Accordion variant='elevation' elevation={0}>
                         <AccordionSummary sx={{ px: 0 }}>
@@ -400,7 +425,6 @@ const OfftakeDetails = (props) => {
                 <Form form={contractModelForm} layout='vertical' onFinish={(v) => {
                     OfftakeService.updateContractModel(offtake_id, v.contractModel).then(() => {
                         console.log('updated');
-
                     })
                 }}>
                     <Stack direction={'row'} gap={1} alignItems={'center'}>
@@ -411,14 +435,13 @@ const OfftakeDetails = (props) => {
                                 options={contractModel}
                                 onChange={(v) => {
                                     console.log(v);
-
                                 }}
                             />
                         </Form.Item>
                         <Button type='primary' htmlType='submit'>Update</Button>
                     </Stack>
                 </Form>
-                <Statistics title={'Country of Origin'} value={country} />
+
                 <Form
                     initialValues={{
                         contract_type: false
@@ -504,15 +527,25 @@ const OfftakeDetails = (props) => {
                     </Stack>
                 </Form>
                 <Divider></Divider>
-                {!documents && (<Empty description="No Documents" />)}
-
+                {!documents &&
+                    (
+                        <Empty
+                            description="No Documents"
+                            children={
+                                <Stack direction={'row'} alignContent={'center'} spacing={1} justifyContent={'center'}>
+                                    <Button type='primary'>Request a required Document</Button>
+                                    <Button>Request an additional Document</Button>
+                                </Stack>
+                            }
+                        />)
+                }
                 <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
                     {documents?.map((document) => {
                         return (<Documents url={document.url} type="pdf" />)
                     })}
                 </Stack>
             </Stack>
-        </Stack>
+        </Stack >
     )
 }
 

@@ -151,9 +151,9 @@ const Offtake = () => {
         // If the filter value is 'all', return the entire list
         if (filterValue === 'all') {
             console.log('all');
-            OfftakeService.getOfftakes().then(data => {
+            OfftakeService.getOfftakes().then((data: any) => {
                 setOfftakes(data)
-                offtakesReset(data)
+                setOfftakesReset(data)
             }).catch(err => { console.log(err) })
         }
 
@@ -191,7 +191,7 @@ const Offtake = () => {
     }, [offtake])
     return (
         <Layout>
-         
+
             {/* Confirm Assessment */}
             <Modal title="Confirm Assessment" open={openConfirm} onOk={() => {
                 confirmForm.submit()
@@ -220,7 +220,6 @@ const Offtake = () => {
                                 setOpenConfirm(false)
                             })
                         }}>
-
                             <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
                                 validator(_, value) {
                                     if (!value) {
@@ -285,7 +284,7 @@ const Offtake = () => {
                     {offtakeBackup?.status === 'submitted' ? (<Button type="primary" onClick={() => {
                         dispatch(setPublishState(true))
                     }} > Publish Offtake</Button>) : null}
-                     {offtakeBackup?.status === 'finalstage' ? (<Button type="primary" onClick={() => {
+                    {offtakeBackup?.status === 'finalstage' ? (<Button type="primary" onClick={() => {
                         dispatch(setPublishState(true))
                     }} >Activate Offtake</Button>) : null}
                     {!offtakeBackup?.status && (<Button onClick={() => {

@@ -13,7 +13,7 @@ function Documents({ upload, url, type }) {
                 setPreview(false)
             }} open={preview}>
                 <Stack width={'70vw'} height={'90vh'} overflow={'hidden'} p={1} borderRadius={1} bgcolor={colors.common.white}>
-                    <iframe style={{ minWidth: '100%', height: '100%', border: 'solid 0px' }} src={url} />
+                    <iframe title='Title heer' style={{ minWidth: '100%', height: '100%', border: 'solid 0px' }} src={url} />
                 </Stack>
             </Backdrop>
             <Stack minWidth={200} maxWidth={200} overflow={'hidden'} borderRadius={2} >
@@ -52,9 +52,7 @@ function Documents({ upload, url, type }) {
                                 }}><RemoveRedEyeRounded sx={{ color: colors.common.white }} /></IconButton>
                             </Stack>
                         </Backdrop>
-                        <iframe onClick={() => {
-                            setPreview(true)
-                        }} style={{ minWidth: '100%', height: 176, objectFit: 'cover', border: 'solid 0px' }} src={url} />
+                        <iframe  style={{ minWidth: '100%', height: 176, objectFit: 'cover', border: 'solid 0px', overflow: 'hidden' }} src={url} />
                     </Stack>
                 )
                 }
