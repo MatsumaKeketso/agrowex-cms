@@ -28,6 +28,7 @@ import { AuthService } from "../services/authService";
 import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
 import { ProfileService } from "../services/profileService";
 import StatusTag from "./StatusTag";
+import DevTools from "../dev/DevTools";
 export const Logo = () => (
   <svg
     width="85"
@@ -305,6 +306,7 @@ const Layout = (props) => {
       >
         {props.children}
       </Stack>
+      <DevTools />
     </Stack>
   );
 };

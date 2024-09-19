@@ -3,23 +3,23 @@ import { Backdrop, colors, IconButton, Stack, Typography } from '@mui/material'
 import { Image, Upload } from 'antd'
 import React, { useState } from 'react'
 const { Dragger } = Upload;
-function Documents({ upload, url, type }) {
+function Documents({ upload, url, type, name }) {
     const [preview, setPreview] = useState(false);
     const [hover, setHover] = useState(false)
 
     return (
         <>
-            <Backdrop sx={{zIndex: 99999}} onClick={() => {
+            <Backdrop sx={{ zIndex: 99999999, }} onClick={() => {
                 setPreview(false)
             }} open={preview}>
                 <Stack width={'70vw'} height={'90vh'} overflow={'hidden'} p={1} borderRadius={1} bgcolor={colors.common.white}>
                     <iframe title='Title heer' style={{ minWidth: '100%', height: '100%', border: 'solid 0px' }} src={url} />
                 </Stack>
             </Backdrop>
-            <Stack minWidth={200} maxWidth={200} overflow={'hidden'} borderRadius={2} >
+            <Stack minWidth={183} maxWidth={183} overflow={'hidden'} borderRadius={2} >
 
                 {upload ? (
-                    <Dragger style={{ maxWidth: 225, height: 176, objectFit: 'cover' }} >
+                    <Dragger style={{ maxWidth: 225, height: 276, objectFit: 'cover' }} >
                         <IconButton disabled>
                             <InboxOutlined />
                         </IconButton>
@@ -52,7 +52,7 @@ function Documents({ upload, url, type }) {
                                 }}><RemoveRedEyeRounded sx={{ color: colors.common.white }} /></IconButton>
                             </Stack>
                         </Backdrop>
-                        <iframe  style={{ minWidth: '100%', height: 176, objectFit: 'cover', border: 'solid 0px', overflow: 'hidden' }} src={url} />
+                        <iframe style={{ minWidth: '100%', height: 258, objectFit: 'cover', border: 'solid 0px', overflow: 'hidden' }} src={url} />
                     </Stack>
                 )
                 }

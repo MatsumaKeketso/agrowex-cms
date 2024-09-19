@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
-import { Box, Button, IconButton, Stack, Divider, TextField, Typography, Backdrop } from '@mui/material'
+import { Box, IconButton, Stack, Divider, TextField, Typography, Backdrop, colors } from '@mui/material'
 import OfftakeDetails from '../components/OfftakeDetails'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { OfftakeService } from '../db/offtake-service'
+import { OfftakeService } from '../services/offtakeService'
 import { useDispatch } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, ConfigProvider, DatePicker, Drawer, Empty, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, Timeline } from 'antd'
-import { ArrowDownwardRounded, CloseOutlined, CloseRounded, DeleteRounded } from '@mui/icons-material'
+import { Card, Button, Drawer, Empty, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, Timeline } from 'antd'
+import { ArrowDownwardRounded, CloseOutlined, CloseRounded, DeleteRounded, Schedule } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import { AuthService } from '../services/authService'
+import { SystemService } from '../services/systemService'
 dayjs.extend(toObject);
 
 const ProductionCost = () => {
@@ -23,6 +24,7 @@ const ProductionCost = () => {
   const { offtake_id } = useParams()
   const [costingForm] = Form.useForm()
   const [next, setNext] = useState(false)
+  const [publish, setPublish] = useState(false)
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -46,25 +48,27 @@ const ProductionCost = () => {
       // dispatch(setActiveOfftake(offtake))
       if (o) {
         setOfftake(o)
-        if (o.status === 'submitted') {
-          setDisableForm(true)
-        } else if (o.status === 'published') {
+        if (
+          OfftakeService.getStatus.Name(o.status) === 'submitted' ||
+          OfftakeService.getStatus.Name(o.status) === 'published' ||
+          OfftakeService.getStatus.Name(o.status) === 'finalstage' ||
+          OfftakeService.getStatus.Name(o.status) === 'active'
+        ) {
           setDisableForm(true)
         }
       }
-      if (o?.schedule) {
+      if ('schedule' in o) {
 
         // schedule exists?
         // prepare scheduling and costing
         var schedule = o.schedule
         var costing = o.costing
+        console.log({ schedule, costing });
 
         // prefill costing steps with schedule steps
         if (schedule?.steps) {
           costingForm.setFieldsValue({
             steps: schedule?.steps.map(step => {
-              console.log(step);
-
               return ({
                 process_name: step?.name || "",
                 id: step?.id || ""
@@ -77,25 +81,27 @@ const ProductionCost = () => {
           if (costing?.steps?.length !== 0) {
             costingForm.setFieldsValue({
               steps: costing.steps.map((step, i) => {
-                if (schedule.steps[i]?.id === step?.id) {
-                  console.log(schedule?.steps[i]);
+                if (schedule.steps) {
+                  if (schedule.steps[i]?.id === step?.id) {
+                    console.log(schedule?.steps[i]);
 
-                  // set costing form with previous values
-                  if (schedule?.steps[i]?.id) {
-                    return ({
-                      process_name: schedule.steps[i].name,
-                      name: step.name,
-                      application: step.application,
-                      category: step.category,
-                      total: step.total,
-                      total_symbol: step.total_symbol,
-                      unit: step.unit,
-                      unit_symbol: step.unit_symbol,
-                    })
-                  } else {
+                    // set costing form with previous values
+                    if (schedule?.steps[i]?.id) {
+                      return ({
+                        process_name: schedule.steps[i].name,
+                        name: step.name,
+                        application: step.application,
+                        category: step.category,
+                        total: step.total,
+                        total_symbol: step.total_symbol,
+                        unit: step.unit,
+                        unit_symbol: step.unit_symbol,
+                      })
+                    } else {
 
+                    }
+                    setLoading(false)
                   }
-                  setLoading(false)
                 }
                 setLoading(false)
               })
@@ -114,12 +120,17 @@ const ProductionCost = () => {
       <Backdrop sx={{ zIndex: 99999 }} open={loading}>
         <Spin />
       </Backdrop>
-      <Modal title="Publish Offtake" open={next} onOk={() => {
+      <Modal title="Submit Offtake" open={next} onOk={() => {
         setLoading(true)
         AuthService.getUser().then(user => {
-          toSubmitted({ ...offtake, status: "submitted", pm: offtake.pm ? offtake.pm : user.uid })
-          setLoading(false)
+          const _status = {
+            status_name: "submitted",
+            updated_at: SystemService.generateTimestamp()
+          }
+          const updated_status = [...offtake.status, _status]
 
+          toSubmitted({ ...offtake, status: updated_status, pm: offtake.pm ? offtake.pm : user.uid })
+          setLoading(false)
         })
       }} onCancel={() => {
         setNext(false)
@@ -133,7 +144,7 @@ const ProductionCost = () => {
           <ArrowDownwardRounded />
           <Stack direction={'row'} alignSelf={'center'} gap={1}>
             <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
-            <StatusTag status={'published'} />
+            <StatusTag status={'submitted'} />
           </Stack>
           <Typography variant="subtitle2">
             This offtake will be submitted to OP Manager, continue?
@@ -159,36 +170,43 @@ const ProductionCost = () => {
                 <Empty />
                 <Stack px={15} py={5} gap={4}>
                   <Typography>You need to add steps for Production Plan before you can set up Production Cost.</Typography>
-                  <Button onClick={() => {
+                  <Button type='primary' onClick={() => {
                     navigate(`/offtakes/${offtake_id}/schedule`);
                   }}>Production Plan</Button>
                 </Stack>
               </Stack>
             )}
-            <Form layout='vertical' disabled={disableForm} form={costingForm} onError={(event) => {
-              console.log(event);
-            }}
+            <Form layout='vertical' disabled={disableForm} form={costingForm}
               onFinish={(values) => {
-                setLoading(true)
-                offtake.schedule.steps.map((step, i) => {
-                  values.steps[i].id = step.id
-                })
-                OfftakeService.updateOfftake(offtake_id, { ...offtake, costing: values }).then(() => {
-                  messageApi.success("Offtake Updated successfully")
-                  setNext(true)
-                  setLoading(false)
-                }).catch(err => {
-                  messageApi.error("Error. Data not saved.")
-                  console.log(err);
+                // setLoading(true)
+                if (offtake.schedule.steps) {
+                  offtake.schedule.steps.map((step, i) => {
+                    if (!step.id) {
+                      messageApi.error('Step Missing Id',);
+                      return
+                    }
+                    values.steps[i].id = step.id
+                  })
+                  OfftakeService.updateOfftake(offtake_id, { ...offtake, costing: values }).then(() => {
+                    messageApi.success("Offtake Updated successfully")
+                    if (publish) { setNext(true) }
+                    setLoading(false)
+                  }).catch(err => {
+                    setLoading(false)
+                    messageApi.error("Error. Data not saved.")
+                    console.log(err);
 
-                })
+                  })
+                } else {
+                  messageApi.error('Production plan missing');
+
+                }
               }}>
               <Form.List name="steps">
                 {(fields, { add, remove }) => (
                   <div style={{ display: 'flex', rowGap: 16, flexDirection: 'column' }}>
                     {fields.map((field) => {
-                      const stepName = costingForm.getFieldsValue([[field.name, 'process_name']])
-                      console.log(stepName);
+                      // const stepName = costingForm.getFieldsValue([[field.name, 'process_name']])
                       return (
                         <Stack>
                           <Stack flex={1} direction={'row'} gap={5}>
@@ -272,31 +290,48 @@ const ProductionCost = () => {
             <Stack flex={1}>
 
             </Stack>
-            <Button disabled={disableForm} variant='outlined' onClick={() => { costingForm.submit() }}>Save Draft</Button>
-            {/* <Button variant='contained'>Continue</Button> */}
-            {offtake.status !== "submitted" && (
-              <Button variant='contained' onClick={async () => {
-                try {
-                  await costingForm.validateFields();
-                  costingForm.submit()
+            <Button color={colors.green[400]} disabled={disableForm} type='default' onClick={() => { costingForm.submit() }}>Save Draft</Button>
+            {/* Update status to published */}
+            {
+              OfftakeService.getStatus.Name(offtake.status) === "submitted" &&
+              (
+                <Button type='primary' onClick={async () => {
+                  navigate(`/offtakes/${offtake.offtake_id}/published-chat`)
+                }}>Chat to PM</Button>
+              )
+            }
+            {/* Update status to submitted */}
+            {
+              OfftakeService.getStatus.Name(offtake.status) === "planning"
+              &&
+              (
+                <Button type='primary' onClick={async () => {
+                  try {
+                    await costingForm.validateFields().then((v) => {
+                      console.log('====================================');
+                      console.log(v);
+                      console.log('====================================');
+                      costingForm.submit()
+                    }).finally(() => {
+                      setPublish(true)
+                    })
+                  } catch (errorInfo) {
+                    messageApi.error("Form not valid")
+                    console.log('Form validation failed:', errorInfo);
+                  }
+                }}>Submit Offtake</Button>
+              )
+            }
 
-
-                } catch (errorInfo) {
-                  messageApi.error("Form not valid")
-                  console.log('Form validation failed:', errorInfo);
-                }
-
-              }}>Publish Offtake</Button>)}
-
-            {offtake.status === "submitted" && (
-              <Button variant='contained' onClick={async () => {
+            {/* {OfftakeService.getStatus.Name(offtake.status) === "submitted" && (
+              <Button type='primary' onClick={async () => {
 
               }}>Approve and Publish Offtake</Button>
-            )}
+            )} */}
           </Stack>
         </Stack>
         <Stack gap={2} p={1} py={2} sx={{ overflowY: 'auto', display: { xs: 'flex', sm: 'flex', md: 'none', lg: 'none' } }}>
-          <Button variant='outlined' onClick={() => {
+          <Button type='link' onClick={() => {
             setOpenDrawer(true)
           }}>View Offtake</Button>
         </Stack>

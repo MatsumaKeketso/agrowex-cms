@@ -20,11 +20,12 @@ import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails from "../components/OfftakeDetails";
 import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
 import { PManagers } from "../database/db-data";
-import { OfftakeService } from "../db/offtake-service";
+import { OfftakeService, stableOfttakes } from "../services/offtakeService";
 import StatusTag from "../components/StatusTag";
 import { ArrowDownwardRounded, ArrowDropDown, ArrowDropDownRounded, ArrowUpwardRounded, ChatBubble, CloseRounded, Filter1Rounded, FilterListRounded, RefreshRounded } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthService } from "../services/authService";
+import { SystemService } from "../services/systemService";
 const _columns = [
     {
         title: 'Customer Id',
@@ -68,24 +69,7 @@ const _columns = [
 
 
 ];
-const formItemLayout = {
-    labelCol: {
-        xs: {
-            span: 5,
-        },
-        sm: {
-            span: 7,
-        },
-    },
-    wrapperCol: {
-        xs: {
-            span: 24,
-        },
-        sm: {
-            span: 24,
-        },
-    },
-};
+
 
 const Offtake = () => {
     const [openOfftake, setOpenOfftake] = useState(false);
@@ -93,7 +77,9 @@ const Offtake = () => {
     const [offtakes, setOfftakes] = useState([])
     const [offtakesReset, setOfftakesReset] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
-    const [offtake_id, setOfftake_id] = useState('');
+    const [offtakeId, setOfftake_id] = useState('');
+    const [offtakeStatus, setOfftakeStatus] = useState('');
+
     const [filterOptions, setFilterOptions] = useState(false)
     const navigate = useNavigate();
     const params = useParams()
@@ -130,6 +116,7 @@ const Offtake = () => {
             return (<Stack>
                 <Button onClick={() => {
                     console.log(r);
+                    setOfftakeStatus(OfftakeService.getStatus.Name(r.status))
                     setOfftakeId(r.offtake_id)
                     dispatch(setActiveOfftake(r))
                     dispatch(setActiveOfftake(r))
@@ -161,7 +148,6 @@ const Offtake = () => {
         const filtered = updatedOfftakes.filter(offtake => offtake.status === filterValue);
         setOfftakes(filtered)
     };
-
     const closeDrawer = (id) => {
         // setOpenOfftake(false)
         refresh()
@@ -176,10 +162,24 @@ const Offtake = () => {
             setOfftakesReset(data)
         })
     }
-
-    useEffect(() => {
-        console.log(offtake);
+    const getStableOfftakes = async () => {
+        // stable offtake => 1725998980488
+        var ot = [];
+        setOfftakes([])
         OfftakeService.getOfftakes().then(data => {
+            // setOfftakesReset([])
+            setOfftakes(data)
+        })
+        console.log(ot);
+
+        // setOfftakes(ot)
+        // setOfftakesReset(ot)
+    }
+    useEffect(() => {
+        getStableOfftakes()
+        return
+        OfftakeService.getOfftakes().then(data => {
+            console.log(data);
             setOfftakes(data)
             setOfftakesReset(data)
             setOpenOfftake(false)
@@ -188,34 +188,41 @@ const Offtake = () => {
             console.log(err);
             console.log('====================================');
         })
-    }, [offtake])
+    }, [])
     return (
         <Layout>
 
+
+
             {/* Confirm Assessment */}
-            <Modal title="Confirm Assessment" open={openConfirm} onOk={() => {
+            <Modal open={openConfirm} onOk={() => {
                 confirmForm.submit()
             }} onCancel={() => {
                 setOpenConfirm(false)
             }}>
-                <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+                <Stack gap={3} pt={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
                     <Typography variant="h4">Assessment confirmation</Typography>
-                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
-                        <Typography variant="subtitle2">AGRO-{offtakeBackup.offtake_id}</Typography>
+                    <Stack sx={{ opacity: 0.3 }} direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">{offtakeBackup.offtake_id}</Typography>
                         <StatusTag status={'inprogress'} />
                     </Stack>
                     <ArrowDownwardRounded />
                     <Stack direction={'row'} alignSelf={'center'} gap={1}>
-                        <Typography variant="subtitle2">AGRO-{offtakeBackup.offtake_id}</Typography>
+                        <Typography variant="subtitle2">{offtakeBackup.offtake_id}</Typography>
                         <StatusTag status={'negotiation'} />
                     </Stack>
-                    <Typography variant="subtitle2">
+                    <Typography variant="body1">
                         Please complete the checklist to confirm the required assessment requirements for the offtake opportunity
                     </Typography>
-                    <Stack flex={1} alignItems={'start'}>
+                    <Stack width={'100%'} flex={1} alignItems={'start'}>
                         <Form layout="horizontal" form={confirmForm} onFinish={(v) => {
                             // "/offtakes/:offtake_id/negotiation"
-                            OfftakeService.updateOfftake(offtakeBackup.offtake_id, { ...offtakeBackup, confirmed: v, status: "negotiation" }).then(Res => {
+                            const _status = {
+                                status_name: "negotiation",
+                                updated_at: SystemService.generateTimestamp()
+                            }
+
+                            OfftakeService.updateOfftake(offtakeBackup.offtake_id, { ...offtakeBackup, confirmed: v, status: [_status] }).then(Res => {
                                 confirmForm.resetFields()
                                 setOpenConfirm(false)
                             })
@@ -263,9 +270,7 @@ const Offtake = () => {
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)
-                setTimeout(() => {
-                    dispatch(setActiveOfftake({}));
-                }, 1000);
+                dispatch(setActiveOfftake({}));
             }} open={openOfftake} extra={
                 <Stack direction={'row'} gap={1}>
                     <Popconfirm title="Not Viable" description="Mark this offtake as non viable, meaning we cannot accommodate this request, proceed?" onConfirm={() => {
@@ -275,22 +280,21 @@ const Offtake = () => {
                     </Popconfirm>{/* <Button onClick={() => { }}>
                         Pipeline
                     </Button> */}
-                    {offtakeBackup?.status === 'negotiation' ? (<Button type="primary" onClick={() => {
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'negotiation' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/chat`);
                     }} > Open Chat</Button>) : null}
-                    {offtakeBackup?.status === 'planning' ? (<Button type="primary" onClick={() => {
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'planning' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
-                    }} > Open Production Schedule</Button>) : null}
-                    {offtakeBackup?.status === 'submitted' ? (<Button type="primary" onClick={() => {
+                    }} > Open Production Plan</Button>) : null}
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'submitted' ? (<Button type="primary" onClick={() => {
                         dispatch(setPublishState(true))
                     }} > Publish Offtake</Button>) : null}
-                    {offtakeBackup?.status === 'finalstage' ? (<Button type="primary" onClick={() => {
-                        dispatch(setPublishState(true))
-                    }} >Activate Offtake</Button>) : null}
+                    {/* {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'finalstage' ? (<Button type="primary" onClick={() => {
+                      
+                    }} >Activate Offtake</Button>) : null} */}
                     {!offtakeBackup?.status && (<Button onClick={() => {
                         setOpenOfftake(false)
                         setOpenConfirm(true)
-
                     }
                     } type="primary">Confirm Assessment</Button>
                     )}
@@ -302,6 +306,7 @@ const Offtake = () => {
 
 
 
+            {/* Page */}
             <Stack position={"relative"} flex={1} p={2} spacing={2}>
                 <Stack
                     position={"sticky"}

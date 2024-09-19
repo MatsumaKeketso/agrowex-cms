@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
-import { Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material'
+import { Box, colors, IconButton, Stack, TextField, Typography } from '@mui/material'
 import OfftakeDetails from '../components/OfftakeDetails'
 import { useLocation, useParams } from 'react-router-dom'
-import { OfftakeService } from '../db/offtake-service'
+import { OfftakeService } from '../services/offtakeService'
 import { useDispatch } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -56,61 +56,74 @@ const ProductionScheduling = () => {
   const dispatch = useDispatch()
   const submitSchedule = (schedule) => {
     setLoading(true)
-    schedule.submissionClosingDate = dayjs(schedule.submissionClosingDate).toString()
-    schedule.steps.map((_, step) => {
-      console.log(offtake.schedule);
-      // assign prev step id or generate a new one
-      console.log();
-
-      const stepsExist = checkStepsProperty(offtake?.schedule)
-      const stepsIdExist = checkStepsAndIdProperty(offtake?.schedule)
-      const stepId = stepsExist ?
-        stepsIdExist ?
-          offtake.schedule?.steps[step]?.id
-          :
-          generateStepId()
-        :
-        null;
-      if (stepsExist) {
-        schedule.steps[step].id = stepId
+    schedule.submissionClosingDate = dayjs(schedule.submissionClosingDate).valueOf()
+    const checkIds = () => {
+      var proceed = false
+      if ('steps' in schedule) {
+        schedule.steps.forEach((d, step) => {
+          if (d.id) {
+            proceed = true
+          } else {
+            proceed = false
+          }
+        });
+        return proceed
+      } else {
+        return proceed
       }
+    }
+    // does schedule have steps
+    if (schedule.steps !== undefined) {
+      // loop steps
+      console.log(schedule);
 
-      try {
-        console.log(schedule.steps[step].stepDuration[0]);
-        // // format step duration start and end dates
-        const stepDurationStartDate = dayjs(schedule.steps[step].stepDuration[0]).toString()
-        const stepDurationEndDate = dayjs(schedule.steps[step].stepDuration[1]).toString()
-        schedule.steps[step].stepDuration = [stepDurationStartDate, stepDurationEndDate]
-        console.log('====================================');
-        console.log(schedule);
-        console.log('====================================');
+      schedule.steps.map((_, step) => {
+        // assign prev step id or generate a new one
+        if ('steps' in offtake.schedule) {
+          schedule.steps[step].id = offtake.schedule?.steps[step]?.id
+        } else {
+          schedule.steps[step].id = generateStepId()
+        }
+        try {
+          // // format step duration start and end dates
+          const stepDurationStartDate = dayjs(schedule.steps[step].stepDuration[0]).valueOf()
+          const stepDurationEndDate = dayjs(schedule.steps[step].stepDuration[1]).valueOf()
+          schedule.steps[step].stepDuration = [stepDurationStartDate, stepDurationEndDate]
+        } catch (error) {
+          console.log(error);
+        }
+      })
+      console.log(schedule);
 
-      } catch (error) {
-        console.log(error);
 
-      }
-    })
+    } else {
+      messageApi.error('Production plan steps missing')
+      setLoading(false)
+    }
     // format submission start and end dates
-    const startDate = dayjs(schedule.offtakeStartAndEndDate[0]).toString()
-    const endDate = dayjs(schedule.offtakeStartAndEndDate[1]).toString()
+    const startDate = dayjs(schedule.offtakeStartAndEndDate[0]).valueOf()
+    const endDate = dayjs(schedule.offtakeStartAndEndDate[1]).valueOf()
     const startAndEndDates = [startDate, endDate]
     schedule.offtakeStartAndEndDate = startAndEndDates
-    // schedule.offtakeStartAndEndDate.map((_, i) => {
 
-    // })
     const offtakeWithSchedule = { ...offtake, schedule: schedule };
-    console.log(schedule.offtakeStartAndEndDate[0]);
     // return
-    OfftakeService.updateOfftake(offtake_id, offtakeWithSchedule).then(() => {
-      dispatch(setActiveOfftake(offtakeWithSchedule))
-      messageApi.success("Offtake Updated successfully")
-      setLoading(false)
-    }).catch(err => {
-      console.log(err);
+    if (checkIds()) {
+      OfftakeService.updateOfftake(offtake_id, offtakeWithSchedule).then(() => {
+        dispatch(setActiveOfftake(offtakeWithSchedule))
+        messageApi.success("Offtake Updated successfully")
+        setLoading(false)
+      }).catch(err => {
+        console.log(err);
 
-      messageApi.error("Error. Data not saved.")
+        messageApi.error("Error. Data not saved.")
+        setLoading(false)
+      })
+    } else {
+      console.log(schedule.steps);
       setLoading(false)
-    })
+      messageApi.error('Problem with step id, contact dev for fix')
+    }
 
   }
   useEffect(() => {
@@ -125,7 +138,12 @@ const ProductionScheduling = () => {
          * 
          */
 
-        if (o.status === 'submitted' || o.status === 'published') {
+        if (
+          OfftakeService.getStatus.Name(o.status) === 'submitted' ||
+          OfftakeService.getStatus.Name(o.status) === 'published' ||
+          OfftakeService.getStatus.Name(o.status) === 'finalstage' ||
+          OfftakeService.getStatus.Name(o.status) === 'active'
+        ) {
           setDisableForm(true)
         }
         setOfftake(o)
@@ -233,9 +251,11 @@ const ProductionScheduling = () => {
                         </Card>
                       ))}
 
-                      <Button disabled={disableForm} variant='outlined' onClick={() => add()} >
-                        + Add Item
-                      </Button>
+                      <Stack alignItems={'flex-end'}>
+                        <Button disabled={disableForm} type='default' onClick={() => add()} >
+                          + Add Step
+                        </Button>
+                      </Stack>
                     </div>
                   )}
                 </Form.List>
@@ -245,7 +265,7 @@ const ProductionScheduling = () => {
               <Stack flex={1}>
 
               </Stack>
-              <Button variant='outlined' disabled={disableForm} onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
+              <Button loading={loading} type='default' color={colors.green[400]} disabled={disableForm} onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
               {/* <Button variant='contained' onClick={() => {
               setNext(true)
             }}>Continue</Button> */}

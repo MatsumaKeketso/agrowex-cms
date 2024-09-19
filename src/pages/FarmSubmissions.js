@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
-import { OfftakeService } from '../db/offtake-service'
+import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
 import { realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, List, Modal, Progress, Skeleton, Statistic, Table, Tooltip } from 'antd';
+import { Avatar, Button, Divider, List, message, Modal, Progress, Skeleton, Statistic, Table, Tooltip } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounded } from '@mui/icons-material';
 import StatusTag from '../components/StatusTag';
-const FarmSubmissionColumns = [
+import { SystemService } from '../services/systemService';
+import { setActiveOfftake } from '../services/offtake/offtakeSlice';
+export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
     dataIndex: 'name',
@@ -134,6 +136,7 @@ const deliveryColumns = [
 const FarmerView = ({ record }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
+  const [documents, setDocuments] = useState([])
   const offtake = useSelector((state) => state.offtake.active)
   const deliveryUpdates = [
     {
@@ -171,8 +174,11 @@ const FarmerView = ({ record }) => {
 
   useEffect(() => {
     console.log(offtake);
+    OfftakeService.getOfftakeDocuments(offtake.offtake_id).then((_documents) => {
+      setDocuments(_documents)
 
-    loadMoreData();
+    })
+    // loadMoreData();
   }, []);
   return (<Stack direction={'row'} >
     <Stack flex={1} gap={2} bgcolor={colors.grey[200]}>
@@ -205,36 +211,24 @@ const FarmerView = ({ record }) => {
           <Stack flex={1} >
             <InfiniteScroll
               dataLength={data.length}
-              next={loadMoreData}
-              hasMore={data.length < 50}
               height={300}
-              loader={
-                <Skeleton
-                  avatar
-                  paragraph={{
-                    rows: 1,
-                  }}
-                  active
-                />
-              }
               endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
               scrollableTarget="scrollableDiv"
             >
               <List
-                dataSource={data}
-                renderItem={(item) => (
-                  <List.Item style={{ display: 'flex', alignItems: 'center' }} key={item.email}>
+                dataSource={documents}
+                renderItem={(document) => (
+                  <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
                     <List.Item.Meta
                       avatar={<IconButton size='small'>
                         <AttachFileRounded />
                       </IconButton>}
-                      title={item.name.last}
+                      title={document.name}
                     />
                     <Stack direction={'row'} gap={1}>
                       <Button>
-                        View
+                        Preview
                       </Button>
-                      <Button icon={<RemoveRedEyeRounded />} />
                     </Stack>
                   </List.Item>
                 )}
@@ -287,7 +281,9 @@ const FarmSubmissions = () => {
   const [tonsSelected, setTons] = useState(0)
   const { offtake_id } = useParams()
   const offtake = useSelector((state) => state.offtake?.active);
+  const [messageAPI, useContext] = message.useMessage()
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const onSelectChange = (newSelectedRowKeys, c) => {
     console.log('selectedRowKeys changed: ', c);
     setSelectedRowKeys(newSelectedRowKeys);
@@ -333,6 +329,8 @@ const FarmSubmissions = () => {
       },
     ],
   };
+  const currentStatus = OfftakeService.getStatus.Name(offtake.status);
+
   const calculateTotalRequestedOffer = (keysArray) => {
     return farms
       .filter(farm => keysArray.includes(farm.key)) // Filter the farms by the keys in the array
@@ -373,11 +371,17 @@ const FarmSubmissions = () => {
   }, [])
   return (
     <Layout >
-
+      {useContext}
       <Modal title="Status Update" open={finalstage} onOk={() => {
         setLoading(true)
         OfftakeService.getOfftake(offtake_id).then(ot => {
-          OfftakeService.updateOfftake(ot.offtake_id, { ...ot, suppliers: selectedFarms, status: 'finalstage' }).then(() => {
+          const _status = {
+            status_name: 'finalstage',
+            updated_at: SystemService.generateTimestamp()
+          }
+          const updated_offtake = { ...ot, suppliers: selectedFarms, status: [...ot.status, _status] }
+          OfftakeService.updateOfftake(ot.offtake_id, updated_offtake).then(() => {
+            dispatch(setActiveOfftake(updated_offtake))
             setFinalStage(false)
             setLoading(false)
           })
@@ -408,9 +412,13 @@ const FarmSubmissions = () => {
 
       <Modal title="Status Update" open={active} onOk={() => {
         setLoading(true)
-        setActive(true)
         OfftakeService.getOfftake(offtake_id).then(ot => {
-          OfftakeService.updateOfftake(ot.offtake_id, { ...ot, status: 'active' }).then(() => {
+          const _status = {
+            status_name: 'active',
+            updated_at: SystemService.generateTimestamp()
+          }
+          const updated_status = [...ot.status, _status]
+          OfftakeService.updateOfftake(ot.offtake_id, { ...ot, status: updated_status }).then(() => {
             setActive(false)
             setLoading(false)
             navigate('/offtakes')
@@ -446,15 +454,24 @@ const FarmSubmissions = () => {
               <Typography variant='body2' flex={1}>Closing Date : { }</Typography>
             </Stack>
             <Typography variant='h6' p={2} flex={1}>{tonsSelected}t / {tonsSelected < required ? required : tonsSelected}t</Typography>
-            {offtake.status !== 'finalstage' && offtake.status !== 'active' && (<Button onClick={() => {
-              setFinalStage(true)
+            {currentStatus !== 'finalstage' && currentStatus !== 'active' && (<Button onClick={() => {
+              OfftakeService.getOfftake(offtake_id).then(_offtake => {
+                // check for master contract
+                const { master_contract } = _offtake;
+                if (master_contract) {
+                  setFinalStage(true)
+                } else {
+                  messageAPI.warning('Master Contract required')
+                }
+
+              })
             }} disabled={tonsSelected < required} size='large' type='primary'>Final Stage</Button>)}
-            {offtake.status === 'finalstage' && (<Button onClick={() => {
+            {currentStatus === 'finalstage' && (<Button onClick={() => {
               setActive(true)
             }} disabled={tonsSelected < required} size='large' type='primary'>Activate Offtake</Button>)}
           </Stack>
           <Table
-            rowSelection={offtake.status === 'finalstage' ? null : rowSelection}
+            rowSelection={currentStatus === 'finalstage' || currentStatus === 'active' ? null : rowSelection}
             dataSource={farms}
             columns={FarmSubmissionColumns}
             expandable={{
@@ -463,7 +480,7 @@ const FarmSubmissions = () => {
             }} />
         </Stack>
         <Stack position={'sticky'} flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto' }}>
-          <OfftakeDetails setOfftakeId={() => { }} showSubmissions={false} />
+          <OfftakeDetails setOfftakeId={() => { }} showSubmissions={true} />
         </Stack>
       </Stack>
     </Layout>

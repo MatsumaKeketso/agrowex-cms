@@ -1,6 +1,7 @@
-import { Box, Stack } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { Tag } from 'antd';
 import React from 'react'
+import { SystemService } from '../services/systemService';
 const colors = {
   inprogress: 'yellow',
   negotiation: '#061724',
@@ -27,8 +28,14 @@ const StatusTag = (props) => {
     return <TagRender status={status} />
   } else {
     // new
-    const currentStatus = status[status.length - 1].name
-    return <TagRender status={currentStatus} />
+    const currentStatus = status[status.length - 1].status_name
+    const updatedAt = SystemService.formatTimestamp(status[status.length - 1].updated_at)
+    return (
+      <Stack gap={1}>
+        <TagRender status={currentStatus} />
+        <Typography variant='caption'>Updated at - {updatedAt}</Typography>
+      </Stack>
+    )
   }
 }
 

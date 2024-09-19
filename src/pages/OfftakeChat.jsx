@@ -3,7 +3,7 @@ import Layout from '../components/Layout'
 import { AppBar, Box, colors, Grid, IconButton, Paper, Stack, styled, Toolbar, Typography } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChatItem, MeetingMessage, MessageBox } from 'react-chat-elements'
-import { OfftakeService } from '../db/offtake-service'
+import { OfftakeService } from '../services/offtakeService'
 import OfftakeDetails from '../components/OfftakeDetails'
 import { ArrowDownward, AttachFile, Call, ChatBubble } from '@mui/icons-material'
 import { Breadcrumb, Button, Drawer, Empty, Form, Input, Modal, Popconfirm } from 'antd'
@@ -14,6 +14,7 @@ import { ChatService, convertTimestampToDateString, createCurrentTimestamp } fro
 import { useSelector } from 'react-redux'
 import { onValue, ref } from 'firebase/database'
 import StatusTag from '../components/StatusTag'
+import { SystemService } from '../services/systemService'
 
 
 const OfftakeChat = () => {
@@ -28,7 +29,7 @@ const OfftakeChat = () => {
   const chatEndRef = useRef(null);
   const navigate = useNavigate()
   const { uid } = useSelector((state) => state?.user.profile || {})
-  const offtake = useSelector((state) => state?.offtake || {})
+  const offtake = useSelector((state) => state?.offtake.active || {})
   const sendMessage = (data) => {
     AuthService.getUser().then(user => {
       const oM = { ...data, timestamp: createCurrentTimestamp(), status: 'sent', sender: user.uid }
@@ -88,11 +89,19 @@ const OfftakeChat = () => {
   }, [])
   return (
     <Layout scroll={false}>
-      <Modal open={planning} title="Begin Planning" onOk={() => {
+
+      {/* Begin Planning */}
+      <Modal open={planning} onOk={() => {
         // return
+        const _status = {
+          status_name: "planning",
+          updated_at: SystemService.generateTimestamp()
+        }
+        var updated_status = [...offtake.status, _status]
+
         AuthService.getUser().then(user => {
           OfftakeService.getOfftake(offtake_id).then(offtake => {
-            OfftakeService.updateOfftake(offtake_id, { ...offtake, schedule: {}, status: 'planning' }).then(() => {
+            OfftakeService.updateOfftake(offtake_id, { ...offtake, schedule: {}, status: updated_status }).then(() => {
               navigate(`/offtakes/${offtake_id}/schedule`)
             })
           })
@@ -101,7 +110,7 @@ const OfftakeChat = () => {
       }} onCancel={() => {
         setPlanning(false)
       }}>
-        <Stack justifyContent={'center'} alignItems={'center'} gap={4}>
+        <Stack pt={5} justifyContent={'center'} alignItems={'center'} gap={4}>
           <Typography variant='h4'>Begin Planning</Typography>
           <Stack gap={2} alignItems={'center'}>
             <Stack sx={{ opacity: 0.3 }} direction={'row'} gap={1}>
@@ -135,15 +144,16 @@ const OfftakeChat = () => {
                   <Button type='text' danger>Not Viable</Button>
                 </Popconfirm>
                 <Button icon={<Call />} size='large'></Button>
-                {offtakeBackup?.status !== 'planning' && (
-                  <Button type='primary' size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
-                    setPlanning(true)
-                  }}>Begin Planning</Button>
-                )}
-                {offtakeBackup?.status === 'planning' && (
+
+                {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'planning' && (
                   <Button size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
                     navigate(`/offtakes/${offtake_id}/schedule`)
                   }}>Production Planning</Button>
+                )}
+                {OfftakeService.getStatus.Name(offtakeBackup?.status) !== 'planning' && (
+                  <Button type='primary'  color={colors.lightGreen[700]} onClick={() => {
+                    setPlanning(true)
+                  }}>Begin Planning</Button>
                 )}
               </Stack>
             </Toolbar>

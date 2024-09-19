@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { firebaseConfig } from "../services/fc";
+import { firebaseConfig } from "../db/fc";
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
@@ -34,7 +34,6 @@ export const AuthService = {
       });
     })
   },
-
   signout: () => {
     return new Promise((res, rej) => {
       signOut(auth).then(() => {

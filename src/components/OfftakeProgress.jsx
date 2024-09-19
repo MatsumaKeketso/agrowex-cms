@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Steps } from 'antd';
 import { green, blue } from '@mui/material/colors';
 import { colors, Step, StepLabel, Stepper, Typography } from '@mui/material';
+import { SystemService } from '../services/systemService';
+import { useSelector } from 'react-redux';
 
 // const { Step } = Steps;
 const stepData = [
@@ -13,17 +15,29 @@ const stepData = [
   { title: 'finalstage', status: 'wait' },
   { title: 'active', status: 'wait' },
 ];
-const OfftakeProgress = ({ currentStage }) => {
-  const [currentStep, setCurrentStep] = useState(3)
-  const getCurrentStepIndex = (currentStep) => {
-    return stepData.findIndex(step => step.title === currentStep);
-  };
+const OfftakeProgress = ({ status }) => {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [updatedAt, setUpdatedAt] = useState('...')
+  const offtake = useSelector(state => state.offtake.active)
   const isStepFailed = (step) => {
     return step === null;
   };
+  useEffect(() => {
+    console.log(offtake);
+    if (offtake?.status) {
+      if (offtake.status?.length) {
+        const currentStatus = status[status?.length - 1].status_name
+        const updatedAt = SystemService.formatTimestamp(status[status?.length - 1].updated_at)
+        const currentStepIndex = stepData.findIndex(step => step.title === currentStatus);
+        setCurrentStep(currentStepIndex)
+        setUpdatedAt(updatedAt)
+      }
+    }
 
+
+  })
   return (
-    <Stepper activeStep={getCurrentStepIndex(currentStage)}>
+    <Stepper activeStep={currentStep}>
       {stepData.map((step, index) => {
         const labelProps = {};
         if (isStepFailed(index)) {

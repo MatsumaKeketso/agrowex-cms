@@ -9,7 +9,7 @@ import { useParams } from 'react-router-dom'
 import { AuthService, realtimeDB } from '../services/authService'
 import ChatMessage from '../components/ChatMessage'
 import { useDispatch, useSelector } from 'react-redux'
-import { OfftakeService } from '../db/offtake-service'
+import { OfftakeService } from '../services/offtakeService'
 import { convertTimestampToDateString, createCurrentTimestamp } from '../services/chatService'
 import { setPublishState } from '../services/offtake/offtakeSlice'
 

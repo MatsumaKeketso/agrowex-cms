@@ -1,17 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { ConfigProvider } from "antd";
 import { store } from "./services/redux/store";
 import "swiper/css";
-import { initializeApp } from "firebase/app";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
-import { firebaseConfig } from "./services/fc";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
