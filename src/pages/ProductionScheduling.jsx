@@ -173,17 +173,23 @@ const ProductionScheduling = () => {
             stat.steps.forEach((step, step_index) => {
               const steps = stat[status_index]?.steps
               schedule.status.forEach((stat, a) => {
+                // does the offtake in db have a schedule
+                var refSteps = []
+
                 // get reference to ids inside the offtake
-                const refSteps = offtake.schedule.status[a].steps
+
                 stat.steps.forEach((step, b) => {
-                  // need to check if ids exist
-                  if ('id' in refSteps[b]) {
-                    //'Assign existing Id'
-                    status[a].steps[b].id = refSteps[b].id
+                  if ("status" in offtake?.schedule) {
+                    refSteps = offtake.schedule.status[a].steps
+                    // need to check if ids exist
+                    if ('id' in refSteps[b]) {
+                      //'Assign existing Id'
+                      status[a].steps[b].id = refSteps[b].id
+                    } else {
+                      //'Generate new id for step'
+                      status[a].steps[b].id = generateStepId()
+                    }
                   } else {
-                    //'Generate new id for step'
-                    status[a].steps[b].id = generateStepId()
-                    return
                     status[a].steps[b].id = generateStepId()
                   }
                   const start = step.duration[0]

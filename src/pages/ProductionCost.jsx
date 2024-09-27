@@ -178,7 +178,7 @@ const ProductionCost = () => {
               <Spin size='large' />
             </Stack>)}
             {offtake?.costing?.status?.length === 0 && (<Empty />)}
-            {!offtake?.costing?.status && (
+            {!offtake?.costing?.status || !offtake?.schedule?.status && (
               <Stack alignItems={'center'}>
                 <Empty />
                 <Stack px={15} py={5} gap={4}>
