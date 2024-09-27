@@ -267,6 +267,8 @@ const Offtake = () => {
 
 
 
+
+
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)

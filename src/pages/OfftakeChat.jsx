@@ -151,7 +151,7 @@ const OfftakeChat = () => {
                   }}>Production Planning</Button>
                 )}
                 {OfftakeService.getStatus.Name(offtakeBackup?.status) !== 'planning' && (
-                  <Button type='primary'  color={colors.lightGreen[700]} onClick={() => {
+                  <Button type='primary' color={colors.lightGreen[700]} onClick={() => {
                     setPlanning(true)
                   }}>Begin Planning</Button>
                 )}

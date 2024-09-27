@@ -35,6 +35,7 @@ import FarmSubmissions from "./pages/FarmSubmissions";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
+
   palette: {
     primary: {
       // light: will be calculated from palette.primary.main,
@@ -62,6 +63,16 @@ export const theme = createTheme({
         },
       },
     },
+    MuiAccordion: {
+      defaultProps: {
+
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 30
+        }
+      }
+    }
   },
   typography: {
     fontFamily: ["Plus Jakarta Sans Variable"],

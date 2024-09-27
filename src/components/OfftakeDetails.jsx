@@ -731,7 +731,7 @@ const OfftakeDetails = (props) => {
                     <Collapse in={viewDocuments}>
                         <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
                             {documents?.map((document) => {
-                                return (<Documents url={document.file_url} name={document.name} type="pdf" />)
+                                return (<Documents key={document.name} url={document.file_url} name={document.name} type="pdf" />)
                             })}
                         </Stack>
                     </Collapse>

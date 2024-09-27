@@ -14,6 +14,8 @@ import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import { AuthService } from '../services/authService'
 import { SystemService } from '../services/systemService'
+import { CheckOutlined } from '@ant-design/icons'
+import { formatDate } from './ProductionScheduling'
 dayjs.extend(toObject);
 
 const ProductionCost = () => {
@@ -63,47 +65,58 @@ const ProductionCost = () => {
         // prepare scheduling and costing
         var schedule = o.schedule
         var costing = o.costing
-        console.log({ schedule, costing });
+        // console.log({ schedule, costing });
 
         // prefill costing steps with schedule steps
-        if (schedule?.steps) {
+        if (schedule?.status) {
           costingForm.setFieldsValue({
-            steps: schedule?.steps.map(step => {
+            status: schedule?.status.map(stat => {
               return ({
-                process_name: step?.name || "",
-                id: step?.id || ""
+                name: stat?.name || "",
+                description: stat?.description || "",
+                id: stat?.id || "",
+                steps: stat.steps.map(step => {
+                  const { name, duration, process_name, total, total_symbol, unit, unit_symbol, category, application } = step
+                  const start = dayjs(duration[0])
+                  const end = dayjs(duration[1])
+                  console.log(step);
+
+                  return {
+                    name: name,
+                    process_name: process_name,
+                    total: total,
+                    application: step.application
+                  }
+                })
               })
             })
           });
+        } else {
+          messageApi.error('Status missing steps')
         }
 
-        if (costing?.steps) {
-          if (costing?.steps?.length !== 0) {
+        if (costing?.status) {
+          if (costing?.status?.length !== 0) {
             costingForm.setFieldsValue({
-              steps: costing.steps.map((step, i) => {
-                if (schedule.steps) {
-                  if (schedule.steps[i]?.id === step?.id) {
-                    console.log(schedule?.steps[i]);
+              status: costing.status.map((stat, i) => {
+                return {
+                  name: stat.name,
+                  description: stat.description,
+                  steps: stat.steps.map((step, b) => {
+                    return ({
+                      process_name: step.process_name,
+                      name: step.name,
+                      application: step.application,
+                      category: step.category,
+                      total: step.total,
+                      total_symbol: step.total_symbol,
+                      unit: step.unit,
+                      unit_symbol: step.unit_symbol,
+                    })
 
-                    // set costing form with previous values
-                    if (schedule?.steps[i]?.id) {
-                      return ({
-                        process_name: schedule.steps[i].name,
-                        name: step.name,
-                        application: step.application,
-                        category: step.category,
-                        total: step.total,
-                        total_symbol: step.total_symbol,
-                        unit: step.unit,
-                        unit_symbol: step.unit_symbol,
-                      })
-                    } else {
-
-                    }
-                    setLoading(false)
-                  }
+                  })
                 }
-                setLoading(false)
+
               })
             });
           }
@@ -164,8 +177,8 @@ const ProductionCost = () => {
             {loading && (<Stack py={5} alignItems={'center'}>
               <Spin size='large' />
             </Stack>)}
-            {!offtake?.costing?.steps.length === 0 && (<Empty />)}
-            {offtake?.costing?.steps === 0 && (
+            {offtake?.costing?.status?.length === 0 && (<Empty />)}
+            {!offtake?.costing?.status && (
               <Stack alignItems={'center'}>
                 <Empty />
                 <Stack px={15} py={5} gap={4}>
@@ -179,30 +192,40 @@ const ProductionCost = () => {
             <Form layout='vertical' disabled={disableForm} form={costingForm}
               onFinish={(values) => {
                 // setLoading(true)
-                if (offtake.schedule.steps) {
-                  offtake.schedule.steps.map((step, i) => {
-                    if (!step.id) {
+
+                if (offtake.schedule.status) {
+                  offtake.schedule.status.map((stat, i) => {
+                    if (!stat.id) {
                       messageApi.error('Step Missing Id',);
                       return
-                    }
-                    values.steps[i].id = step.id
-                  })
-                  OfftakeService.updateOfftake(offtake_id, { ...offtake, costing: values }).then(() => {
-                    messageApi.success("Offtake Updated successfully")
-                    if (publish) { setNext(true) }
-                    setLoading(false)
-                  }).catch(err => {
-                    setLoading(false)
-                    messageApi.error("Error. Data not saved.")
-                    console.log(err);
+                    } else {
+                      values.status[i].id = stat.id
+                      stat.steps.forEach((step, b) => {
+                        const { id } = step
+                        values.status[i].steps[b].id = id
+                      //   const start = formatDate(values.status[i].steps[b].duration[0])
+                      //   const end = formatDate(values.status[i].steps[b].duration[1])
+                      //   values.status[i].steps[b].duration = [start, end]
+                      });
+                 
+                      OfftakeService.updateOfftake(offtake_id, { ...offtake, costing: values }).then(() => {
+                        messageApi.success("Offtake Updated successfully")
+                        if (publish) { setNext(true) }
+                        setLoading(false)
+                      }).catch(err => {
+                        setLoading(false)
+                        messageApi.error("Error. Data not saved.")
+                        console.log(err);
+                      })
 
+                    }
                   })
                 } else {
                   messageApi.error('Production plan missing');
 
                 }
               }}>
-              <Form.List name="steps">
+              <Form.List name="status">
                 {(fields, { add, remove }) => (
                   <div style={{ display: 'flex', rowGap: 16, flexDirection: 'column' }}>
                     {fields.map((field) => {
@@ -211,53 +234,75 @@ const ProductionCost = () => {
                         <Stack>
                           <Stack flex={1} direction={'row'} gap={5}>
                             <Stack pt={0.5} gap={1} direction={'row'}>
-                              <Typography>Step {field.name + 1}</Typography>
+                              <Typography>Status {field.name + 1}</Typography>
                             </Stack>
                             <Stack
                               flex={1}
                             >
-                              <Form.Item label="Process Name" name={[field.name, 'process_name']} rules={[{ required: true }]} >
 
+                              <Form.Item label="Status" name={[field.name, 'name']} rules={[{ required: true }]} >
                                 <Input style={{ color: 'black', fontSize: 27 }} disabled bordered={false} size='large' />
-
                               </Form.Item>
-                              {/* <Form.Item hidden={true} name={[field.name, 'id']} rules={[{ required: true }]} >
+                              <Form.Item label="Description" name={[field.name, 'description']} rules={[{ required: true }]}>
+                                <Input.TextArea disabled bordered={false} size='large' />
+                              </Form.Item>
+                              <Form.List name={[field.name, 'steps']}>
+                                {(steps, { add, remove }) => (
+                                  <Timeline>
+                                    {steps.map((step) => {
+
+                                      return (
+                                        <Timeline.Item key={step.name} >
+                                          <Stack>
+                                            {/* <Form.Item hidden={true} name={[field.name, 'id']} rules={[{ required: true }]} >
                                 <Input size='large' disabled={true} />
                               </Form.Item> */}
-                              {/* <Divider >Details</Divider> */}
-                              <Form.Item label="Name" name={[field.name, 'name']} rules={[{ required: true }]} >
-                                <Input />
-                              </Form.Item>
-                              <Form.Item label="Application" name={[field.name, 'application']} rules={[{ required: true }]} >
-                                <Input />
-                              </Form.Item>
-                              <Stack direction={'row'} gap={2}>
-                                <Form.Item style={{ width: '100%' }} label="Unit" name={[field.name, 'unit']} rules={[{ required: true }]} >
-                                  <Input />
-                                </Form.Item>
-                                <Form.Item label="Per" name={[field.name, 'unit_symbol']} rules={[{ required: true }]} >
-                                  <Select placeholder="Select unit">
-                                    <Select.Option value="ha">/Ha</Select.Option>
-                                  </Select>
-                                </Form.Item>
+                                            {/* <Divider >Details</Divider> */}
+                                            <Form.Item name={[step.name, 'name']} rules={[{ required: true }]} >
+                                              <Input style={{ color: 'black', fontSize: 18 }} bordered={false} />
+                                            </Form.Item>
+                                            <Form.Item label="Name" name={[step.name, 'process_name']} rules={[{ required: true }]} >
+                                              <Input />
+                                            </Form.Item>
+                                            <Form.Item label="Application" name={[step.name, 'application']} rules={[{ required: true }]} >
+                                              <Input />
+                                            </Form.Item>
+                                            <Stack direction={'row'} gap={2}>
+                                              <Form.Item style={{ width: '100%' }} label="Unit" name={[step.name, 'unit']} rules={[{ required: true }]} >
+                                                <Input />
+                                              </Form.Item>
+                                              <Form.Item label="Per" name={[step.name, 'unit_symbol']} rules={[{ required: true }]} >
+                                                <Select placeholder="Select unit">
+                                                  <Select.Option value="ha">/Ha</Select.Option>
+                                                </Select>
+                                              </Form.Item>
 
-                              </Stack>
-                              <Form.Item label="Category" name={[field.name, 'category']} rules={[{ required: true }]} >
-                                <Select >
-                                  <Select.Option value="ha">/Ha</Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Stack direction={'row'} gap={2}>
-                                <Form.Item style={{ width: '100%' }} label="Total" name={[field.name, 'total']} rules={[{ required: true }]} >
-                                  <Input />
-                                </Form.Item>
-                                <Form.Item label="Per" name={[field.name, 'total_symbol']} rules={[{ required: true }]} >
-                                  <Select placeholder="Select unit">
-                                    <Select.Option value="ha">/Ha</Select.Option>
-                                  </Select>
-                                </Form.Item>
+                                            </Stack>
+                                            <Form.Item label="Category" name={[step.name, 'category']} rules={[{ required: true }]} >
+                                              <Select >
+                                                <Select.Option value="ha">/Ha</Select.Option>
+                                              </Select>
+                                            </Form.Item>
+                                            <Stack direction={'row'} gap={2}>
+                                              <Form.Item style={{ width: '100%' }} label="Total" name={[step.name, 'total']} rules={[{ required: true }]} >
+                                                <Input />
+                                              </Form.Item>
+                                              <Form.Item label="Per" name={[step.name, 'total_symbol']} rules={[{ required: true }]} >
+                                                <Select placeholder="Select unit">
+                                                  <Select.Option value="ha">/Ha</Select.Option>
+                                                </Select>
+                                              </Form.Item>
 
-                              </Stack>
+                                            </Stack>
+                                          </Stack>
+                                        </Timeline.Item>
+                                      )
+                                    })}
+
+                                  </Timeline>
+                                )}
+                              </Form.List>
+
                               {/* <IconButton size='small' onClick={() => {
                             remove(field.name);
                           }}>
