@@ -377,8 +377,8 @@ const OfftakeDetails = (props) => {
             try {
                 if (offtake.schedule.steps) {
                     const a = []
-                    offtake.schedule.steps.forEach(step => {
-                        a.push({ title: step.name })
+                    offtake.schedule.status.forEach(stat => {
+                        a.push({ title: stat.name })
                     });
                     setProductionProgress(a)
                     console.log(a);
@@ -526,7 +526,7 @@ const OfftakeDetails = (props) => {
                         </Stack>
                     </Stack>
                 )}
-                {currentStatus === 'published' && (
+                {currentStatus === 'published' || currentStatus === 'finalstage' && (
                     <Stack>
                         {!ot?.master_contract && (<Stack flex={1} >
 

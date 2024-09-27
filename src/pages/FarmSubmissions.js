@@ -5,14 +5,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
 import { realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, List, message, Modal, Progress, Skeleton, Statistic, Table, Tooltip } from 'antd';
+import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Statistic, Table, Tooltip } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounded } from '@mui/icons-material';
+import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounded, SwipeRightAltOutlined } from '@mui/icons-material';
 import StatusTag from '../components/StatusTag';
 import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
+import { PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -54,63 +55,33 @@ export const FarmSubmissionColumns = [
   //   dataIndex: 'address',
   //   key: 'address',
   // },
+  {
+    title: "Actions",
+    dataIndex: ['offers', 'actions'],
+    key: 'x',
+    width: 130,
+    render: (v, r) => {
+      return (
+        <Stack>
+          <Popconfirm title="Pause Farm" description="Farm activity will be suspended, continue?">
+            <Button type='primary' icon={<PlayCircleOutlined />} shape='circle'></Button>
+          </Popconfirm>
+        </Stack>
+      )
+    }
+  }
+];
+const productionColumns = [
+  {
+    title: 'Date',
+    dataIndex: 'stepAndDate',
+    key: 'stepAndDate',
+  },
 
-];
-const livestockTypes = [
-  { key: '1', type: "Cattle" },
-  { key: '2', type: "Sheep" },
-  { key: '3', type: "Goats" },
-  { key: '4', type: "Pigs" },
-  { key: '5', type: "Chickens" },
-  { key: '6', type: "Ducks" },
-  { key: '7', type: "Turkeys" },
-  { key: '8', type: "Horses" },
-  { key: '9', type: "Rabbits" },
-  { key: '10', type: "Bees" },
-];
-
-const livestockColumns = [
-  {
-    title: 'Livestock Type',
-    dataIndex: 'type',
-    key: 'type',
-  },
-];
-const produceTypes = [
-  { key: '1', type: "Wheat" },
-  { key: '2', type: "Corn" },
-  { key: '3', type: "Soybeans" },
-  { key: '4', type: "Barley" },
-  { key: '5', type: "Oats" },
-  { key: '6', type: "Rice" },
-  { key: '7', type: "Fruits" },
-  { key: '8', type: "Vegetables" },
-  { key: '9', type: "Nuts" },
-  { key: '10', type: "Herbs" },
-];
-
-const produceColumns = [
-  {
-    title: 'Produce Type',
-    dataIndex: 'type',
-    key: 'type',
-  },
-];
-const deliveryColumns = [
-  {
-    title: 'Delivery Date',
-    dataIndex: 'DeliveryDate',
-    key: 'DeliveryDate',
-  },
-  {
-    title: 'Size',
-    dataIndex: 'Size',
-    key: 'Size',
-  },
   {
     title: 'Comment',
-    dataIndex: 'Comment',
-    key: 'Comment',
+    dataIndex: 'comments',
+    key: 'comments',
     render: (text) => {
       const truncatedText = text.substring(0, 48).trim();
       return (
@@ -122,22 +93,128 @@ const deliveryColumns = [
       )
     }
   },
+
+];
+const productionColumnsFS = [
+  {
+    title: 'End Date',
+    dataIndex: 'stepAndDate',
+    key: 'stepAndDate',
+    width: 150
+  },
+  {
+    title: 'Farmer',
+    dataIndex: 'farmer',
+    key: 'farmer',
+  },
   {
     title: 'Produce',
-    dataIndex: 'Produce',
-    key: 'Produce',
+    dataIndex: 'produce',
+    key: 'produce',
   },
   {
-    title: 'Image',
-    dataIndex: 'Image',
-    key: 'Image',
+    title: 'Status',
+    dataIndex: 'status',
+    key: 'status',
+  },
+
+  {
+    title: 'Comment',
+    dataIndex: 'comments',
+    key: 'comments',
+
+  },
+
+];
+const deliveryColumns = [
+  {
+    title: 'Date',
+    dataIndex: 'stepAndDate',
+    key: 'stepAndDate',
+  },
+
+  {
+    title: 'Comment',
+    dataIndex: 'comments',
+    key: 'comments',
+    render: (text) => {
+      const truncatedText = text.substring(0, 48).trim();
+      return (
+        <Tooltip title={text}>
+          <div style={{ maxHeight: '48px', overflow: 'hidden' }}>
+            {truncatedText}
+            {text.length > 48 && '...'}</div>
+        </Tooltip>
+      )
+    }
+  },
+
+];
+const TrackerData = [
+  {
+    offTakeId: "AGRID-1673451062583",
+    farmer: "Mantshwa farm",
+    produce: "Cherry Tomato",
+    status: "Land Preparation",
+    stepAndDate: "02 Sep 2024",
+    step: "Site selection and soil test",
+    comments:
+      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
+    image: "View image",
+  },
+  {
+    offTakeId: "AGRID-1673451062583",
+    farmer: "Mantshwa farm",
+    produce: "Cherry Tomato",
+    status: "Land Preparation",
+    stepAndDate: "02 Sep 2024",
+    step: "Tilling and Leveling",
+    comments:
+      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
+    image: "View image",
+  },
+  {
+    offTakeId: "AGRID-1673451062583",
+    farmer: "Mantshwa farm",
+    produce: "Cherry Tomato",
+    status: "Land Preparation",
+    stepAndDate: "02 Sep 2024",
+    step: "Irrigation, planting & amendments",
+    comments:
+      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
+    image: "View image",
+  },
+  {
+    offTakeId: "AGRID-1673451062583",
+    farmer: "Mantshwa farm",
+    produce: "Cherry Tomato",
+    status: "Seeding",
+    stepAndDate: "02 Sep 2024",
+    step: "Choose Seeds, prep soil & soil moisture",
+    comments:
+      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
+    image: "View image",
+  },
+  {
+    offTakeId: "AGRID-1673451062583",
+    farmer: "Mantshwa farm",
+    produce: "Cherry Tomato",
+    status: "Seeding",
+    stepAndDate: "02 Sep 2024",
+    step: "Planting depth, spacing, seed placement & covering seed",
+    comments:
+      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
+    image: "View image",
   },
 ];
+
 const FarmerView = ({ record }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [documents, setDocuments] = useState([])
+  const [tableSegment, setTableSegment] = useState('Production')
   const offtake = useSelector((state) => state.offtake.active)
+  const [tableModal, setTableModal] = useState(false)
   const deliveryUpdates = [
     {
       key: '1',
@@ -173,102 +250,163 @@ const FarmerView = ({ record }) => {
   };
 
   useEffect(() => {
-    console.log(offtake);
     OfftakeService.getOfftakeDocuments(offtake.offtake_id).then((_documents) => {
       setDocuments(_documents)
-
     })
     // loadMoreData();
   }, []);
-  return (<Stack direction={'row'} >
-    <Stack flex={1} gap={2} bgcolor={colors.grey[200]}>
-      {/* Profile */}
-      <Stack p={2}>
-        <Stack direction={'row'} gap={2}>
-          <Avatar size={'large'}></Avatar>
-          <Stack gap={1}>
-            <Typography variant='h5'>{record.name}</Typography>
-            <Typography variant='subtitle1'>{record.type}</Typography>
-            <Stack>
-              <Button style={{ alignSelf: 'start' }}>Chat</Button>
+  return (
+    <Stack direction={'row'} >
+
+      <Modal style={{
+        top: 20,
+      }} width={1000} footer={
+        <Segmented
+          value={tableSegment}
+          options={['Production', 'Delivery']}
+          onChange={(value) => {
+            setTableSegment(value)
+            console.log(value); // string
+          }}
+        />} onCancel={() => {
+          setTableModal(false)
+        }} title={`${tableSegment} Tracker Details`} open={tableModal} bodyStyle={{ height: '80vh', }}>
+        {tableSegment === 'Production' ? (
+          <Stack>
+            <Table style={{ flex: 1, width: '100%' }} columns={productionColumnsFS} dataSource={TrackerData} />
+
+          </Stack>
+        ) : (
+          <Stack>
+            <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
+
+          </Stack>
+        )}
+      </Modal>
+
+      <Stack flex={1} gap={2} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[200]}>
+        {/* Profile */}
+        <Stack p={2}>
+          <Stack direction={'row'} gap={2}>
+            <Avatar size={'large'}></Avatar>
+            <Stack gap={1}>
+              <Typography variant='h5'>{record.name}</Typography>
+              <Typography variant='subtitle1'>{record.type}</Typography>
+              <Stack>
+                <Button style={{ alignSelf: 'start' }}>Chat</Button>
+              </Stack>
+            </Stack>
+          </Stack>
+          <Stack direction={'row'} flexWrap={'wrap'} gap={5}>
+            <Statistic title="Farm Hecters" value={50} />
+            <Statistic title="Email" value={record.contact.email} />
+            <Statistic title="Phone Number" formatter={(value) => {
+              return value
+            }} value={record.contact.phoneNumber} />
+            <Statistic title="Address" value={record.address} />
+          </Stack>
+        </Stack>
+        <Stack>
+          <Stack p={2}>
+            <Typography variant='subtitle1'>Attachments</Typography>
+          </Stack>
+          <Stack direction={'row'}  >
+            <Stack flex={1} >
+              <InfiniteScroll
+                dataLength={data.length}
+                height={300}
+                endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
+                scrollableTarget="scrollableDiv"
+              >
+                <List
+                  dataSource={documents}
+                  renderItem={(document) => (
+                    <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
+                      <List.Item.Meta
+                        avatar={<IconButton size='small'>
+                          <AttachFileRounded />
+                        </IconButton>}
+                        title={document.name}
+                      />
+                      <Stack direction={'row'} gap={1}>
+                        <Button>
+                          Preview
+                        </Button>
+                      </Stack>
+                    </List.Item>
+                  )}
+                />
+              </InfiniteScroll>
+            </Stack>
+            <Stack flex={1} height={'100%'}>
+              <Box sx={{ width: '100%', height: '100%', background: colors.grey[300] }} >
+                <iframe style={{ width: '100%', height: '100%', border: 'solid 0px' }} src='https://firebasestorage.googleapis.com/v0/b/agrowex.appspot.com/o/documents%2FYour%20Curriculum%20Vitae%20.pdf?alt=media&token=0fa86281-4f59-4027-9627-cd8ca7266954' />
+              </Box>
             </Stack>
           </Stack>
         </Stack>
-        <Stack direction={'row'} flexWrap={'wrap'} gap={5}>
-          <Statistic title="Farm Hecters" value={50} />
-          <Statistic title="Email" value={record.contact.email} />
-          <Statistic title="Phone Number" formatter={(value) => {
-            return value
-          }} value={record.contact.phoneNumber} />
-          <Statistic title="Address" value={record.address} />
-        </Stack>
       </Stack>
-      <Stack>
-        <Stack p={2}>
-          <Typography variant='subtitle1'>Attachments</Typography>
-        </Stack>
-        <Stack direction={'row'}  >
-          <Stack flex={1} >
-            <InfiniteScroll
-              dataLength={data.length}
-              height={300}
-              endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
-              scrollableTarget="scrollableDiv"
-            >
-              <List
-                dataSource={documents}
-                renderItem={(document) => (
-                  <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
-                    <List.Item.Meta
-                      avatar={<IconButton size='small'>
-                        <AttachFileRounded />
-                      </IconButton>}
-                      title={document.name}
-                    />
-                    <Stack direction={'row'} gap={1}>
-                      <Button>
-                        Preview
-                      </Button>
-                    </Stack>
-                  </List.Item>
-                )}
-              />
-            </InfiniteScroll>
+      <Stack flex={1} gap={2}>
+        {offtake.status == 'active' && (
+          <Stack py={3} alignItems={'center'}>
+            <Progress type="dashboard" percent={75} gapDegree={30} />
+            <Typography variant='caption'>Delivered</Typography>
+            <Typography variant='subtitle1'>Cherry Tomato</Typography>
+            <Typography variant='h6'>10tons</Typography>
+            <Stack>
+              <Table columns={deliveryColumns} dataSource={[deliveryUpdates[0]]} />
+            </Stack>
           </Stack>
-          <Stack flex={1} height={'100%'}>
-            <Box sx={{ width: '100%', height: '100%', background: colors.grey[300] }} >
-              <iframe style={{ width: '100%', height: '100%', border: 'solid 0px' }} src='https://firebasestorage.googleapis.com/v0/b/agrowex.appspot.com/o/documents%2FYour%20Curriculum%20Vitae%20.pdf?alt=media&token=0fa86281-4f59-4027-9627-cd8ca7266954' />
-            </Box>
+        )}
+        <Stack direction={'row'} alignItems={'center'}>
+          <Stack flex={1} alignItems={'center'}>
+            <Progress type="dashboard" percent={75} />
+            <Stack p={1} >
+              <Typography>Production</Typography>
+            </Stack>
+            {/* <Table columns={livestockColumns} dataSource={livestockTypes} /> */}
           </Stack>
-        </Stack>
-      </Stack>
-    </Stack>
-    <Stack flex={1}>
-      {offtake.status == 'active' && (
-        <Stack py={3} alignItems={'center'}>
-          <Progress type="dashboard" percent={75} gapDegree={30} />
-          <Typography variant='caption'>Delivered</Typography>
-          <Typography variant='subtitle1'>Cherry Tomato</Typography>
-          <Typography variant='h6'>10tons</Typography>
-          <Stack>
-            <Table columns={deliveryColumns} dataSource={deliveryUpdates} />
-          </Stack>
-        </Stack>
-      )}
+          <SwapRightOutlined />
+          <Stack flex={1} alignItems={'center'}>
+            <Progress type="dashboard" percent={0} />
+            <Stack p={1}>
+              <Typography>Delivery</Typography>
+            </Stack>
 
-      <Stack p={2}>
-        <Typography variant='subtitle1' fontWeight={'bold'}>Farm Produce</Typography>
-      </Stack>
-      <Stack direction={'row'}>
-        <Stack flex={1}>
-          <Table columns={livestockColumns} dataSource={livestockTypes} />
+          </Stack>
         </Stack>
-        <Stack flex={1}>
-          <Table columns={produceColumns} dataSource={produceTypes} />
+        <Stack alignItems={'center'}>
+          <Segmented
+            value={tableSegment}
+            options={['Production', 'Delivery']}
+            onChange={(value) => {
+              setTableSegment(value)
+              console.log(value); // string
+            }}
+          />
         </Stack>
+        {tableSegment === 'Production' ? (
+          <Stack>
+            <Table style={{ flex: 1, width: '100%' }} columns={productionColumns} dataSource={TrackerData} />
+            <Stack p={1}>
+              <Button onClick={() => {
+                setTableModal(true)
+              }}>View All</Button>
+            </Stack>
+          </Stack>
+        ) : (
+          <Stack>
+            <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
+            <Stack p={1}>
+              <Button onClick={() => {
+                setTableModal(true)
+              }}>View All</Button>
+            </Stack>
+          </Stack>
+        )}
+
       </Stack>
-    </Stack>
-  </Stack>)
+    </Stack>)
 }
 const FarmSubmissions = () => {
   const [finalstage, setFinalStage] = useState(false)
