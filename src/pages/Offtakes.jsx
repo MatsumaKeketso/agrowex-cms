@@ -265,9 +265,7 @@ const Offtake = () => {
             </Modal>
             {/* End Confirm assessment */}
 
-
-
-
+            
 
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {

@@ -69,18 +69,7 @@ const ProductionScheduling = () => {
   const navigate = useNavigate()
 
 
-  const toSubmitted = (ot) => {
-    setLoading(true)
-    dispatch(setActiveOfftake(ot))
-    OfftakeService.updateOfftake(offtake_id, ot).then(() => {
-      setLoading(false)
-      messageApi.success("Offtake updated")
-      navigate("/offtakes")
-    }).catch(err => {
-      setLoading(false)
-      messageApi.error(err.message);
-    })
-  }
+
 
 
   const submitSchedule = (schedule) => {
@@ -144,23 +133,13 @@ const ProductionScheduling = () => {
     }
     const finalChecks = () => {
       const formattedSchedule = { offtakeStartAndEndDate, status, submissionClosingDate }
-      // const offtakeWithSchedule = { ...offtake, schedule: formattedSchedule };
       if (checkIds("status")) {
         // db offtake update
-        console.log('All steps have Ids');
-        // TODO need to put the schedule inside a collection of the offtake
-        //
-        // console.log(formattedSchedule);
-
-
         OfftakeService.updateProductionPlan(offtake_id, formattedSchedule).then(() => {
-          // local global offtake update
-          // setOfftake(offtakeWithSchedule)
-          // dispatch(setActiveOfftake(offtakeWithSchedule))
-          if (publish) { setNext(true) }
-          // feedback
           messageApi.success("Offtake Updated successfully")
+
           setLoading(false)
+          if (publish) { setNext(true) }
         }).catch(err => {
           console.log(err);
           // feedback
@@ -340,7 +319,18 @@ const ProductionScheduling = () => {
             updated_at: SystemService.generateTimestamp()
           }
           const updated_status = [...offtake.status, _status]
-
+          const toSubmitted = (ot) => {
+            setLoading(true)
+            // dispatch(setActiveOfftake(ot))
+            OfftakeService.updateOfftake(offtake_id, ot).then(() => {
+              setLoading(false)
+              messageApi.success("Offtake updated")
+              navigate("/offtakes")
+            }).catch(err => {
+              setLoading(false)
+              messageApi.error(err.message);
+            })
+          }
           toSubmitted({ ...offtake, status: updated_status, pm: offtake.pm ? offtake.pm : user.uid })
           setLoading(false)
         })
@@ -517,23 +507,20 @@ const ProductionScheduling = () => {
             </Stack>
             <Stack direction={'row'} gap={1} p={1} >
               <Stack flex={1}>              </Stack>
-              <Button loading={loading} type='default' color={colors.green[400]} disabled={disableForm} onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
+              <Button
+                loading={loading}
+                type='default'
+                color={colors.green[400]}
+                disabled={disableForm}
+                onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
               {/* Update status to submitted */}
               {
                 OfftakeService.getStatus.Name(offtake.status) === "planning"
                 &&
                 (
                   <Button type='primary' onClick={async () => {
-                    try {
-                      await scheduleForm.validateFields().then((v) => {
-                        scheduleForm.submit()
-                      }).finally(() => {
-                        setPublish(true)
-                      })
-                    } catch (errorInfo) {
-                      messageApi.error("Form not valid")
-                      console.log('Form validation failed:', errorInfo);
-                    }
+                    scheduleForm.submit()
+                    setPublish(true)
                   }}>Submit Offtake</Button>
                 )
               }
