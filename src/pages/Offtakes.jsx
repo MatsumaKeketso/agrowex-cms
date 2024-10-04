@@ -38,8 +38,8 @@ const _columns = [
     },
     {
         title: 'Customer',
-        dataIndex: 'name',
-        key: 'name',
+        dataIndex: ['_address', 'alias_name'],
+        key: 'alias_name',
     },
     // {
     //     title: 'Amount',
@@ -48,13 +48,13 @@ const _columns = [
     // },
     {
         title: 'Delivery Date',
-        dataIndex: 'delivery_date',
-        key: 'delivery_date',
+        dataIndex: 'end_date',
+        key: 'end_date',
     },
     {
         title: 'Order Date',
-        dataIndex: 'order_date',
-        key: 'order_date',
+        dataIndex: 'start_date',
+        key: 'start_date',
     },
     // { // removing reference, can be searched for (maybe)
     //     title: 'Reference',

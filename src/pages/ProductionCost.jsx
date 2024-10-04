@@ -14,7 +14,7 @@ import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import { AuthService } from '../services/authService'
 import { SystemService } from '../services/systemService'
-import { CheckOutlined } from '@ant-design/icons'
+import { CheckOutlined, DeleteOutlined } from '@ant-design/icons'
 import { formatDate } from './ProductionScheduling'
 dayjs.extend(toObject);
 
@@ -203,11 +203,11 @@ const ProductionCost = () => {
                       stat.steps.forEach((step, b) => {
                         const { id } = step
                         values.status[i].steps[b].id = id
-                      //   const start = formatDate(values.status[i].steps[b].duration[0])
-                      //   const end = formatDate(values.status[i].steps[b].duration[1])
-                      //   values.status[i].steps[b].duration = [start, end]
+                        //   const start = formatDate(values.status[i].steps[b].duration[0])
+                        //   const end = formatDate(values.status[i].steps[b].duration[1])
+                        //   values.status[i].steps[b].duration = [start, end]
                       });
-                 
+
                       OfftakeService.updateOfftake(offtake_id, { ...offtake, costing: values }).then(() => {
                         messageApi.success("Offtake Updated successfully")
                         if (publish) { setNext(true) }
@@ -254,51 +254,35 @@ const ProductionCost = () => {
                                       return (
                                         <Timeline.Item key={step.name} >
                                           <Stack>
-                                            {/* <Form.Item hidden={true} name={[field.name, 'id']} rules={[{ required: true }]} >
-                                <Input size='large' disabled={true} />
-                              </Form.Item> */}
-                                            {/* <Divider >Details</Divider> */}
-                                            <Form.Item name={[step.name, 'name']} rules={[{ required: true }]} >
-                                              <Input style={{ color: 'black', fontSize: 18 }} bordered={false} />
-                                            </Form.Item>
-                                            <Form.Item label="Name" name={[step.name, 'process_name']} rules={[{ required: true }]} >
-                                              <Input />
-                                            </Form.Item>
-                                            <Form.Item label="Application" name={[step.name, 'application']} rules={[{ required: true }]} >
-                                              <Input />
-                                            </Form.Item>
-                                            <Stack direction={'row'} gap={2}>
-                                              <Form.Item style={{ width: '100%' }} label="Unit" name={[step.name, 'unit']} rules={[{ required: true }]} >
-                                                <Input />
-                                              </Form.Item>
-                                              <Form.Item label="Per" name={[step.name, 'unit_symbol']} rules={[{ required: true }]} >
-                                                <Select placeholder="Select unit">
-                                                  <Select.Option value="ha">/Ha</Select.Option>
-                                                </Select>
-                                              </Form.Item>
+                                            <Form.List name={[step.name, 'item']}>
+                                              {(items, { add, remove }) => (
+                                                <Stack>
+                                                  {items.map((item) => {
+                                                    return (
 
-                                            </Stack>
-                                            <Form.Item label="Category" name={[step.name, 'category']} rules={[{ required: true }]} >
-                                              <Select >
-                                                <Select.Option value="ha">/Ha</Select.Option>
-                                              </Select>
-                                            </Form.Item>
-                                            <Stack direction={'row'} gap={2}>
-                                              <Form.Item style={{ width: '100%' }} label="Total" name={[step.name, 'total']} rules={[{ required: true }]} >
-                                                <Input />
-                                              </Form.Item>
-                                              <Form.Item label="Per" name={[step.name, 'total_symbol']} rules={[{ required: true }]} >
-                                                <Select placeholder="Select unit">
-                                                  <Select.Option value="ha">/Ha</Select.Option>
-                                                </Select>
-                                              </Form.Item>
+                                                      <Stack direction={'row'} spacing={1} >
+                                                        <Form.Item label="Cost Item" name={[item.name, 'name']} rules={[{ required: true }]} >
+                                                          <Input />
+                                                        </Form.Item>
+                                                        <Form.Item label="Cost Amount" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
+                                                          <Input addonBefore="R" />
+                                                        </Form.Item>
+                                                        <Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>
+                                                      </Stack>
+                                                    )
+                                                  })}
+                                                  <Stack alignItems={'start'}>
 
-                                            </Stack>
+                                                    <Button onClick={() => { add() }}>Add Step Cost Item</Button>
+                                                  </Stack>
+                                                </Stack>
+                                              )}
+                                            </Form.List>
                                           </Stack>
                                         </Timeline.Item>
                                       )
                                     })}
-
+                                    <Button onClick={() => { add() }}>Add Step</Button>
                                   </Timeline>
                                 )}
                               </Form.List>

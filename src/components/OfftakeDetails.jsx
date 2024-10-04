@@ -459,9 +459,10 @@ const OfftakeDetails = (props) => {
                         <Button color={colors.green[400]} type={page === 'schedule' ? 'default' : 'text'} onClick={() => {
                             navigate(`/offtakes/${ot.offtake_id}/schedule`);
                         }}>Production Plan</Button>
-                        <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
+                        {/* Removed to because processes are merged */}
+                        {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
                             navigate(`/offtakes/${ot.offtake_id}/costing`);
-                        }}>Production Cost</Button>
+                        }}>Production Cost</Button> */}
 
                         <Button color={colors.green[400]} type={page === 'chat' ? 'default' : 'text'} onClick={() => {
                             if (currentStatus === 'planning') {

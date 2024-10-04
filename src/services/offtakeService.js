@@ -1,4 +1,4 @@
-import { getDoc, getDocs, query, updateDoc } from "firebase/firestore";
+import { addDoc, getDoc, getDocs, query, updateDoc } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { firestoreDB, realtimeDB } from "./authService";
 import { push, ref } from "firebase/database";
@@ -150,6 +150,33 @@ export const OfftakeService = {
   updateOfftake: async (offtake_id, offtake_data) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
+  },
+  updateProductionPlan: async (offtake_id, schedule) => {
+    // Create a reference to the 'tracker' document in the 'production-plan' collection
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', 'tracker');
+
+    // Set the document with the provided schedule data
+    await setDoc(trackerDocRef, schedule);
+
+    console.log('Offtake schedule updated successfully!');
+    return trackerDocRef.id; // Return the reference to the updated document
+  },
+  getProductionPlan: async (offtake_id) => {
+
+    // Create a reference to the 'tracker' document in the 'production-plan' collection
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', 'tracker');
+
+    // Get the document
+    const docSnap = await getDoc(trackerDocRef);
+
+    if (docSnap.exists()) {
+      console.log('Schedule document found');
+      return docSnap.data(); // Return the document data
+    } else {
+      console.log('No such document!');
+      return null;
+    }
+
   },
   removeCostingStep: async (offtake_id, stepId) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);

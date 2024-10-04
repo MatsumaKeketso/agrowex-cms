@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import { Accordion, AccordionDetails, AccordionSummary, Box, colors, Divider, IconButton, Stack, TextField, Typography } from '@mui/material'
 import OfftakeDetails from '../components/OfftakeDetails'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { OfftakeService } from '../services/offtakeService'
 import { useDispatch } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
@@ -14,6 +14,9 @@ import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import weekday from 'dayjs/plugin/weekday';
 import localeData from 'dayjs/plugin/localeData'
+import { DeleteOutlined } from '@ant-design/icons'
+import { AuthService } from '../services/authService'
+import { SystemService } from '../services/systemService'
 dayjs.extend(weekday);
 dayjs.extend(localeData)
 const generateStepId = () => {
@@ -59,12 +62,32 @@ const ProductionScheduling = () => {
   const [offtake, setOfftake] = useState({})
   const { offtake_id } = useParams()
   const [scheduleForm] = Form.useForm()
+  const [publish, setPublish] = useState(false)
+  const [next, setNext] = useState(false)
   const [messageApi, contextHolder] = message.useMessage();
   const dispatch = useDispatch()
+  const navigate = useNavigate()
+
+
+  const toSubmitted = (ot) => {
+    setLoading(true)
+    dispatch(setActiveOfftake(ot))
+    OfftakeService.updateOfftake(offtake_id, ot).then(() => {
+      setLoading(false)
+      messageApi.success("Offtake updated")
+      navigate("/offtakes")
+    }).catch(err => {
+      setLoading(false)
+      messageApi.error(err.message);
+    })
+  }
+
+
   const submitSchedule = (schedule) => {
     // will be edited
     // setLoading(true)
     var { offtakeStartAndEndDate, status, submissionClosingDate } = schedule;
+    var dataValid = false;
     // format steps duration
     schedule.status.forEach((stat, a) => {
       stat.steps.forEach((step, b) => {
@@ -72,7 +95,7 @@ const ProductionScheduling = () => {
         const end = step.duration[1]
         const formated_duration = [formatDate(start), formatDate(end)]
         status[a].steps[b].duration = formated_duration
-        console.log(status);
+
       });
     });
     submissionClosingDate = formatDate(schedule.submissionClosingDate)
@@ -81,11 +104,6 @@ const ProductionScheduling = () => {
     const statusEnd = formatDate(schedule.offtakeStartAndEndDate[1])
     offtakeStartAndEndDate = [statusStart, statusEnd]
     // check ids for status
-    /**
-     * 
-     * @param {string} state "status", "steps"
-     * @returns 
-     */
     const checkIds = (state: string) => {
       var proceed = false
       switch (state) {
@@ -126,15 +144,20 @@ const ProductionScheduling = () => {
     }
     const finalChecks = () => {
       const formattedSchedule = { offtakeStartAndEndDate, status, submissionClosingDate }
-      const offtakeWithSchedule = { ...offtake, schedule: formattedSchedule };
+      // const offtakeWithSchedule = { ...offtake, schedule: formattedSchedule };
       if (checkIds("status")) {
         // db offtake update
         console.log('All steps have Ids');
-        OfftakeService.updateOfftake(offtake_id, offtakeWithSchedule).then(() => {
+        // TODO need to put the schedule inside a collection of the offtake
+        //
+        // console.log(formattedSchedule);
+
+
+        OfftakeService.updateProductionPlan(offtake_id, formattedSchedule).then(() => {
           // local global offtake update
           // setOfftake(offtakeWithSchedule)
           // dispatch(setActiveOfftake(offtakeWithSchedule))
-
+          if (publish) { setNext(true) }
           // feedback
           messageApi.success("Offtake Updated successfully")
           setLoading(false)
@@ -159,13 +182,19 @@ const ProductionScheduling = () => {
       schedule.status.map((_, status_index) => {
         // assign prev step id or generate a new one
         // does status exist in the current active offtake
-        if ('status' in offtake.schedule) {
-          // assign that id
-          status[status_index].id = offtake.schedule?.status[status_index]?.id
+        // is there a schedule in the current active offtake
+        if ('schedule' in offtake) {
+          if ('status' in offtake?.schedule) {
+            // assign that id
+            status[status_index].id = offtake.schedule?.status[status_index]?.id
+          } else {
+            // generate a new one
+            status[status_index].id = generateStepId()
+          }
         } else {
-          // generate a new one
           status[status_index].id = generateStepId()
         }
+
       })
       try {
         schedule.status.forEach((stat, status_index) => {
@@ -173,34 +202,26 @@ const ProductionScheduling = () => {
             stat.steps.forEach((step, step_index) => {
               const steps = stat[status_index]?.steps
               schedule.status.forEach((stat, a) => {
-                // does the offtake in db have a schedule
-                var refSteps = []
-
-                // get reference to ids inside the offtake
-
                 stat.steps.forEach((step, b) => {
-                  if ("status" in offtake?.schedule) {
-                    refSteps = offtake.schedule.status[a].steps
-                    // need to check if ids exist
-                    if ('id' in refSteps[b]) {
-                      //'Assign existing Id'
-                      status[a].steps[b].id = refSteps[b].id
-                    } else {
-                      //'Generate new id for step'
-                      status[a].steps[b].id = generateStepId()
-                    }
-                  } else {
-                    status[a].steps[b].id = generateStepId()
-                  }
+                  // format duration
                   const start = step.duration[0]
                   const end = step.duration[1]
                   const formated_duration = [formatDate(start), formatDate(end)]
                   status[a].steps[b].duration = formated_duration
-                  console.log(status);
+
+                  // make sure costing is added
+                  if (!step?._costing || step?._costing.length === 0) {
+                    messageApi.error('Production Costing is required for each step')
+                    return false
+                  } else {
+                    dataValid = true
+                  }
+
+
                 });
               })
             });
-            finalChecks()
+            if (dataValid) { finalChecks() }
           } else {
             setLoading(false);
             messageApi.error("Missing steps for status")
@@ -218,11 +239,10 @@ const ProductionScheduling = () => {
       messageApi.error('Production plan status missing')
       setLoading(false)
     }
-
-
-
-
   }
+
+
+
   useEffect(() => {
 
     // Get offtake
@@ -247,22 +267,19 @@ const ProductionScheduling = () => {
         return;
       }
       // schedule exists?
-      if (o?.schedule) {
-
-        // access and store schedule
-        var s = o.schedule
-
-        // set form fields
-        Object.keys(o.schedule).map((section) => {
+    })
+    OfftakeService.getProductionPlan(offtake_id).then(schedule => {
+      if (schedule) {
+        Object.keys(schedule).map((section) => {
           switch (section) {
             case "submissionClosingDate":
-              const closingDate = dayjs(s.submissionClosingDate);
+              const closingDate = dayjs(schedule.submissionClosingDate);
               scheduleForm.setFieldValue("submissionClosingDate", closingDate);
               break;
             case "status":
               // Something goes wrong in here
               // set values cant be edited
-              const status = o.schedule[section]
+              const status = schedule[section]
               scheduleForm.setFieldValue("status", status.map(stat => {
                 const { name, description, steps } = stat
                 return {
@@ -272,39 +289,82 @@ const ProductionScheduling = () => {
                     const { name, duration } = step
                     const start = dayjs(duration[0])
                     const end = dayjs(duration[1])
+                    console.log(step);
+
                     return {
                       name: name,
-                      duration: [start, end]
+                      duration: [start, end],
+                      _costing: step._costing.map((cost) => {
+                        return {
+                          name: cost.name,
+                          amount: cost.amount
+                        }
+                      })
                     }
                   })
                 }
               }))
               return
-              scheduleForm.setFieldsValue({
-                steps: s.steps.map((step) => {
-                  const startDate = dayjs(step.stepDuration[0])
-                  const endDate = dayjs(step.stepDuration[1])
-                  return ({
-                    name: step.name,
-                    stepDuration: [startDate, endDate]
-                  })
-                })
-              });
+              // scheduleForm.setFieldsValue({
+              //   steps: s.steps.map((step) => {
+              //     const startDate = dayjs(step.stepDuration[0])
+              //     const endDate = dayjs(step.stepDuration[1])
+              //     return ({
+              //       name: step.name,
+              //       stepDuration: [startDate, endDate]
+              //     })
+              //   })
+              // });
               break;
             case "offtakeStartAndEndDate":
-              const startDate = dayjs(s.offtakeStartAndEndDate[0])
-              const endDate = dayjs(s.offtakeStartAndEndDate[1])
+              const startDate = dayjs(schedule.offtakeStartAndEndDate[0])
+              const endDate = dayjs(schedule.offtakeStartAndEndDate[1])
               scheduleForm.setFieldValue("offtakeStartAndEndDate", [startDate, endDate],);
               break;
           }
         })
-
       }
+
     })
   }, [])
 
   return (
     <Layout>
+
+
+      <Modal title="Submit Offtake" open={next} onOk={() => {
+        setLoading(true)
+        AuthService.getUser().then(user => {
+          const _status = {
+            status_name: "submitted",
+            updated_at: SystemService.generateTimestamp()
+          }
+          const updated_status = [...offtake.status, _status]
+
+          toSubmitted({ ...offtake, status: updated_status, pm: offtake.pm ? offtake.pm : user.uid })
+          setLoading(false)
+        })
+      }} onCancel={() => {
+        setNext(false)
+      }}>
+        <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+          <Typography variant="h4">Submission </Typography>
+          <Stack sx={{ opacity: .3 }} direction={'row'} alignSelf={'center'} gap={1}>
+            <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+            <StatusTag status={'planning'} />
+          </Stack>
+          <ArrowDownwardRounded />
+          <Stack direction={'row'} alignSelf={'center'} gap={1}>
+            <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
+            <StatusTag status={'submitted'} />
+          </Stack>
+          <Typography variant="subtitle2">
+            This offtake will be submitted to OP Manager, continue?
+          </Typography>
+        </Stack>
+      </Modal>
+
+
       <Stack gap={0} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
         {contextHolder}
         <Stack flex={1} sx={{
@@ -334,18 +394,9 @@ const ProductionScheduling = () => {
                         <Stack key={field.name}>
                           <Stack py={2}>
                             <Divider>
-                              <Stack direction={'row'} gap={1}>   Status {field.name + 1}       {field.name !== 0 ? (
+                              <Stack direction={'row'} gap={1}>Production Status {field.name + 1} {field.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
                                   remove(field.name);
-                                  if ('steps' in offtake?.schedule) {
-                                    const statusId = offtake?.schedule?.steps[field.name]?.id
-                                    if (statusId) {
-                                      OfftakeService.removeCostingStep(offtake_id, statusId).then(() => {
-                                        console.log('costing step removed');
-                                      })
-                                    }
-                                  }
-
                                 }}>
                                   <CloseRounded />
                                 </IconButton>) : null}</Stack>
@@ -380,13 +431,15 @@ const ProductionScheduling = () => {
 
                                         return (
                                           <Timeline.Item key={step.name} dot={<Spin />}>
-                                            <Card title={`Step ${step.name + 1}`
+                                            <Card title={`Production Step ${step.name + 1}`
                                             }
                                               extra={
-                                                <IconButton onClick={() => { remove(step.name) }}><CloseRounded /></IconButton>
+                                                <>
+                                                  {step.name !== 0 ? (<IconButton onClick={() => { remove(step.name) }}><CloseRounded /></IconButton>) : null}
+                                                </>
                                               }
                                             >
-                                              < Stack direction={'row'} gap={1}>
+                                              <Stack direction={'row'} gap={1}>
                                                 <Form.Item
                                                   rules={[{ required: true, message: 'Please enter the name of this step' }]}
                                                   name={[step.name, 'name']}
@@ -401,9 +454,35 @@ const ProductionScheduling = () => {
                                                 >
                                                   <DatePicker.RangePicker picker="date" />
                                                 </Form.Item>
-
                                               </Stack>
+                                              <Stack py={1}>
+                                                <Divider>Production Cost</Divider>
+                                              </Stack>
+                                              <Form.List name={[step.name, '_costing']}>
+                                                {(items, { add, remove }) => (
+                                                  <Stack>
+                                                    {items.map((item, i) => {
+                                                      return (
 
+                                                        <Stack key={item.key} direction={'row'} spacing={1} >
+                                                          <Form.Item label="Cost Item" name={[item.name, 'name']} rules={[{ required: true }]} >
+                                                            <Input />
+                                                          </Form.Item>
+                                                          <Form.Item label="Cost Amount" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
+                                                            <Input addonBefore="R" />
+                                                          </Form.Item>
+                                                          <Stack pt={3.5}>
+                                                            {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
+                                                          </Stack>
+                                                        </Stack>
+                                                      )
+                                                    })}
+                                                    <Stack alignItems={'start'}>
+                                                      <Button onClick={() => { add() }}>Add Cost Item</Button>
+                                                    </Stack>
+                                                  </Stack>
+                                                )}
+                                              </Form.List>
                                             </Card>
                                           </Timeline.Item>
                                         )
@@ -437,13 +516,27 @@ const ProductionScheduling = () => {
               </Form>
             </Stack>
             <Stack direction={'row'} gap={1} p={1} >
-              <Stack flex={1}>
-
-              </Stack>
+              <Stack flex={1}>              </Stack>
               <Button loading={loading} type='default' color={colors.green[400]} disabled={disableForm} onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
-              {/* <Button variant='contained' onClick={() => {
-              setNext(true)
-            }}>Continue</Button> */}
+              {/* Update status to submitted */}
+              {
+                OfftakeService.getStatus.Name(offtake.status) === "planning"
+                &&
+                (
+                  <Button type='primary' onClick={async () => {
+                    try {
+                      await scheduleForm.validateFields().then((v) => {
+                        scheduleForm.submit()
+                      }).finally(() => {
+                        setPublish(true)
+                      })
+                    } catch (errorInfo) {
+                      messageApi.error("Form not valid")
+                      console.log('Form validation failed:', errorInfo);
+                    }
+                  }}>Submit Offtake</Button>
+                )
+              }
             </Stack>
           </Stack>
         </Stack>
