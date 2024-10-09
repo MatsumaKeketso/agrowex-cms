@@ -33,28 +33,6 @@ const generateStepId = () => {
 export const formatDate = (dateObject) => {
   return dayjs(dateObject).valueOf()
 }
-const checkStepsProperty = (schedule) => {
-  // Check if schedule is an object and if the steps property exists
-  return schedule && typeof schedule === 'object' && 'steps' in schedule;
-};
-const checkStepsAndIdProperty = (schedule) => {
-  // First, check if the 'steps' property exists and is an array
-  if (schedule && typeof schedule === 'object' && Array.isArray(schedule.steps)) {
-    // Now check if any object in the 'steps' array has an 'id' property
-    return schedule.steps.some(step => step && typeof step === 'object' && 'id' in step);
-  }
-  return false; // Return false if 'steps' does not exist or is not an array
-};
-function checkType(expression) {
-  try {
-    // Evaluate the expression to get the value it points to
-    const value = eval(expression);
-    // Return the type of the value
-    return typeof value;
-  } catch (error) {
-    return `Error: ${error.message}`;
-  }
-}
 
 const ProductionScheduling = () => {
   const [disableForm, setDisableForm] = useState(false)
@@ -67,172 +45,148 @@ const ProductionScheduling = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const dispatch = useDispatch()
   const navigate = useNavigate()
-
-
-
-
-
+  const statusValues = Form.useWatch("status", scheduleForm)
   const submitSchedule = (schedule) => {
+    console.log(schedule);
+
     // will be edited
     // setLoading(true)
-    var { offtakeStartAndEndDate, status, submissionClosingDate } = schedule;
-    var dataValid = false;
-    // format steps duration
-    schedule.status.forEach((stat, a) => {
-      stat.steps.forEach((step, b) => {
-        const start = step.duration[0]
-        const end = step.duration[1]
-        const formated_duration = [formatDate(start), formatDate(end)]
-        status[a].steps[b].duration = formated_duration
-
-      });
-    });
-    submissionClosingDate = formatDate(schedule.submissionClosingDate)
-    // format submission start and end dates
-    const statusStart = formatDate(schedule.offtakeStartAndEndDate[0])
-    const statusEnd = formatDate(schedule.offtakeStartAndEndDate[1])
-    offtakeStartAndEndDate = [statusStart, statusEnd]
-    // check ids for status
-    const checkIds = (state: string) => {
-      var proceed = false
-      switch (state) {
-        case "status":
-          if ('status' in schedule) {
-            status.forEach((d, stat) => {
-              if (d.id) { // string
-                proceed = true
-              } else { // undefined
-                proceed = false
-              }
-            });
-            return proceed
-          } else {
-            return proceed
-          }
-          break;
-        case "steps":
-          status.forEach((d, stat) => {
-            if ('steps' in d) {
-              d.steps.forEach((step) => {
-                if (step?.id) { // string
-                  proceed = true
-                } else { // undefined
-                  proceed = false
-                }
-              })
-              return proceed
-            } else {
-              return proceed
-            }
-          });
-          break;
-        default:
-          break;
-      }
-
+    var missing_steps = false
+    var new_schedule: any = {
+      submission_closing_date: 0,
+      offtake_start_and_end_date: [0, 0],
+      status: []
     }
-    const finalChecks = () => {
-      const formattedSchedule = { offtakeStartAndEndDate, status, submissionClosingDate }
-      if (checkIds("status")) {
-        // db offtake update
-        OfftakeService.updateProductionPlan(offtake_id, formattedSchedule).then(() => {
-          messageApi.success("Offtake Updated successfully")
+    // format steps duration
+    // add updated at timestamp
 
+    // TODO
+    // Each status needs to be in its own document
+    // the uid should always be accessible
+    // deleting status should be synced with db
+    // update fetch to reflect location
+    if (schedule?.status !== undefined) {
+      schedule.status.forEach((stat, a) => {
+
+        const formatted_status: any = {
+          name: stat.name,
+          description: stat.description,
+          _steps: []
+        }
+        if (stat?._steps !== undefined) {
+          missing_steps = false
+          stat._steps.forEach((step, b) => {
+            const start = step.duration[0]
+            const end = step.duration[1]
+            const formatted_step = {
+              duration: [formatDate(start), formatDate(end)],
+              updated_at: SystemService.generateTimestamp(),
+              name: step.name,
+              _costing: step._costing ? step._costing : []
+            }
+            formatted_status._steps.push(formatted_step)
+          });
+          new_schedule.status.push(formatted_status)
+        } else {
+          messageApi.error("Missing steps")
+          missing_steps = true
+        }
+      });
+      new_schedule.submission_closing_date = formatDate(schedule.submission_closing_date)
+      // format submission start and end dates
+      const offtakeStart = formatDate(schedule.offtake_start_and_end_date[0])
+      const offtakeEnd = formatDate(schedule.offtake_start_and_end_date[1])
+      new_schedule.offtake_start_and_end_date = [offtakeStart, offtakeEnd]
+      // check ids for status
+      const offtake_with_dates = { ...offtake, offtake_start_and_end_date: new_schedule.offtake_start_and_end_date, submission_closing_date: new_schedule.submission_closing_date }
+      if (!missing_steps) {
+        new_schedule.status.forEach((stat, i) => {
+          const status_doc_id = schedule.status[i].key
+          console.log(status_doc_id);
+          if (status_doc_id) {
+            OfftakeService.updateProductionPlan(offtake_id, status_doc_id, stat).then(() => {
+              console.log('Status updated successfully');
+            })
+          } else {
+            OfftakeService.addProductionStatus(offtake_id, stat).then((ref) => {
+              console.log('New status pushed successfully');
+              // todo fetch the data after pushing to update the hidden form field values
+              getProductionStatuses()
+            })
+          }
+        });
+        OfftakeService.updateOfftake(offtake_id, offtake_with_dates).then(def => {
+          messageApi.success("Offtake Updated successfully")
           setLoading(false)
           if (publish) { setNext(true) }
         }).catch(err => {
           console.log(err);
           // feedback
-          messageApi.error("Error. Data not saved.")
+          messageApi.error("Error. Offtake not saved.")
           setLoading(false)
         })
-
-
-      } else {
-        console.log(schedule.steps);
-        setLoading(false)
-        messageApi.error('Problem with step id, contact dev for fix')
       }
-    }
-
-    // does schedule have statuses
-    if (status !== undefined) {
-      // status Id assignent
-      schedule.status.map((_, status_index) => {
-        // assign prev step id or generate a new one
-        // does status exist in the current active offtake
-        // is there a schedule in the current active offtake
-        if ('schedule' in offtake) {
-          if ('status' in offtake?.schedule) {
-            // assign that id
-            status[status_index].id = offtake.schedule?.status[status_index]?.id
-          } else {
-            // generate a new one
-            status[status_index].id = generateStepId()
-          }
-        } else {
-          status[status_index].id = generateStepId()
-        }
-
-      })
-      try {
-        schedule.status.forEach((stat, status_index) => {
-          if (stat?.steps || stat.steps.length !== 0) {
-            stat.steps.forEach((step, step_index) => {
-              const steps = stat[status_index]?.steps
-              schedule.status.forEach((stat, a) => {
-                stat.steps.forEach((step, b) => {
-                  // format duration
-                  const start = step.duration[0]
-                  const end = step.duration[1]
-                  const formated_duration = [formatDate(start), formatDate(end)]
-                  status[a].steps[b].duration = formated_duration
-
-                  // make sure costing is added
-                  if (!step?._costing || step?._costing.length === 0) {
-                    messageApi.error('Production Costing is required for each step')
-                    return false
-                  } else {
-                    dataValid = true
-                  }
 
 
-                });
-              })
-            });
-            if (dataValid) { finalChecks() }
-          } else {
-            setLoading(false);
-            messageApi.error("Missing steps for status")
-            return
-          }
-        });
-
-      } catch (error) {
-        messageApi.error(error.message)
-        setLoading(false)
-        console.log(error);
-      }
-      // steps as status
     } else {
-      messageApi.error('Production plan status missing')
-      setLoading(false)
+      messageApi.error("Missing status")
     }
+
+
   }
 
 
+  const getProductionStatuses = () => {
+    OfftakeService.getProductionPlan(offtake_id).then(status => {
+      if (status) {
+        scheduleForm.setFieldValue("status", status.map((stat: any) => {
+          const { name, description, _steps, key } = stat
+          return {
+            key: key,
+            name: name,
+            description: description,
+            _steps: _steps.map(step => {
+              const { name, duration } = step
+              const start = dayjs(duration[0])
+              const end = dayjs(duration[1])
+              console.log(step);
 
+              return {
+                name: name,
+                duration: [start, end],
+                _costing: step._costing.map((cost) => {
+                  return {
+                    name: cost.name,
+                    amount: cost.amount
+                  }
+                })
+              }
+            })
+          }
+        }))
+
+
+
+      }
+
+    })
+  }
   useEffect(() => {
 
     // Get offtake
     OfftakeService.getOfftake(offtake_id).then(o => {
       // dispatch(setActiveOfftake(offtake))
       if (o) {
-        // TODO
-        /** need to check if user is om
-         * pm should have edit access
-         * 
-         */
+        if (o.submission_closing_date) {
+          const closingDate = dayjs(o.submission_closing_date);
+          scheduleForm.setFieldValue("submission_closing_date", closingDate);
+        }
+        if (o.offtake_start_and_end_date) {
+          const startDate = dayjs(o.offtake_start_and_end_date[0])
+          const endDate = dayjs(o.offtake_start_and_end_date[1])
+          scheduleForm.setFieldValue("offtake_start_and_end_date", [startDate, endDate]);
+        }
+
         if (
           OfftakeService.getStatus.Name(o.status) === 'submitted' ||
           OfftakeService.getStatus.Name(o.status) === 'published' ||
@@ -247,96 +201,42 @@ const ProductionScheduling = () => {
       }
       // schedule exists?
     })
-    OfftakeService.getProductionPlan(offtake_id).then(schedule => {
-      if (schedule) {
-        Object.keys(schedule).map((section) => {
-          switch (section) {
-            case "submissionClosingDate":
-              const closingDate = dayjs(schedule.submissionClosingDate);
-              scheduleForm.setFieldValue("submissionClosingDate", closingDate);
-              break;
-            case "status":
-              // Something goes wrong in here
-              // set values cant be edited
-              const status = schedule[section]
-              scheduleForm.setFieldValue("status", status.map(stat => {
-                const { name, description, steps } = stat
-                return {
-                  name: name,
-                  description: description,
-                  steps: steps.map(step => {
-                    const { name, duration } = step
-                    const start = dayjs(duration[0])
-                    const end = dayjs(duration[1])
-                    console.log(step);
+    getProductionStatuses()
 
-                    return {
-                      name: name,
-                      duration: [start, end],
-                      _costing: step._costing.map((cost) => {
-                        return {
-                          name: cost.name,
-                          amount: cost.amount
-                        }
-                      })
-                    }
-                  })
-                }
-              }))
-              return
-              // scheduleForm.setFieldsValue({
-              //   steps: s.steps.map((step) => {
-              //     const startDate = dayjs(step.stepDuration[0])
-              //     const endDate = dayjs(step.stepDuration[1])
-              //     return ({
-              //       name: step.name,
-              //       stepDuration: [startDate, endDate]
-              //     })
-              //   })
-              // });
-              break;
-            case "offtakeStartAndEndDate":
-              const startDate = dayjs(schedule.offtakeStartAndEndDate[0])
-              const endDate = dayjs(schedule.offtakeStartAndEndDate[1])
-              scheduleForm.setFieldValue("offtakeStartAndEndDate", [startDate, endDate],);
-              break;
-          }
-        })
-      }
-
-    })
   }, [])
 
   return (
     <Layout>
 
 
-      <Modal title="Submit Offtake" open={next} onOk={() => {
-        setLoading(true)
-        AuthService.getUser().then(user => {
-          const _status = {
-            status_name: "submitted",
-            updated_at: SystemService.generateTimestamp()
-          }
-          const updated_status = [...offtake.status, _status]
-          const toSubmitted = (ot) => {
-            setLoading(true)
-            // dispatch(setActiveOfftake(ot))
-            OfftakeService.updateOfftake(offtake_id, ot).then(() => {
-              setLoading(false)
-              messageApi.success("Offtake updated")
-              navigate("/offtakes")
-            }).catch(err => {
-              setLoading(false)
-              messageApi.error(err.message);
-            })
-          }
-          toSubmitted({ ...offtake, status: updated_status, pm: offtake.pm ? offtake.pm : user.uid })
-          setLoading(false)
-        })
-      }} onCancel={() => {
-        setNext(false)
-      }}>
+      <Modal title="Submit Offtake"
+        open={next}
+        onOk={() => {
+          setLoading(true)
+          AuthService.getUser().then(user => {
+            const _status = {
+              status_name: "submitted",
+              updated_at: SystemService.generateTimestamp()
+            }
+            const updated_status = [...offtake.status, _status]
+            const toSubmitted = (ot) => {
+              setLoading(true)
+              // dispatch(setActiveOfftake(ot))
+              OfftakeService.updateOfftake(offtake_id, ot).then(() => {
+                setLoading(false)
+                messageApi.success("Offtake updated")
+                navigate("/offtakes")
+              }).catch(err => {
+                setLoading(false)
+                messageApi.error(err.message);
+              })
+            }
+            toSubmitted({ ...offtake, status: updated_status, pm: offtake.pm ? offtake.pm : user.uid })
+            setLoading(false)
+          })
+        }} onCancel={() => {
+          setNext(false)
+        }}>
         <Stack gap={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
           <Typography variant="h4">Submission </Typography>
           <Stack sx={{ opacity: .3 }} direction={'row'} alignSelf={'center'} gap={1}>
@@ -370,11 +270,11 @@ const ProductionScheduling = () => {
               <Form disabled={disableForm} form={scheduleForm} layout='vertical' onFinish={(schedule) => {
                 submitSchedule(schedule)
               }}>
-                <Form.Item rules={[{ required: true }]} label="Offtake Submission ads closing date" name="submissionClosingDate">
+                <Form.Item rules={[{ required: true }]} label="Offtake Submission ads closing date" name="submission_closing_date">
                   <DatePicker picker="date" />
 
                 </Form.Item>
-                <Form.Item rules={[{ required: true }]} label="Offtake start and end date" name="offtakeStartAndEndDate">
+                <Form.Item rules={[{ required: true }]} label="Offtake start and end date" name="offtake_start_and_end_date">
                   <DatePicker.RangePicker picker="date" />
                 </Form.Item>
                 <Form.List name="status" >
@@ -386,7 +286,11 @@ const ProductionScheduling = () => {
                             <Divider>
                               <Stack direction={'row'} gap={1}>Production Status {field.name + 1} {field.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
-                                  remove(field.name);
+                                  const key = statusValues[field.name].key
+                                  console.log();
+                                  OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
+                                    remove(field.name);
+                                  })
                                 }}>
                                   <CloseRounded />
                                 </IconButton>) : null}</Stack>
@@ -399,6 +303,10 @@ const ProductionScheduling = () => {
                           >
                             <AccordionSummary>
                               <Stack flex={1}>
+                                <Form.Item hidden
+                                  name={[field.name, 'key']}>
+                                  <Input disabled />
+                                </Form.Item>
                                 <Form.Item rules={[{ required: true, message: 'Please enter Step name' }]}
                                   label="Name" name={[field.name, 'name']}>
                                   <Input />
@@ -414,7 +322,7 @@ const ProductionScheduling = () => {
                             <AccordionDetails>
                               <Stack flex={1} gap={1}>
 
-                                <Form.List name={[field.name, 'steps']}>
+                                <Form.List name={[field.name, '_steps']}>
                                   {(steps, { add, remove }) => (
                                     <Timeline>
                                       {steps.map((step) => {
@@ -518,9 +426,9 @@ const ProductionScheduling = () => {
                 OfftakeService.getStatus.Name(offtake.status) === "planning"
                 &&
                 (
-                  <Button type='primary' onClick={async () => {
-                    scheduleForm.submit()
+                  <Button type='primary' onClick={() => {
                     setPublish(true)
+                    scheduleForm.submit()
                   }}>Submit Offtake</Button>
                 )
               }

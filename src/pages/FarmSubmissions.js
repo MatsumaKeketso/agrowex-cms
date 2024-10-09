@@ -55,21 +55,7 @@ export const FarmSubmissionColumns = [
   //   dataIndex: 'address',
   //   key: 'address',
   // },
-  {
-    title: "Actions",
-    dataIndex: ['offers', 'actions'],
-    key: 'x',
-    width: 130,
-    render: (v, r) => {
-      return (
-        <Stack>
-          <Popconfirm title="Pause Farm" description="Farm activity will be suspended, continue?">
-            <Button type='primary' icon={<PlayCircleOutlined />} shape='circle'></Button>
-          </Popconfirm>
-        </Stack>
-      )
-    }
-  }
+
 ];
 const productionColumns = [
   {
@@ -138,12 +124,13 @@ const deliveryColumns = [
     dataIndex: 'comments',
     key: 'comments',
     render: (text) => {
-      const truncatedText = text.substring(0, 48).trim();
+      const truncatedText = text ? text.substring(0, 48).trim() : text;
       return (
         <Tooltip title={text}>
           <div style={{ maxHeight: '48px', overflow: 'hidden' }}>
             {truncatedText}
-            {text.length > 48 && '...'}</div>
+            {/* {text.length > 48 && '...'} */}
+          </div>
         </Tooltip>
       )
     }
@@ -347,63 +334,102 @@ const FarmerView = ({ record }) => {
         </Stack>
       </Stack>
       <Stack flex={1} gap={2}>
-        {offtake.status == 'active' && (
+        {OfftakeService.getStatus.Name(offtake.status) === 'active' && (
           <Stack py={3} alignItems={'center'}>
-            <Progress type="dashboard" percent={75} gapDegree={30} />
+            {/* <Progress type="dashboard" percent={75} gapDegree={30} />
             <Typography variant='caption'>Delivered</Typography>
             <Typography variant='subtitle1'>Cherry Tomato</Typography>
             <Typography variant='h6'>10tons</Typography>
             <Stack>
               <Table columns={deliveryColumns} dataSource={[deliveryUpdates[0]]} />
-            </Stack>
-          </Stack>
-        )}
-        <Stack direction={'row'} alignItems={'center'}>
-          <Stack flex={1} alignItems={'center'}>
-            <Progress type="dashboard" percent={75} />
-            <Stack p={1} >
-              <Typography>Production</Typography>
-            </Stack>
-            {/* <Table columns={livestockColumns} dataSource={livestockTypes} /> */}
-          </Stack>
-          <SwapRightOutlined />
-          <Stack flex={1} alignItems={'center'}>
-            <Progress type="dashboard" percent={0} />
-            <Stack p={1}>
-              <Typography>Delivery</Typography>
-            </Stack>
+            </Stack> */}
+            <Stack spacing={2} direction={'row'} alignItems={'center'}>
+              <Stack flex={1} alignItems={'center'}>
+                <Progress type="dashboard" percent={75} />
+                <Stack p={1} >
+                  <Typography>Production</Typography>
+                </Stack>
 
-          </Stack>
-        </Stack>
-        <Stack alignItems={'center'}>
-          <Segmented
-            value={tableSegment}
-            options={['Production', 'Delivery']}
-            onChange={(value) => {
-              setTableSegment(value)
-              console.log(value); // string
-            }}
-          />
-        </Stack>
-        {tableSegment === 'Production' ? (
-          <Stack>
-            <Table style={{ flex: 1, width: '100%' }} columns={productionColumns} dataSource={TrackerData} />
-            <Stack p={1}>
-              <Button onClick={() => {
-                setTableModal(true)
-              }}>View All</Button>
+              </Stack>
+              <SwapRightOutlined />
+              <Stack flex={1} alignItems={'center'}>
+                <Progress type="dashboard" percent={0} />
+                <Stack p={1}>
+                  <Typography>Delivery</Typography>
+                </Stack>
+              </Stack>
             </Stack>
-          </Stack>
-        ) : (
-          <Stack>
-            <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
-            <Stack p={1}>
-              <Button onClick={() => {
-                setTableModal(true)
-              }}>View All</Button>
+            <Stack alignItems={'center'}>
+              <Segmented
+                value={tableSegment}
+                options={['Production', 'Delivery']}
+                onChange={(value) => {
+                  setTableSegment(value)
+                  console.log(value); // string
+                }}
+              />
             </Stack>
+            {tableSegment === 'Production' ? (
+              <Stack>
+                <Table style={{ flex: 1, width: '100%' }} columns={productionColumns} dataSource={TrackerData} />
+                <Stack p={1}>
+                  <Button onClick={() => {
+                    setTableModal(true)
+                  }}>View All</Button>
+                </Stack>
+              </Stack>
+            ) : (
+              <Stack>
+                <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
+                <Stack p={1}>
+                  <Button onClick={() => {
+                    setTableModal(true)
+                  }}>View All</Button>
+                </Stack>
+              </Stack>
+            )}
           </Stack>
         )}
+        {OfftakeService.getStatus.Name(offtake.status) === 'published' || OfftakeService.getStatus.Name(offtake.status) === 'finalstage' ? (
+          <Stack p={2} spacing={1}>
+            <Stack>
+              <Typography variant='h5'>Farm Produce</Typography>
+            </Stack>
+            <Stack>
+              <Table columns={[
+                {
+                  title: 'Name',
+                  dataIndex: 'name',
+                  key: 'name',
+                },
+                {
+                  title: 'Age',
+                  dataIndex: 'age',
+                  key: 'age',
+                },
+                {
+                  title: 'Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                },
+              ]} dataSource={[
+                {
+                  key: '1',
+                  name: 'Mike',
+                  age: 32,
+                  address: '10 Downing Street',
+                },
+                {
+                  key: '2',
+                  name: 'John',
+                  age: 42,
+                  address: '10 Downing Street',
+                },
+              ]} />
+            </Stack>
+          </Stack>
+        ) : null}
+
 
       </Stack>
     </Stack>)
@@ -588,7 +614,7 @@ const FarmSubmissions = () => {
         <Stack flex={1} sx={{ overflow: 'auto' }}>
           <Stack direction={'row'} gap={1} alignItems={'center'}>
             <Stack gap={0} p={2} flex={1}>
-              <Typography variant='h6' flex={1}>Suppliers</Typography>
+              <Typography variant='h6' flex={1}>Farmers who are interested</Typography>
               <Typography variant='body2' flex={1}>Closing Date : { }</Typography>
             </Stack>
             <Typography variant='h6' p={2} flex={1}>{tonsSelected}t / {tonsSelected < required ? required : tonsSelected}t</Typography>
@@ -611,7 +637,22 @@ const FarmSubmissions = () => {
           <Table
             rowSelection={currentStatus === 'finalstage' || currentStatus === 'active' ? null : rowSelection}
             dataSource={farms}
-            columns={FarmSubmissionColumns}
+            columns={[...FarmSubmissionColumns, {
+              title: "Actions",
+              dataIndex: ['offers', 'actions'],
+              key: 'x',
+              width: 130,
+              render: (v, r) => {
+                const disablePause = OfftakeService.getStatus.Name(offtake.status) !== 'active'
+                return (
+                  <Stack>
+                    <Popconfirm okButtonProps={{ disabled: disablePause }} title="Pause Farm" description="Farm activity will be suspended, continue?">
+                      <Button disabled={disablePause} type='primary' icon={<PlayCircleOutlined />} shape='circle'></Button>
+                    </Popconfirm>
+                  </Stack>
+                )
+              }
+            }]}
             expandable={{
               expandedRowRender: (record) => <FarmerView record={record} />,
               rowExpandable: (record) => record.name !== 'Not Expandable',

@@ -1,7 +1,7 @@
-import { addDoc, getDoc, getDocs, query, updateDoc } from "firebase/firestore";
+import { addDoc, deleteDoc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { firestoreDB, realtimeDB } from "./authService";
-import { push, ref } from "firebase/database";
+import { get, push, ref, remove } from "firebase/database";
 import { SystemService } from "./systemService";
 import moment from 'moment';
 const offtakesCollection = collection(firestoreDB, "offtakes");
@@ -86,7 +86,8 @@ const farms = [
 export const stableOfttakes = ["AGREF-OF-1726166927085", "AGREF-OF-1726166927086", "AGREF-OF-1726166927087", "AGREF-OF-1726166927088", "AGREF-OF-1726166927089", "AGREF-OF-1726166927090"]
 export const OfftakeService = {
   getOfftakes: async () => {
-    const q = query(offtakesCollection)
+    // check for form completion first before fetch
+    const q = query(offtakesCollection, where("form_completion_status", "==", "complete"))
     const querySnapshot = await getDocs(q);
     const offtakes = [];
     querySnapshot.forEach((doc) => {
@@ -151,32 +152,66 @@ export const OfftakeService = {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
   },
-  updateProductionPlan: async (offtake_id, schedule) => {
+  addProductionStatus: async (offtake_id, status) => {
+    try {
+      // Create a reference to the 'production-plan' collection
+      const productionPlanCollectionRef = collection(firestoreDB, 'offtakes', offtake_id, 'production-plan');
+
+      // Add a new document to the collection with the provided status data
+      const docRef = await addDoc(productionPlanCollectionRef, status);
+
+      console.log('Production status added successfully with ID:', docRef.id);
+      return docRef.id; // Return the ID of the newly created document
+    } catch (error) {
+      console.error('Error adding production status:', error);
+      throw error;
+    }
+  },
+
+  removeProductionStatus: async (offtake_id, status_id) => {
+    try {
+      // Create a reference to the specific document in the 'production-plan' subcollection
+      const statusDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', status_id);
+
+      // Delete the document
+      await deleteDoc(statusDocRef);
+
+      console.log('Production status removed successfully:', status_id);
+      return status_id; // Return the ID of the removed document
+    } catch (error) {
+      console.error('Error removing production status:', error);
+      throw error;
+    }
+  },
+  updateProductionPlan: async (offtake_id, status_id, status) => {
     // Create a reference to the 'tracker' document in the 'production-plan' collection
-    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', 'tracker');
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', status_id);
 
     // Set the document with the provided schedule data
-    await setDoc(trackerDocRef, schedule);
+    await setDoc(trackerDocRef, status);
 
     console.log('Offtake schedule updated successfully!');
     return trackerDocRef.id; // Return the reference to the updated document
   },
   getProductionPlan: async (offtake_id) => {
+    try {
+      const productionPlanRef = collection(firestoreDB, "offtakes", offtake_id, "production-plan");
+      const querySnapshot = await getDocs(productionPlanRef);
 
-    // Create a reference to the 'tracker' document in the 'production-plan' collection
-    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', 'tracker');
-
-    // Get the document
-    const docSnap = await getDoc(trackerDocRef);
-
-    if (docSnap.exists()) {
-      console.log('Schedule document found');
-      return docSnap.data(); // Return the document data
-    } else {
-      console.log('No such document!');
-      return null;
+      if (!querySnapshot.empty) {
+        const documents = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+          key: doc.id
+        }));
+        return documents;
+      } else {
+        console.log("No documents found in the production-plan subcollection!");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching production plan:", error);
+      throw error;
     }
-
   },
   removeCostingStep: async (offtake_id, stepId) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
@@ -207,7 +242,7 @@ export const OfftakeService = {
     }
   },
   sendOMMessage: (offtake_id, message) => {
-    const offtake = ref(realtimeDB, `published-chat/${offtake_id}`)
+    const offtake = ref(realtimeDB, `submitted-chat/${offtake_id}`)
     return push(offtake, message)
       .then(() => {
         return 'success';
@@ -281,13 +316,13 @@ export const OfftakeService = {
         "commodity_name": "Broccoli",
         "address": "Johannesburg Road Lyndhurst Johannesburg",
         "contract": "instrument2",
-        "form_completion_status": "incomplete",
+        "form_completion_status": "complete",
         "input_investment": "Yes",
-        "created_at": 1726167034357,
+        "created_at": SystemService.generateTimestamp(),
         "title": "Agrowex Offtake",
         "country": "south_africa",
         "_commodity_meta": {
-          "product_id": null,
+          "product_id": 'SKU-342i3uhf',
           "description": "Broccoli is a cruciferous vegetable belonging to the Brassica genus, which also includes cabbage, kale, cauliflower, and Brussels sprouts. It has a green, tree-like appearance with a thick stem and florets resembling tiny trees. The florets are packed with nutrients and have a mild, slightly bitter flavor. Broccoli is often eaten raw or cooked, and its versatility makes it a popular addition to various dishes, from salads to stir-fries.",
           "id": 66,
           "order": "Brassicales",

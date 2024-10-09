@@ -306,7 +306,7 @@ const Layout = (props) => {
       >
         {props.children}
       </Stack>
-      <DevTools />
+      {/* <DevTools /> */}
     </Stack>
   );
 };

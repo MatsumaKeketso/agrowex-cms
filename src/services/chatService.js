@@ -15,6 +15,12 @@ export const ChatService = {
   sendMessage: async (message, offtake_id) => {
     push(ref(realtimeDB, `negotiations/${offtake_id}/`), message);
   },
+  sendPlanningMessage: async (message, offtake_id) => {
+    push(ref(realtimeDB, `planning/${offtake_id}/`), message);
+  },
+  sendPublishedMessage: async (message, offtake_id) => {
+    push(ref(realtimeDB, `planning/${offtake_id}/`), message);
+  },
   getMessages: (offtake_id) => {
     return new Promise((res, rej) => {
       get(child(realtimeDB, `negotiations/${offtake_id}/`)).then((snapshot) => {

@@ -26,6 +26,7 @@ import { ArrowDownwardRounded, ArrowDropDown, ArrowDropDownRounded, ArrowUpwardR
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthService } from "../services/authService";
 import { SystemService } from "../services/systemService";
+import dayjs from "dayjs";
 const _columns = [
     {
         title: 'Customer Id',
@@ -50,11 +51,25 @@ const _columns = [
         title: 'Delivery Date',
         dataIndex: 'end_date',
         key: 'end_date',
+        render: (v, t) => {
+            return <>
+                Pending...
+            </>
+        }
     },
     {
         title: 'Order Date',
         dataIndex: 'start_date',
         key: 'start_date',
+        render: (v, r) => {
+            if (r.offtake_start_and_end_date) {
+                const startDate = SystemService.formatTimestamp(r.offtake_start_and_end_date[0])
+                const endDate = dayjs(r.offtake_start_and_end_date[1])
+                return <>{startDate}</>
+            } else {
+                return <>{SystemService.convertTimestampToDateString(r?.created_at)}</>
+            }
+        }
     },
     // { // removing reference, can be searched for (maybe)
     //     title: 'Reference',
@@ -63,8 +78,12 @@ const _columns = [
     // },
     {
         title: 'Contract Type',
-        dataIndex: 'supply_duration',
-        key: 'supply_duration',
+        dataIndex: 'contract_model',
+        key: 'contract_model',
+        render: (v, r) => {
+
+            return <Stack> {v ? v : "Pending..."} </ Stack>
+        }
     },
 
 
@@ -221,11 +240,13 @@ const Offtake = () => {
                                 status_name: "negotiation",
                                 updated_at: SystemService.generateTimestamp()
                             }
-
-                            OfftakeService.updateOfftake(offtakeBackup.offtake_id, { ...offtakeBackup, confirmed: v, status: [_status] }).then(Res => {
-                                confirmForm.resetFields()
-                                setOpenConfirm(false)
+                            AuthService.getUser().then(user => {
+                                OfftakeService.updateOfftake(offtakeBackup.offtake_id, { ...offtakeBackup, confirmed: v, assigned_to: user.uid, status: [...offtakeBackup.status, _status] }).then(res => {
+                                    confirmForm.resetFields()
+                                    setOpenConfirm(false)
+                                })
                             })
+
                         }}>
                             <Form.Item rules={[{ required: true, }, ({ getFieldValue }) => ({
                                 validator(_, value) {
@@ -265,7 +286,7 @@ const Offtake = () => {
             </Modal>
             {/* End Confirm assessment */}
 
-            
+
 
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
@@ -283,16 +304,16 @@ const Offtake = () => {
                     {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'negotiation' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/chat`);
                     }} > Open Chat</Button>) : null}
-                    {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'planning' ? (<Button type="primary" onClick={() => {
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'planning' ? (<Button type="primary" onClick={() => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
                     }} > Open Production Plan</Button>) : null}
-                    {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'submitted' ? (<Button type="primary" onClick={() => {
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'submitted' ? (<Button type="primary" onClick={() => {
                         dispatch(setPublishState(true))
                     }} > Publish Offtake</Button>) : null}
                     {/* {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'finalstage' ? (<Button type="primary" onClick={() => {
                       
                     }} >Activate Offtake</Button>) : null} */}
-                    {!offtakeBackup?.status && (<Button onClick={() => {
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'inprogress' && (<Button onClick={() => {
                         setOpenOfftake(false)
                         setOpenConfirm(true)
                     }

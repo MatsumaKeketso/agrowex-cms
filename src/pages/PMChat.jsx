@@ -32,7 +32,7 @@ const PMChat = () => {
     }
   };
   const listenForChatMessages = () => {
-    const chatRef = ref(realtimeDB, `published-chat/${offtake_id}`);
+    const chatRef = ref(realtimeDB, `submitted-chat/${offtake_id}`);
     onValue(chatRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();

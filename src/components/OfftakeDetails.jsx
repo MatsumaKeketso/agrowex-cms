@@ -16,9 +16,10 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import OfftakeProgress from './OfftakeProgress';
 import { FarmSubmissionColumns } from '../pages/FarmSubmissions';
 import { storage, SystemService } from '../services/systemService';
-import { firestoreDB } from '../services/authService';
+import { AuthService, firestoreDB } from '../services/authService';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { getDownloadURL, ref as sRef, uploadBytesResumable } from 'firebase/storage';
+import moment from 'moment';
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
     const offtake = useSelector((state) => state.offtake)
@@ -59,26 +60,28 @@ const PublishOfftake = () => {
     // TODO Update this status update function
     const UpdateStatus = () => {
         setLoading(true)
-        const status = {
-            status_name: 'published',
-            updated_at: SystemService.generateTimestamp()
-        }
-        const updates_status = [...offtake.status, status]
-        OfftakeService.updateOfftake(offtake.offtake_id, {
-            ...offtake, status: updates_status
-        }).then(() => {
-
-            messageApi.success('Offtake Updated!');
-            dispatch(setPublishState(false))
-            setLoading(false)
-            dispatch(setActiveOfftake({
-                ...offtake, status: updates_status
-            }))
-        }).catch(err => {
-            console.log(err);
-            messageApi.error('Update Error')
-            setLoading(false)
+        AuthService.getUser().then(user => {
+            const status = {
+                status_name: 'published',
+                updated_at: SystemService.generateTimestamp()
+            }
+            const updated_status = [...offtake.status, status]
+            OfftakeService.updateOfftake(offtake.offtake_id, {
+                ...offtake, status: updated_status, approved_by: user.uid
+            }).then(() => {
+                messageApi.success('Offtake Updated!');
+                dispatch(setPublishState(false))
+                setLoading(false)
+                dispatch(setActiveOfftake({
+                    ...offtake, status: updated_status
+                }))
+            }).catch(err => {
+                console.log(err);
+                messageApi.error('Update Error')
+                setLoading(false)
+            })
         })
+
     }
     useEffect(() => {
         console.log(offtake);
@@ -229,7 +232,7 @@ const MasterContractDialog = ({ open, onClose }) => {
     };
 
     return (
-        <Modal footer={<></>} okButtonProps={{ disabled: loading }} title="Upload Contract" open={open} onCancel={() => onClose()}>
+        <Modal footer={<></>} okButtonProps={{ disabled: loading }} title="Upload Contract" open={open} maskClosable={false} onCancel={() => onClose()}>
             <Stack alignItems={'center'} gap={4}>
                 <Typography variant='h4'>Attach Master Contract</Typography>
                 <Stack position={'relative'} alignItems={'center'} width={'100%'}>
@@ -238,7 +241,7 @@ const MasterContractDialog = ({ open, onClose }) => {
                 </Stack>
 
                 <Stack textAlign={'center'} gap={2}>
-                    <Upload {...props}>
+                    <Upload accept=".pdf" {...props}>
                         <Button loading={loading} type='primary' icon={<UploadOutlined />}>
                             <Typography>{loading ? 'Uploading...' : 'Upload document'}</Typography></Button>
                     </Upload>
@@ -281,6 +284,7 @@ const OfftakeDetails = (props) => {
         phone_number,
         email,
         commodity_name,
+
         status,
         production_method,
         quantity,
@@ -328,11 +332,13 @@ const OfftakeDetails = (props) => {
     }
     useEffect(() => {
         if (ot) {
+
             if (ot.status) {
                 const latest = ot?.status?.length - 1 || null
                 const cS = OfftakeService.getStatus.Name(ot.status)
                 const uA = OfftakeService.getStatus.UpdatedAt(ot.status)
                 setCurrentStatus(cS)
+                contractModelForm.setFieldValue("contract_model", ot?.contract_model)
             }
             if (
                 OfftakeService.getStatus.Name(ot.status) === 'submitted' ||
@@ -342,6 +348,15 @@ const OfftakeDetails = (props) => {
                 OfftakeService.getStatus.Name(ot.status) === 'active'
             ) {
                 setProduction(true)
+            }
+            if (OfftakeService.getStatus.Name(ot.status) === 'inprogress' ||
+                OfftakeService.getStatus.Name(ot.status) === 'negotiation' ||
+                OfftakeService.getStatus.Name(ot.status) === 'planning' ||
+                OfftakeService.getStatus.Name(ot.status) === 'submitted' ||
+                OfftakeService.getStatus.Name(ot.status) === 'finalstage' ||
+                OfftakeService.getStatus.Name(ot.status) === 'active'
+            ) {
+                setDisableForm(true)
             }
         }
         const locations = location.pathname.split('/')
@@ -363,32 +378,25 @@ const OfftakeDetails = (props) => {
     }, [offtake])
     useEffect(() => {
         getAndWatchDocuments()
-        var list = []
-        Array(7).fill().map((_, v) => {
-            list.push({ value: `option${v}`, label: `Option ${v}` })
-        })
-        setContractModel(list)
+        setContractModel([
+            { value: 'f-h-m', label: 'Fresh Hub Model' },
+            { value: 'i-m', label: 'Intermediary Model' },
+            { value: 'm-m', label: 'Multipartite Model' },
+            { value: 'm-m', label: 'Centralised Model' },
+            { value: 'n-e-m', label: 'Necleus Estate Model' }
+        ])
         OfftakeService.getFarmSubmissions().then(f => {
             if (f) {
                 setFarms(f)
             }
         })
-        if (offtake.schedule) {
-            try {
-                if (offtake.schedule.steps) {
-                    const a = []
-                    offtake.schedule.status.forEach(stat => {
-                        a.push({ title: stat.name })
-                    });
-                    setProductionProgress(a)
-                    console.log(a);
+        OfftakeService.getProductionPlan(offtake.offtake_id).then(status => {
+            console.log(status);
 
-                }
-            } catch (error) {
-                console.log(error);
-
+            if (status) {
+                setProductionProgress(status)
             }
-        }
+        })
         if (offtake.suppliers) {
             var a = []
             offtake.suppliers.forEach(supplier => {
@@ -518,16 +526,40 @@ const OfftakeDetails = (props) => {
                             <Typography variant='subtitle1' fontWeight={'bold'}>Production Tracker</Typography>
                         </Stack>
                         <Stack p={2}>
-                            <Steps
-                                percent={50}
-                                direction="vertical"
-                                current={1}
-                                items={productionProgress}
-                            />
+                            {productionProgress.map((stat) => {
+
+
+                                return (
+                                    <Stack spacing={1}>
+                                        <Stack spacing={1} direction={'row'}>
+                                            <Stack pt={1} spacing={1}>
+                                                <Spin />
+                                            </Stack>
+                                            <Stack>
+                                                <Typography variant='h6'>{stat.name}</Typography>
+                                                <Typography variant='body2'>{stat.description}</Typography>
+                                            </Stack>
+                                        </Stack>
+                                        <Stack spacing={2} direction={'row'}>
+                                            <Divider orientation="vertical" flexItem />
+                                            {stat._steps.map((step) => {
+                                                return (
+                                                    <Stack flex={1} spacing={1}>
+                                                        <Stack flex={1} spacing={1} direction={'row'}>
+                                                            <Typography flex={1} variant='subtitle1'>{step.name}</Typography> <Typography color={colors.grey[800]} variant='caption'>{moment(step.duration[0]).format("LL")} to {moment(step.duration[1]).format("LL")}</Typography>
+                                                        </Stack>
+                                                        <Typography>{step.description}</Typography>
+                                                    </Stack>
+                                                )
+                                            })}
+                                        </Stack>
+                                    </Stack>
+                                )
+                            })}
                         </Stack>
                     </Stack>
                 )}
-                {currentStatus === 'published' || currentStatus === 'finalstage' && (
+                {currentStatus === 'published' || currentStatus === 'finalstage' ? (
                     <Stack>
                         {!ot?.master_contract && (<Stack flex={1} >
 
@@ -554,7 +586,7 @@ const OfftakeDetails = (props) => {
                             </Stack>
                         )}
                     </Stack >
-                )}
+                ) : null}
                 {currentStatus === 'published' && (<Stack>
                     <Stack p={2} direction={'row'}>
                         <Stack flex={1}>
@@ -602,7 +634,7 @@ const OfftakeDetails = (props) => {
 
                 {/* Contact Details */}
                 <Stack>
-                    <Accordion variant='elevation' elevation={0}>
+                    <Accordion defaultExpanded={true} variant='elevation' elevation={0}>
                         <AccordionSummary sx={{ px: 0 }}>
                             <Chip icon={<FaceOutlined />} label={`Contact Details - ${ot['_address']?.alias_name}`} />
                         </AccordionSummary>
@@ -617,23 +649,34 @@ const OfftakeDetails = (props) => {
                 </Stack>
 
                 <Form form={contractModelForm} layout='vertical' onFinish={(v) => {
-                    OfftakeService.updateContractModel(offtake_id, v.contractModel).then(() => {
-                        console.log('updated');
+                    OfftakeService.updateContractModel(offtake.offtake_id, v.contract_model).then(() => {
+                        messageApi.success("Contract Model Updated")
+                    }).catch((err) => {
+                        messageApi.error("Something went wrong")
+                        console.log(err);
+
                     })
                 }}>
-                    <Stack direction={'row'} gap={1} alignItems={'center'}>
-                        <Form.Item name="contractModel" label="Contract Model" rules={[{ required: true }]}>
-                            <Select
-                                style={{ width: 400 }}
-                                placeholder="Please select a model..."
-                                options={contractModel}
-                                onChange={(v) => {
-                                    console.log(v);
-                                }}
-                            />
-                        </Form.Item>
-                        <Button type='default' htmlType='submit'>Update</Button>
-                    </Stack>
+                    {
+                        OfftakeService.getStatus.Name(offtake.status) === 'inprogress' ||
+                            OfftakeService.getStatus.Name(offtake.status) === 'negotiation' ||
+                            OfftakeService.getStatus.Name(offtake.status) === 'planning' ? null : (
+                            <Stack direction={'row'} gap={1} alignItems={'center'}>
+                                <Form.Item name="contract_model" label="Contract Model" rules={[{ required: true }]}>
+                                    <Select
+                                        style={{ width: 400 }}
+                                        placeholder="Please select a model..."
+                                        options={contractModel}
+                                        onChange={(v) => {
+                                            console.log(v);
+                                        }}
+                                    />
+                                </Form.Item>
+                                <Button type='default' htmlType='submit'>Update</Button>
+                            </Stack>
+                        )
+                    }
+
                 </Form>
 
                 <Form
@@ -642,24 +685,10 @@ const OfftakeDetails = (props) => {
                     }}
                     name='permissions'
                     form={offtakeForm}
-                    // disabled={disableForm}
+                    disabled={disableForm}
                     layout='vertical'
                     onFinish={(v) => {
-
-                        // v = new form properties, default set to merge
-                        const permissions = {
-                            category: false,
-                            produceName: false,
-                            productionMethod: false,
-                            totalOrderQuantity: false,
-                            deliveryFrequency: false,
-                            inputInvestment: false,
-                            supplyDuration: false,
-                            offerPricePerUnit: false,
-                            quality: false
-                        }
                         const a = { ...offtake, permissions: v }
-
                         OfftakeService.updateOfftake(
                             offtake_id ?
                                 offtake_id :
@@ -669,7 +698,7 @@ const OfftakeDetails = (props) => {
                             if (closeDrawer) {
                                 closeDrawer(offtake_id)
                             }
-                            // })
+
                             dispatch(offtakeUpdateSuccess(true))
                             setTimeout(() => {
                                 dispatch(offtakeUpdateSuccess(false))
