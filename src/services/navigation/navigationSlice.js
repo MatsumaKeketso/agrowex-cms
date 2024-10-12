@@ -1,14 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { useNavigate } from "react-router-dom";
 import { getNavIcon } from "../navigation-icons";
-const oldMenu = {
-  links: ["home", "orders", "store", "products", "warehouse"],
-  active: "home",
-};
+
 const initialState = {
   links: [
     // follow ANTD menu structure
-    { label: "Dashboard", key: "home", icon: getNavIcon("home") },
+    { label: "Dashboard", key: "dashboard", icon: getNavIcon("home") },
     { label: "Orders", key: "orders", icon: getNavIcon("orders") },
     { label: "Offtakes", key: "offtakes", icon: getNavIcon("offtakes") },
     { label: "Store", key: "store", icon: getNavIcon("store") },

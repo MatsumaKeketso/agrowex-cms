@@ -6,6 +6,7 @@ import {
   AgricultureRounded,
   DriveEtaRounded,
   ForumRounded,
+  HomeMaxRounded,
   MessageRounded,
   MoreVertRounded,
   QuestionMarkRounded,
@@ -14,51 +15,55 @@ import {
   WarehouseRounded,
 } from "@mui/icons-material";
 export const getNavIcon = (name) => {
+  return null;
   switch (name) {
     case "home":
       return <DashboardRoundedIcon />;
-      break;
+
     case "orders":
       return <LocalShippingRoundedIcon />;
-      break;
+
     case "store":
       return <StorefrontRoundedIcon />;
-      break;
+
     case "offtakes":
       return <StorefrontRoundedIcon />;
-      break;
+
     case "products":
       return <ShoppingCartRoundedIcon />;
-      break;
+
     case "warehouse":
       return <WarehouseRounded />;
-      break;
+
     case "more":
       return <MoreVertRounded />;
-      break;
+
     case "suppliers":
       return <LocalShippingRoundedIcon />;
-      break;
+
     case "farms":
       return <AgricultureRounded />;
-      break;
+
     case "market":
       return <StorefrontRounded />;
-      break;
+
     case "drivers":
       return <DriveEtaRounded />;
-      break;
+
     case "reconcile":
       return <ReceiptRounded />;
-      break;
+
     case "requests":
       return <ForumRounded />;
-      break;
+
     case "messages":
       return <MessageRounded />;
-      break;
+
     case "faq":
       return <QuestionMarkRounded />;
-      break;
+
+    default:
+      return <HomeMaxRounded />
+
   }
 };

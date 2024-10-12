@@ -1,17 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { ConfigProvider } from "antd";
 import { store } from "./services/redux/store";
 import "swiper/css";
-import { initializeApp } from "firebase/app";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
-import { firebaseConfig } from "./services/fc";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
@@ -27,9 +24,18 @@ import Reconcile from "./pages/Reconcile";
 import FAQs from "./pages/FAQs";
 import Requests from "./pages/Requests";
 import Offtake from "./pages/Offtakes";
-const app = initializeApp(firebaseConfig);
+import OfftakeChat from "./pages/OfftakeChat";
+import ProductionSceduling from "./pages/ProductionScheduling";
+import Signin from "./pages/Signin";
+import ProductionCost from "./pages/ProductionCost";
+import Account from "./pages/Account";
+import { colors } from "@mui/material";
+import PMChat from "./pages/PMChat";
+import FarmSubmissions from "./pages/FarmSubmissions";
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 export const theme = createTheme({
+
   palette: {
     primary: {
       // light: will be calculated from palette.primary.main,
@@ -57,6 +63,16 @@ export const theme = createTheme({
         },
       },
     },
+    MuiAccordion: {
+      defaultProps: {
+
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 30
+        }
+      }
+    }
   },
   typography: {
     fontFamily: ["Plus Jakarta Sans Variable"],
@@ -83,6 +99,10 @@ export const theme = createTheme({
 const router = createBrowserRouter([
   {
     path: "/",
+    element: <Signin />,
+  },
+  {
+    path: "/dashboard",
     element: <Home />,
   },
   {
@@ -102,8 +122,28 @@ const router = createBrowserRouter([
     element: <Offtake />,
   },
   {
+    path: "/offtakes/:offtake_id/chat",
+    element: <OfftakeChat />,
+  },
+  {
+    path: "/offtakes/:offtake_id/published-chat",
+    element: <PMChat />,
+  },
+  {
+    path: "/offtakes/:offtake_id/schedule",
+    element: <ProductionSceduling />,
+  },
+  {
+    path: "/offtakes/:offtake_id/submissions",
+    element: <FarmSubmissions />,
+  },
+  {
+    path: "/offtakes/:offtake_id/costing",
+    element: <ProductionCost />,
+  },
+  {
     path: "/account",
-    element: <Home />,
+    element: <Account />,
   },
   {
     path: "/warehouse",
@@ -154,6 +194,24 @@ root.render(
               headerColor: theme.palette.common.white,
               headerSortActiveBg: theme.palette.primary.light,
             },
+            Statistic: {
+              contentFontSize: 18
+            },
+            Segmented: {
+              borderRadius: 16,
+              borderRadiusSM: 16,
+              borderRadiusLG: 16,
+              borderRadiusXS: 16,
+              itemSelectedBg: theme.palette.primary.main,
+              itemSelectedColor: 'white',
+              itemColor: theme.palette.primary.main
+            },
+            Input: {
+              colorTextDisabled: "rgb(0,0,0)",
+              colorTextPlaceholder: "rgb(84,82,82)"
+            }, Progress: {
+              defaultColor: theme.palette.primary.main
+            }
           },
         }}
       >

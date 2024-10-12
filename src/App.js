@@ -1,5 +1,4 @@
 import logo from "./logo.svg";
-import "./App.css";
 import Layout from "./components/Layout";
 import { Typography, Button, Stack } from "@mui/material";
 import Home from "./pages/Home";
