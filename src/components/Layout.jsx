@@ -15,14 +15,21 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
-import { Drawer, Space, Menu as ANTMenu } from "antd";
+import { Drawer, Space, Menu as ANTMenu, Tag, Modal } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  ArrowDownwardRounded,
   ChatBubbleRounded,
   MailOutlined,
   MessageRounded,
+  MoreVertRounded,
 } from "@mui/icons-material";
-const Logo = () => (
+import { AuthService } from "../services/authService";
+import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
+import { ProfileService } from "../services/profileService";
+import StatusTag from "./StatusTag";
+import DevTools from "../dev/DevTools";
+export const Logo = () => (
   <svg
     width="85"
     height="49"
@@ -85,18 +92,19 @@ const Logo = () => (
   </svg>
 );
 
-const MenuAppBar = ({ links = [], active, onNavigate }) => {
+const MenuAppBar = ({ links = [], active }) => {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("mail");
   const [sideNavLinks, setSideNavLinks] = useState([]);
-  const navigation = useSelector((state) => state.navigation);
-  const handleMenu = (event) => {};
+  const navigation = useSelector((state: any) => state.navigation);
+  const handleMenu = (event) => { };
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const handleClose = () => {};
+  const handleClose = () => { };
   const showDrawer = () => {
     setOpen(true);
   };
+
   const onClose = () => {
     setOpen(false);
   };
@@ -109,7 +117,8 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
     }
   };
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+  }, []);
   return (
     <AppBar
       // variant="outlined"
@@ -118,7 +127,7 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
         background: "transparent",
         color: "black",
         borderWidth: 0,
-        zIndex: 5,
+        zIndex: 10,
         // borderRadius: 30,
       }}
       position="static"
@@ -186,54 +195,88 @@ const MenuAppBar = ({ links = [], active, onNavigate }) => {
               <MessageRounded />
             </IconButton>
           </Badge>
-
-          <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            sx={{ alignSelf: "flex-start", alignItems: "center" }}
-            onClick={handleMenu}
-            color="inherit"
-          >
-            <AccountCircle />
-          </IconButton>
-          <Stack spacing={-1} alignItems={"center"}>
-            <Typography variant="h6">Jane Doe</Typography>
-            <Typography color={"GrayText"} variant="overline">
-              Procurement
-            </Typography>
-          </Stack>
-          {/* <Menu
-            id="menu-appbar"
-            anchorOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-
-            keepMounted
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleClose}>Profile</MenuItem>
-            <MenuItem onClick={handleClose}>My account</MenuItem>
-          </Menu> */}
+          <ProfileMenu />
         </Stack>
       </Toolbar>
     </AppBar>
   );
 };
+const ProfileMenu = () => {
+  const { online, profile } = useSelector((state: any) => state.user)
+  const [anchorEl, setAnchorEl] = useState(null);
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const open = Boolean(anchorEl);
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+  useEffect(() => {
+    console.log(profile.img);
+
+  }, [])
+  return (
+    <Stack direction={'row'} gap={1}>
+      <Avatar src={profile.img || ""} alt={profile.fullnames} />
+
+      <Stack>
+        <Typography variant="h6">{profile.fullnames}</Typography>
+        <Tag style={{ alignSelf: 'flex-start' }}>{profile.role}</Tag>
+      </Stack>
+      <IconButton
+        sx={{ alignSelf: 'flex-start' }}
+        id="basic-button"
+        aria-controls={open ? 'basic-menu' : undefined}
+        aria-haspopup="true"
+        aria-expanded={open ? 'true' : undefined}
+        onClick={handleClick}
+      >
+
+        <MoreVertRounded />
+      </IconButton>
+      <Menu
+        id="basic-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        MenuListProps={{
+          'aria-labelledby': 'basic-button',
+        }}
+      >
+        <MenuItem onClick={() => {
+          navigate("/account");
+        }}>My Account</MenuItem>
+        <MenuItem onClick={() => {
+          AuthService.signout().then(() => {
+            dispatch(updateProfile({}))
+            dispatch(updateAuth({}))
+            dispatch(toggleOnline(false))
+            navigate('/');
+          })
+        }}>Logout</MenuItem>
+      </Menu>
+    </Stack>
+  );
+}
+
 const Layout = (props) => {
-  const { navigateTo } = props;
-  const navigation = useSelector((state) => state.navigation);
+  const { navigateTo, scroll = true } = props;
+  const navigation = useSelector((state: any) => state.navigation);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
+    AuthService.getUser().then((user) => {
+      dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }))
+      ProfileService.getProfile(user.uid).then(profile => {
+        dispatch(updateProfile(profile))
+        dispatch(toggleOnline(true))
+      })
+    })
     const splitter = location.pathname.split("/");
+
     if (splitter[1]) {
       dispatch(setActiveNav(splitter[1]));
     } else {
@@ -242,26 +285,30 @@ const Layout = (props) => {
   }, []);
   return (
     <Stack
-      // p={2}
-      flex={1}
       sx={{
         maxHeight: "100vh",
         minHeight: "100vh",
         overflow: "hidden",
         bgcolor: "#F6F6F6",
+        backgroundSize: "cover",
+        background: 'linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)),url(https://images.unsplash.com/photo-1484759288640-783b22c95d54?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)'
       }}
+      // p={2}
+      flex={1}
+
     >
       <MenuAppBar links={navigation.links} active={navigation.active} />
 
       <Stack
-        m={{ xs: 0, sm: 1, md: 2, lg: 5 }}
-        sx={{ overflowY: "auto", borderRadius: 3, bgcolor: "white" }}
+        m={{ xs: 0, sm: 1 }}
+        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)" }}
         flex={1}
         height={"100%"}
         borderRadius={{ xs: 0, sm: 10, md: 20, lg: 30 }}
       >
         {props.children}
       </Stack>
+      {/* <DevTools /> */}
     </Stack>
   );
 };
