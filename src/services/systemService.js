@@ -91,7 +91,9 @@ export const SystemService = {
   generateTimestamp: () => {
     return Date.now();
   },
+  // todo need to add time string for this formating
   formatTimestamp: (timestamp) => {
+
     const date = new Date(timestamp);
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);

@@ -145,7 +145,7 @@ const ProductionScheduling = () => {
             key: key,
             name: name,
             description: description,
-            _steps: _steps.map(step => {
+            _steps: _steps ? _steps?.map(step => {
               const { name, duration } = step
               const start = dayjs(duration[0])
               const end = dayjs(duration[1])
@@ -154,14 +154,14 @@ const ProductionScheduling = () => {
               return {
                 name: name,
                 duration: [start, end],
-                _costing: step._costing.map((cost) => {
+                _costing: step?._costing ? step?._costing?.map((cost) => {
                   return {
                     name: cost.name,
                     amount: cost.amount
                   }
-                })
+                }) : []
               }
-            })
+            }) : []
           }
         }))
 
@@ -284,7 +284,7 @@ const ProductionScheduling = () => {
                         <Stack key={field.name}>
                           <Stack py={2}>
                             <Divider>
-                              <Stack direction={'row'} gap={1}>Production Status {field.name + 1} {field.name !== 0 ? (
+                              <Stack direction={'row'} gap={1}>Production Category {field.name + 1} {field.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
                                   const key = statusValues[field.name].key
                                   console.log();
@@ -403,7 +403,7 @@ const ProductionScheduling = () => {
                       <Stack py={2} gap={2} direction={'row'} alignItems={'center'}>
                         <Divider sx={{ flex: 1, color: colors.green[400] }}>
                           <Button disabled={disableForm} type='default' onClick={() => add()} >
-                            + Add Status
+                            + Add Category
                           </Button>
                         </Divider>
 

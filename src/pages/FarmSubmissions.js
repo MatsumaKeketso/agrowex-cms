@@ -14,6 +14,7 @@ import StatusTag from '../components/StatusTag';
 import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
 import { PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
+import Documents from '../components/Documents';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -202,6 +203,7 @@ const FarmerView = ({ record }) => {
   const [tableSegment, setTableSegment] = useState('Production')
   const offtake = useSelector((state) => state.offtake.active)
   const [tableModal, setTableModal] = useState(false)
+  const navigate = useNavigate()
   const deliveryUpdates = [
     {
       key: '1',
@@ -280,7 +282,9 @@ const FarmerView = ({ record }) => {
               <Typography variant='h5'>{record.name}</Typography>
               <Typography variant='subtitle1'>{record.type}</Typography>
               <Stack>
-                <Button style={{ alignSelf: 'start' }}>Chat</Button>
+                <Button onClick={() => {
+                  navigate(`/offtakes/${offtake.offtake_id}/chat`)
+                }} style={{ alignSelf: 'start' }}>Chat</Button>
               </Stack>
             </Stack>
           </Stack>
@@ -325,10 +329,8 @@ const FarmerView = ({ record }) => {
                 />
               </InfiniteScroll>
             </Stack>
-            <Stack flex={1} height={'100%'}>
-              <Box sx={{ width: '100%', height: '100%', background: colors.grey[300] }} >
-                <iframe style={{ width: '100%', height: '100%', border: 'solid 0px' }} src='https://firebasestorage.googleapis.com/v0/b/agrowex.appspot.com/o/documents%2FYour%20Curriculum%20Vitae%20.pdf?alt=media&token=0fa86281-4f59-4027-9627-cd8ca7266954' />
-              </Box>
+            <Stack height={'100%'}>
+              <Documents url={'https://firebasestorage.googleapis.com/v0/b/agrowex.appspot.com/o/documents%2FYour%20Curriculum%20Vitae%20.pdf?alt=media&token=0fa86281-4f59-4027-9627-cd8ca7266954'} name="Example File" />
             </Stack>
           </Stack>
         </Stack>

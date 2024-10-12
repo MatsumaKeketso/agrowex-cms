@@ -10,8 +10,9 @@ import { AuthService, realtimeDB } from '../services/authService'
 import ChatMessage from '../components/ChatMessage'
 import { useDispatch, useSelector } from 'react-redux'
 import { OfftakeService } from '../services/offtakeService'
-import { convertTimestampToDateString, createCurrentTimestamp } from '../services/chatService'
+import { ChatService, convertTimestampToDateString, createCurrentTimestamp } from '../services/chatService'
 import { setPublishState } from '../services/offtake/offtakeSlice'
+import { SystemService } from '../services/systemService'
 
 // Overview
 // Comminucation between OM and PM during offtake in submitted stage going to published
@@ -24,6 +25,22 @@ const PMChat = () => {
   const { offtake_id } = useParams()
   const dispatch = useDispatch();
   const profile = useSelector((state) => state?.user.profile || {})
+  const sendMessage = (data) => {
+    AuthService.getUser().then(user => {
+      const oM = { ...data, timestamp: SystemService.generateTimestamp(), status: 'sent', sender: user.uid }
+      setLoading(false)
+      ChatService.sendMessage(oM, offtake_id).then(res => {
+        console.log(res);
+        setLoading(false)
+        chatform.resetFields()
+        return
+        ChatService.getMessages(offtake_id).then((data) => {
+          setMessages(data)
+        })
+      })
+    })
+
+  }
   const scrollToBottom = () => {
     try {
       chatEndRef?.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,7 +49,7 @@ const PMChat = () => {
     }
   };
   const listenForChatMessages = () => {
-    const chatRef = ref(realtimeDB, `submitted-chat/${offtake_id}`);
+    const chatRef = ref(realtimeDB, `chat/${offtake_id}`);
     onValue(chatRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -104,6 +121,10 @@ const PMChat = () => {
           </Stack>
           <Stack direction={'row'} gap={1} p={1} >
             <Form form={chatform} onFinish={(values) => {
+              sendMessage({
+                content: { ...values, type: messageType }
+              });
+              return
               AuthService.getUser().then(user => {
                 if (user) {
                   const content = { ...values, type: messageType, status: 'sent', sender: user.uid, timestamp: createCurrentTimestamp() }

@@ -127,7 +127,7 @@ const MenuAppBar = ({ links = [], active }) => {
         background: "transparent",
         color: "black",
         borderWidth: 0,
-        zIndex: 5,
+        zIndex: 10,
         // borderRadius: 30,
       }}
       position="static"
@@ -285,21 +285,23 @@ const Layout = (props) => {
   }, []);
   return (
     <Stack
-      sx={{ background: 'url(https://images.unsplash.com/photo-1484759288640-783b22c95d54?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)' }}
-      // p={2}
-      flex={1}
       sx={{
         maxHeight: "100vh",
         minHeight: "100vh",
         overflow: "hidden",
         bgcolor: "#F6F6F6",
+        backgroundSize: "cover",
+        background: 'linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)),url(https://images.unsplash.com/photo-1484759288640-783b22c95d54?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)'
       }}
+      // p={2}
+      flex={1}
+
     >
       <MenuAppBar links={navigation.links} active={navigation.active} />
 
       <Stack
         m={{ xs: 0, sm: 1 }}
-        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "white" }}
+        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)" }}
         flex={1}
         height={"100%"}
         borderRadius={{ xs: 0, sm: 10, md: 20, lg: 30 }}

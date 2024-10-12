@@ -111,6 +111,16 @@ export const OfftakeService = {
       console.log("No such document!");
     }
   },
+  getUserProfile: async (uid) => {
+    const docRef = doc(firestoreDB, "users", uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data()
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+  },
   getOfftakeStatusTracker: async (offtake_id) => {
     const trackersRef = await getDocs(collection(firestoreDB, "offtakes", offtake_id, "status_trackers"));
     const docSnap = await getDoc(trackersRef);
@@ -188,7 +198,7 @@ export const OfftakeService = {
     const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', status_id);
 
     // Set the document with the provided schedule data
-    await setDoc(trackerDocRef, status);
+    await setDoc(trackerDocRef, status)
 
     console.log('Offtake schedule updated successfully!');
     return trackerDocRef.id; // Return the reference to the updated document
@@ -251,6 +261,60 @@ export const OfftakeService = {
         console.error("Error publishing message: ", error);
         return 'failed';
       });
+  },
+  getMasterContract: async (offtake_id, document_id) => {
+    try {
+      // Create a reference to the specific document within the 'documents' subcollection
+      const documentRef = doc(firestoreDB, 'offtakes', offtake_id, '_documents', document_id);
+
+      // Get the document
+      const docSnap = await getDoc(documentRef);
+
+      if (docSnap.exists()) {
+        // If the document exists, return its data
+        return { id: docSnap.id, ...docSnap.data() };
+      } else {
+        // If the document doesn't exist, return null or throw an error
+        console.log('No such document!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting document:', error);
+      throw error;
+    }
+  },
+  getSingleDocument: async (offtake_id, document_id) => {
+    try {
+      // Create a reference to the specific document within the 'documents' subcollection
+      const documentRef = doc(firestoreDB, 'offtakes', offtake_id, '_documents', document_id);
+
+      // Get the document
+      const docSnap = await getDoc(documentRef);
+
+      if (docSnap.exists()) {
+        // If the document exists, return its data
+        return { id: docSnap.id, ...docSnap.data() };
+      } else {
+        // If the document doesn't exist, return null or throw an error
+        console.log('No such document!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting document:', error);
+      throw error;
+    }
+  },
+  addDocument: async (offtake_id, document) => {
+    try {
+      // Create a reference to the 'production-plan' collection
+      const documentsCollectionRef = collection(firestoreDB, 'offtakes', offtake_id, '_documents');
+      // Add a new document to the collection with the provided status data
+      const docRef = await addDoc(documentsCollectionRef, document);
+      return docRef.id; // Return the ID of the newly created document
+    } catch (error) {
+      console.error('Error adding production status:', error);
+      throw error;
+    }
   },
   getFarmSubmissions: async () => {
     return farms

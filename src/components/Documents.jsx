@@ -8,11 +8,11 @@ function Documents({ upload, url, type, name }) {
     const [hover, setHover] = useState(false)
 
     return (
-        <>
-            <Backdrop sx={{ zIndex: 99999999, }} onClick={() => {
+        <Stack>
+            <Backdrop sx={{ zIndex: 99, }} onClick={() => {
                 setPreview(false)
             }} open={preview}>
-                <Stack width={'70vw'} height={'90vh'} overflow={'hidden'} p={1} borderRadius={1} bgcolor={colors.common.white}>
+                <Stack width={'70vw'} height={'80vh'} overflow={'hidden'} p={1} borderRadius={1} bgcolor={colors.common.white}>
                     <iframe title='Title heer' style={{ minWidth: '100%', height: '100%', border: 'solid 0px' }} src={url} />
                 </Stack>
             </Backdrop>
@@ -58,7 +58,7 @@ function Documents({ upload, url, type, name }) {
                 }
 
             </Stack >
-        </>
+        </Stack>
 
     )
 }

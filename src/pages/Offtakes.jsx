@@ -27,9 +27,21 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AuthService } from "../services/authService";
 import { SystemService } from "../services/systemService";
 import dayjs from "dayjs";
+const UserProfile = ({ user_id }) => {
+    const [user, setUser] = useState({})
+    useEffect(() => {
+        OfftakeService.getUserProfile(user_id).then((user_profile) => {
+            setUser(user_profile)
+        })
+    }, [])
+
+    return (<>
+        {user?.name ? (<Typography variant="body2">{user?.name} {user?.surname}</Typography>) : (<Typography variant="body2">Loading...</Typography>)}
+    </>)
+}
 const _columns = [
     {
-        title: 'Customer Id',
+        title: 'Offtake Id',
         dataIndex: 'offtake_id',
         key: 'offtake_id',
         responsive: ['lg'],
@@ -41,6 +53,9 @@ const _columns = [
         title: 'Customer',
         dataIndex: ['_address', 'alias_name'],
         key: 'alias_name',
+        render: (v, r) => {
+            return (<UserProfile user_id={r.uid} />)
+        }
     },
     // {
     //     title: 'Amount',
@@ -48,12 +63,12 @@ const _columns = [
     //     key: 'amount',
     // },
     {
-        title: 'Delivery Date',
-        dataIndex: 'end_date',
-        key: 'end_date',
+        title: 'Supply Duration',
+        dataIndex: 'supply_duration',
+        key: 'supply_duration',
         render: (v, t) => {
             return <>
-                Pending...
+                {v}
             </>
         }
     },
@@ -78,8 +93,8 @@ const _columns = [
     // },
     {
         title: 'Contract Type',
-        dataIndex: 'contract_model',
-        key: 'contract_model',
+        dataIndex: 'contract',
+        key: 'contract',
         render: (v, r) => {
 
             return <Stack> {v ? v : "Pending..."} </ Stack>
@@ -132,17 +147,55 @@ const Offtake = () => {
         width: 130,
         key: 'actions',
         render: (v, r) => {
-            return (<Stack>
-                <Button onClick={() => {
-                    console.log(r);
-                    setOfftakeStatus(OfftakeService.getStatus.Name(r.status))
-                    setOfftakeId(r.offtake_id)
-                    dispatch(setActiveOfftake(r))
-                    dispatch(setActiveOfftake(r))
-                    setOfftakeBackup(r)
-                    setOpenOfftake(true)
-                }}>View More</Button>
-            </Stack>)
+            const current_status = OfftakeService.getStatus.Name(r.status)
+            switch (current_status) {
+                case 'planning':
+                    return (<Stack>
+                        <Button onClick={() => {
+                            dispatch(setActiveOfftake(r))
+                            navigate(`/offtakes/${r.offtake_id}/schedule`)
+                        }}>View More</Button>
+                    </Stack>)
+                    break;
+                case 'negotiation':
+                    return (<Stack>
+                        <Button onClick={() => {
+                            dispatch(setActiveOfftake(r))
+                            navigate(`/offtakes/${r.offtake_id}/chat`)
+                        }}>View More</Button>
+                    </Stack>)
+                    break;
+                case 'published':
+                    return (<Stack>
+                        <Button onClick={() => {
+                            dispatch(setActiveOfftake(r))
+                            navigate(`/offtakes/${r.offtake_id}/submissions`)
+                        }}>View More</Button>
+                    </Stack>)
+                    break;
+                case 'finalstage':
+                    return (<Stack>
+                        <Button onClick={() => {
+                            dispatch(setActiveOfftake(r))
+                            navigate(`/offtakes/${r.offtake_id}/submissions`)
+                        }}>Review Details</Button>
+                    </Stack>)
+                    break;
+                default:
+                    return (<Stack>
+                        <Button onClick={() => {
+                            console.log(r);
+                            setOfftakeStatus(OfftakeService.getStatus.Name(r.status))
+                            setOfftakeId(r.offtake_id)
+                            dispatch(setActiveOfftake(r))
+                            dispatch(setActiveOfftake(r))
+                            setOfftakeBackup(r)
+                            setOpenOfftake(true)
+                        }}>View More</Button>
+                    </Stack>)
+                    break;
+            }
+
         }
     },]
     const filterOfftakesByStatus = (filterValue) => {

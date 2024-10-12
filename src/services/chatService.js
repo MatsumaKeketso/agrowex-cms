@@ -13,17 +13,20 @@ export const createCurrentTimestamp = () => {
 }
 export const ChatService = {
   sendMessage: async (message, offtake_id) => {
-    push(ref(realtimeDB, `negotiations/${offtake_id}/`), message);
+    // negotiations
+    push(ref(realtimeDB, `chat/${offtake_id}/`), message);
   },
   sendPlanningMessage: async (message, offtake_id) => {
-    push(ref(realtimeDB, `planning/${offtake_id}/`), message);
+    // planning
+    push(ref(realtimeDB, `chat/${offtake_id}/`), message);
   },
   sendPublishedMessage: async (message, offtake_id) => {
-    push(ref(realtimeDB, `planning/${offtake_id}/`), message);
+    // 
+    push(ref(realtimeDB, `chat/${offtake_id}/`), message);
   },
   getMessages: (offtake_id) => {
     return new Promise((res, rej) => {
-      get(child(realtimeDB, `negotiations/${offtake_id}/`)).then((snapshot) => {
+      get(child(realtimeDB, `chat/${offtake_id}/`)).then((snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
           const messages = []

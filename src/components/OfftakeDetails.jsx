@@ -55,9 +55,6 @@ const PublishOfftake = () => {
     const [loading, setLoading] = useState(false)
     const [messageApi, contextHolder] = message.useMessage();
     const dispatch = useDispatch();
-
-
-    // TODO Update this status update function
     const UpdateStatus = () => {
         setLoading(true)
         AuthService.getUser().then(user => {
@@ -146,6 +143,7 @@ const MasterContractDialog = ({ open, onClose }) => {
     const [loading, setLoading] = useState(false)
     const [progress, setProgress] = useState(0)
     const [result, setResult] = useState('')
+    const [messageApi, contextHolder] = message.useMessage();
     const offtake = useSelector(state => state.offtake.active)
     const dispatch = useDispatch()
     const uploadFile = (path, fileObject) => {
@@ -164,7 +162,7 @@ const MasterContractDialog = ({ open, onClose }) => {
             (snapshot) => {
                 // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setProgress((progress * 1).toFixed(2))
+                setProgress((progress).toFixed(2))
                 switch (snapshot.state) {
                     case 'paused':
                         console.log('Upload is paused');
@@ -205,12 +203,17 @@ const MasterContractDialog = ({ open, onClose }) => {
                         created_at: SystemService.generateTimestamp(),
                         file_url: downloadURL
                     }
-                    const updated_offtake = { ...offtake, master_contract: document }
-                    OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(() => {
-                        dispatch(setActiveOfftake(updated_offtake))
-                        setLoading(false)
-                        onClose()
-                        setProgress(0)
+                    OfftakeService.addDocument(offtake.offtake_id, document).then(document_id => {
+                        const updated_offtake = { ...offtake, master_contract: document_id }
+                        OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(() => {
+                            messageApi.error("Upload complete")
+                            dispatch(setActiveOfftake(updated_offtake))
+                            setLoading(false)
+                            onClose()
+                            setProgress(0)
+                        })
+                    }).catch(err => {
+                        messageApi.error(err.message)
                     })
                 });
             }
@@ -233,6 +236,7 @@ const MasterContractDialog = ({ open, onClose }) => {
 
     return (
         <Modal footer={<></>} okButtonProps={{ disabled: loading }} title="Upload Contract" open={open} maskClosable={false} onCancel={() => onClose()}>
+            {contextHolder}
             <Stack alignItems={'center'} gap={4}>
                 <Typography variant='h4'>Attach Master Contract</Typography>
                 <Stack position={'relative'} alignItems={'center'} width={'100%'}>
@@ -275,11 +279,13 @@ const OfftakeDetails = (props) => {
     const [contractModel, setContractModel] = useState([])
     const [viewDocuments, setViewDocuments] = useState(false)
     const [production, setProduction] = useState(false)
+    const [userProfile, setUserProfile] = useState({})
+    const [masterContract, setMasterContract] = useState(null)
     const description = 'This is a description.';
     const {
         order_date,
         delivery_date,
-        contract_type,
+        contract,
         country,
         phone_number,
         email,
@@ -330,9 +336,31 @@ const OfftakeDetails = (props) => {
             }
         });
     }
+    const getMasterContract = () => {
+        if (!("master_contract" in ot)) {
+            return
+        }
+
+        const property = ot["master_contract"];
+
+        if (typeof property === "string") {
+            // means its a doc key
+            OfftakeService.getMasterContract(ot.offtake_id, ot.master_contract).then((contract) => {
+                console.log(contract);
+                if (contract) {
+                    setMasterContract(contract)
+                }
+            })
+        } else if (typeof property === "object" && property !== null) {
+            // mean its a doc, "old structure"
+            setMasterContract(property)
+        } else {
+            return "Neither string nor object";
+        }
+    }
     useEffect(() => {
         if (ot) {
-
+            getMasterContract()
             if (ot.status) {
                 const latest = ot?.status?.length - 1 || null
                 const cS = OfftakeService.getStatus.Name(ot.status)
@@ -350,7 +378,7 @@ const OfftakeDetails = (props) => {
                 setProduction(true)
             }
             if (OfftakeService.getStatus.Name(ot.status) === 'inprogress' ||
-                OfftakeService.getStatus.Name(ot.status) === 'negotiation' ||
+                OfftakeService.getStatus.Name(ot.status) === 'published' ||
                 OfftakeService.getStatus.Name(ot.status) === 'planning' ||
                 OfftakeService.getStatus.Name(ot.status) === 'submitted' ||
                 OfftakeService.getStatus.Name(ot.status) === 'finalstage' ||
@@ -377,6 +405,7 @@ const OfftakeDetails = (props) => {
 
     }, [offtake])
     useEffect(() => {
+        // todo pull the customer's information from collection
         getAndWatchDocuments()
         setContractModel([
             { value: 'f-h-m', label: 'Fresh Hub Model' },
@@ -390,9 +419,14 @@ const OfftakeDetails = (props) => {
                 setFarms(f)
             }
         })
+        OfftakeService.getUserProfile(offtake.uid).then((user) => {
+            console.log(user);
+            if (user) {
+                setUserProfile(user)
+            }
+        })
         OfftakeService.getProductionPlan(offtake.offtake_id).then(status => {
             console.log(status);
-
             if (status) {
                 setProductionProgress(status)
             }
@@ -464,7 +498,7 @@ const OfftakeDetails = (props) => {
                 {production && (<Stack gap={2}>
                     <Divider >Production</Divider>
                     <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                        <Button color={colors.green[400]} type={page === 'schedule' ? 'default' : 'text'} onClick={() => {
+                        <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
                             navigate(`/offtakes/${ot.offtake_id}/schedule`);
                         }}>Production Plan</Button>
                         {/* Removed to because processes are merged */}
@@ -472,14 +506,17 @@ const OfftakeDetails = (props) => {
                             navigate(`/offtakes/${ot.offtake_id}/costing`);
                         }}>Production Cost</Button> */}
 
-                        <Button color={colors.green[400]} type={page === 'chat' ? 'default' : 'text'} onClick={() => {
-                            if (currentStatus === 'planning') {
+                        <Button color={colors.green[400]} type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                            if (currentStatus === 'planning' ||
+                                currentStatus === 'finalstage' ||
+                                currentStatus === 'active' ||
+                                currentStatus === 'submitted') {
                                 navigate(`/offtakes/${ot.offtake_id}/chat`);
                             }
-                            else if (currentStatus === 'submitted') {
-                                navigate(`/offtakes/${ot.offtake_id}/published-chat`)
-                            }
-                        }}>Chat {currentStatus === "published" && "with PM"}</Button>
+                            // else if (currentStatus === 'submitted') {
+                            //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
+                            // }
+                        }}>Chat </Button>
                     </Stack>
                     <Divider />
                 </Stack>)}
@@ -521,9 +558,17 @@ const OfftakeDetails = (props) => {
                     </Stack>
                 )}
                 {currentStatus === 'active' && (
-                    <Stack >
+                    <Stack>
                         <Stack p={2}>
                             <Typography variant='subtitle1' fontWeight={'bold'}>Production Tracker</Typography>
+                        </Stack>
+                        <Stack px={2}>
+                            <Typography>Production Progress</Typography>
+                            <Progress percent={80} status="active" />
+                        </Stack>
+                        <Stack px={2}>
+                            <Typography>Delivery Progress</Typography>
+                            <Progress percent={10} status="active" />
                         </Stack>
                         <Stack p={2}>
                             {productionProgress.map((stat) => {
@@ -559,34 +604,36 @@ const OfftakeDetails = (props) => {
                         </Stack>
                     </Stack>
                 )}
-                {currentStatus === 'published' || currentStatus === 'finalstage' ? (
-                    <Stack>
-                        {!ot?.master_contract && (<Stack flex={1} >
+                {currentStatus === 'published' ||
+                    currentStatus === 'active' ||
+                    currentStatus === 'finalstage'
+                    ? (
+                        <Stack>
+                            {!masterContract && (<Stack flex={1} >
+                                <Button type='primary' onClick={() => {
+                                    setMasterContractDialog(true)
+                                }}>Upload Master Contract</Button>
 
-                            <Button type='primary' onClick={() => {
-                                setMasterContractDialog(true)
-                            }}>Upload Master Contract</Button>
+                            </Stack>)}
+                            {masterContract && (
+                                <Stack flex={1} direction={'row'} spacing={1} >
+                                    <Documents url={masterContract.file_url} name={masterContract.name} />
+                                    <Stack px={1} spacing={2} >
+                                        <Stack>
+                                            <Typography variant='subtitle1'>{masterContract.name}</Typography>
+                                            <Typography color='GrayText' variant='body1'>Uploaded at - {SystemService.formatTimestamp(masterContract.created_at)}</Typography>
+                                        </Stack>
+                                        <Stack alignItems={'flex-start'}>
+                                            <Button type='default' onClick={() => {
+                                                setMasterContractDialog(true)
+                                            }}>Update</Button>
+                                        </Stack>
+                                    </Stack>
 
-                        </Stack>)}
-                        {ot?.master_contract && (
-                            <Stack flex={1} direction={'row'} spacing={1} >
-                                <Documents url={ot.master_contract.file_url} name={ot.master_contract.name} />
-                                <Stack px={1} spacing={2} >
-                                    <Stack>
-                                        <Typography variant='subtitle1'>{ot.master_contract.name}</Typography>
-                                        <Typography color='GrayText' variant='body1'>Uploaded at - {SystemService.formatTimestamp(ot.master_contract.created_at)}</Typography>
-                                    </Stack>
-                                    <Stack alignItems={'flex-start'}>
-                                        <Button type='default' onClick={() => {
-                                            setMasterContractDialog(true)
-                                        }}>Update</Button>
-                                    </Stack>
                                 </Stack>
-
-                            </Stack>
-                        )}
-                    </Stack >
-                ) : null}
+                            )}
+                        </Stack >
+                    ) : null}
                 {currentStatus === 'published' && (<Stack>
                     <Stack p={2} direction={'row'}>
                         <Stack flex={1}>
@@ -622,10 +669,10 @@ const OfftakeDetails = (props) => {
                         <Statistics title="Order date" value={SystemService.convertTimestampToDateString(ot?.created_at)} />
                     </Grid>
                     <Grid item flex={1} p={1} >
-                        <Statistics title="Delivery Date" value={delivery_date} />
+                        <Statistics title="Delivery Date" value={supply_duration} />
                     </Grid>
                     <Grid item flex={1} p={1} >
-                        <Statistics title="Contract Type" value={contract_type} />
+                        <Statistics title="Contract Type" value={contract} />
                     </Grid>
                     <Grid item flex={1} p={1} >
                         <Statistics title={'Country of Origin'} value={country} />
@@ -636,13 +683,13 @@ const OfftakeDetails = (props) => {
                 <Stack>
                     <Accordion defaultExpanded={true} variant='elevation' elevation={0}>
                         <AccordionSummary sx={{ px: 0 }}>
-                            <Chip icon={<FaceOutlined />} label={`Contact Details - ${ot['_address']?.alias_name}`} />
+                            <Chip icon={<FaceOutlined />} label={`Contact Details - ${userProfile?.name} ${userProfile?.surname}`} />
                         </AccordionSummary>
                         <AccordionDetails>
                             <Stack p={0} direction={'row'} gap={3}>
-                                <Statistics title={'Phone Number'} value={phone_number} />
-                                <Statistics title={'Email'} value={email} />
-                                <Statistics title={'Location'} value={ot['_address']?.region} />
+                                <Statistics title={'Phone Number'} value={userProfile?.phone?.phone_number} />
+                                <Statistics title={'Email'} value={userProfile?.email} />
+                                <Statistics title={'Location'} value={userProfile?.place_name} />
                             </Stack>
                         </AccordionDetails>
                     </Accordion>
