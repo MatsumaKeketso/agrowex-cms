@@ -4,6 +4,7 @@ import { firestoreDB, realtimeDB } from "./authService";
 import { get, push, ref, remove } from "firebase/database";
 import { SystemService } from "./systemService";
 import moment from 'moment';
+import { FarmerService } from "./farmerService";
 const offtakesCollection = collection(firestoreDB, "offtakes");
 
 const farms = [
@@ -214,6 +215,36 @@ export const OfftakeService = {
           key: doc.id
         }));
         return documents;
+      } else {
+        console.log("No documents found in the production-plan subcollection!");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching production plan:", error);
+      throw error;
+    }
+  },
+  getRespondents: async (offtake_id) => {
+    try {
+      const respondentsRef = collection(firestoreDB, "offtakes", offtake_id, "respondents");
+      const querySnapshot = await getDocs(respondentsRef);
+
+      if (!querySnapshot.empty) {
+        const respondents = []
+        querySnapshot.docs.map(doc => {
+          var _data = {
+            ...doc.data(),
+            key: doc.id,
+            farm_profile: {}
+          }
+          FarmerService.getSingleFarm(doc.data().respondent).then(_farm => {
+            if (_farm) {
+              _data.farm_profile = _farm
+              respondents.push(_data)
+            }
+          })
+        });
+        return respondents;
       } else {
         console.log("No documents found in the production-plan subcollection!");
         return [];

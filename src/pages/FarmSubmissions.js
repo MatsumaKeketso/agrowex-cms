@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
 import { realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Statistic, Table, Tooltip } from 'antd';
+import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Statistic, Table, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -15,6 +15,7 @@ import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
 import { PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
 import Documents from '../components/Documents';
+import { FarmerService } from '../services/farmerService';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -298,8 +299,11 @@ const FarmerView = ({ record }) => {
           </Stack>
         </Stack>
         <Stack>
-          <Stack p={2}>
-            <Typography variant='subtitle1'>Attachments</Typography>
+          <Stack p={2} direction={'row'}>
+            <Typography flex={1} variant='subtitle1'>Attachments</Typography>
+            <Upload showUploadList={false}>
+              <Button>Attach Document</Button>
+            </Upload>
           </Stack>
           <Stack direction={'row'}  >
             <Stack flex={1} >
@@ -531,8 +535,15 @@ const FarmSubmissions = () => {
       }
     });
   };
-
+  const getRespondents = () => {
+    OfftakeService.getRespondents(offtake.offtake_id).then(respondents => {
+      console.log('====================================');
+      console.log(respondents);
+      console.log('====================================');
+    })
+  }
   useEffect(() => {
+    getRespondents()
     listenForFarmSubmissions()
   }, [])
   return (

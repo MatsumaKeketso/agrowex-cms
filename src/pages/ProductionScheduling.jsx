@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
-import { Accordion, AccordionDetails, AccordionSummary, Box, colors, Divider, IconButton, Stack, TextField, Typography } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, AppBar, Box, colors, Divider, IconButton, Stack, TextField, Toolbar, Typography } from '@mui/material'
 import OfftakeDetails from '../components/OfftakeDetails'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { OfftakeService } from '../services/offtakeService'
@@ -42,10 +42,12 @@ const ProductionScheduling = () => {
   const [scheduleForm] = Form.useForm()
   const [publish, setPublish] = useState(false)
   const [next, setNext] = useState(false)
+  const [productionCost, setProductionCost] = useState(0)
   const [messageApi, contextHolder] = message.useMessage();
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const statusValues = Form.useWatch("status", scheduleForm)
+
   const submitSchedule = (schedule) => {
     console.log(schedule);
 
@@ -172,6 +174,29 @@ const ProductionScheduling = () => {
     })
   }
   useEffect(() => {
+    var amount = 0
+    if (statusValues) {
+      statusValues.map(_status => {
+        if (_status) {
+          if (_status?._steps) {
+            _status?._steps.map(step => {
+              if (step?._costing) {
+                step?._costing.map(cost => {
+                  if (cost) {
+                    const _amount = cost?.amount
+                    amount = (amount + (_amount * 1))
+                  }
+                })
+              }
+
+            })
+          }
+        }
+      })
+      setProductionCost(amount)
+    }
+  }, [statusValues])
+  useEffect(() => {
 
     // Get offtake
     OfftakeService.getOfftake(offtake_id).then(o => {
@@ -255,15 +280,20 @@ const ProductionScheduling = () => {
       </Modal>
 
 
-      <Stack gap={0} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
+      <Stack gap={1} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
         {contextHolder}
         <Stack flex={1} sx={{
           maxHeight: '100%',
           overflowY: 'auto'
         }}>
-          <Stack direction={'row'} gap={1}>
-            <Typography variant='h6' p={2}>Production Plan</Typography>
-          </Stack>
+          <AppBar variant='outlined' position='sticky'>
+            <Toolbar>
+              <Stack flex={1} direction={'row'} gap={1}>
+                <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
+                <Typography variant='subtitle1' p={2}>Production Cost : R{productionCost}</Typography>
+              </Stack>
+            </Toolbar>
+          </AppBar>
           <Stack flex={1}>
             <Stack flex={1} p={3} sx={{ overflow: 'auto' }} position={'relative'}>
 

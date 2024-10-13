@@ -358,6 +358,34 @@ const OfftakeDetails = (props) => {
             return "Neither string nor object";
         }
     }
+    function getDaysBetween(dateArray) {
+        // Ensure moment.js is available
+        if (typeof moment === 'undefined') {
+            return "Error: moment.js is not loaded";
+        }
+
+        // Check if the input is an array with exactly two elements
+        if (!Array.isArray(dateArray) || dateArray.length !== 2) {
+            return "Error: Input must be an array with exactly two date strings";
+        }
+
+        const [date1, date2] = dateArray;
+
+        // Parse the dates using moment.js
+        const momentDate1 = moment(date1);
+        const momentDate2 = moment(date2);
+
+        // Check if both dates are valid
+        if (!momentDate1.isValid() || !momentDate2.isValid()) {
+            return "Error: Invalid date format";
+        }
+
+        // Calculate the difference in days
+        const daysDifference = Math.abs(momentDate1.diff(momentDate2, 'days'));
+
+        // Return the result as a string
+        return `${daysDifference} days`;
+    }
     useEffect(() => {
         if (ot) {
             getMasterContract()
@@ -525,7 +553,7 @@ const OfftakeDetails = (props) => {
                     <Stack>
                         <Stack p={2} direction={'row'}>
                             <Stack flex={1}>
-                                <Typography>Suppliers</Typography>
+                                <Typography>Respondents</Typography>
                             </Stack>
                             <Button type='primary' onClick={() => {
                                 "/offtakes/:offtake_id/submissions"
@@ -665,17 +693,32 @@ const OfftakeDetails = (props) => {
                     ]} />
                 </Stack>)}
                 <Grid container spacing={1}>
-                    <Grid item flex={1} p={1} >
+                    <Grid item md={4} flex={1} p={1} >
                         <Statistics title="Order date" value={SystemService.convertTimestampToDateString(ot?.created_at)} />
                     </Grid>
-                    <Grid item flex={1} p={1} >
-                        <Statistics title="Delivery Date" value={supply_duration} />
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title="Delivery Date" value={SystemService.formatTimestamp(supply_duration)} />
                     </Grid>
-                    <Grid item flex={1} p={1} >
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title="Packaging" value={ot?.packaging} />
+                    </Grid>
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title="Payment Method" value={ot?.payment_instrument} />
+                    </Grid>
+                    <Grid item md={4} flex={1} p={1} >
                         <Statistics title="Contract Type" value={contract} />
                     </Grid>
-                    <Grid item flex={1} p={1} >
+                    <Grid item md={4} flex={1} p={1} >
                         <Statistics title={'Country of Origin'} value={country} />
+                    </Grid>
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title={'Payment Terms'} value={ot?.payment_terms} />
+                    </Grid>
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title={'Position'} value={ot?.position} />
+                    </Grid>
+                    <Grid item md={4} flex={1} p={1} >
+                        <Statistics title={'Pricing Option'} value={ot?.pricing_option} />
                     </Grid>
                 </Grid>
 
@@ -779,10 +822,10 @@ const OfftakeDetails = (props) => {
                                 <PermissionControl label={"Do You Provide Input Investment?"} name="input_investment" value={ot?.input_investment} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
-                                <PermissionControl label={"Supply Duration"} name="supply_duration" value={supply_duration} form={offtakeForm} />
+                                <PermissionControl label={"Supply Duration"} name="supply_duration" value={getDaysBetween(supply_duration)} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
-                                <PermissionControl label={"Offer price Per Unit"} name="price" value={`R ${ot?.offer_price_per_unit ? ot?.offer_price_per_unit.toFixed(2) : (0).toFixed(2)}`} form={offtakeForm} />
+                                <PermissionControl label={"Offer price Per Unit"} name="price" value={`R ${ot?.offer_price_per_unit ? ot?.offer_price_per_unit : (0).toFixed(2)}`} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Quality/Grade"} name="quality_grade" value={quality_grade} form={offtakeForm} />
