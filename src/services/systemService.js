@@ -20,7 +20,7 @@ export const SystemService = {
     const storageRef = sRef(storage, `cms-documents/${path}${fileObject.name}`);
 
     const uploadTask = uploadBytesResumable(storageRef, fileObject, metadata);
-  
+
     // Listen for state changes, errors, and completion of the upload.
     uploadTask.on('state_changed',
       (snapshot) => {
@@ -97,6 +97,9 @@ export const SystemService = {
     const date = new Date(timestamp);
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);
+  },
+  converStringToSentenceCase: (str) => {
+    return str.replace(/\b\w/g, c => c.toUpperCase());
   }
 }
 

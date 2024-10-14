@@ -189,11 +189,11 @@ root.render(
         theme={{
           token: { colorPrimary: theme.palette.primary.main, "borderRadius": 30 },
           components: {
-            Table: {
-              headerBg: theme.palette.primary.main,
-              headerColor: theme.palette.common.white,
-              headerSortActiveBg: theme.palette.primary.light,
-            },
+            // Table: {
+            //   headerBg: theme.palette.,
+            //   headerColor: theme.palette.common.white,
+            //   headerSortActiveBg: theme.palette.primary.light,
+            // },
             Statistic: {
               contentFontSize: 18
             },

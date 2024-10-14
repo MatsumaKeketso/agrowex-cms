@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import OfftakeDetails from "../components/OfftakeDetails";
+import OfftakeDetails, { getDaysBetween } from "../components/OfftakeDetails";
 import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
 import { PManagers } from "../database/db-data";
 import { OfftakeService, stableOfttakes } from "../services/offtakeService";
@@ -68,7 +68,7 @@ const _columns = [
         key: 'supply_duration',
         render: (v, t) => {
             return <>
-                {v}
+                {getDaysBetween(v)}
             </>
         }
     },
@@ -344,7 +344,9 @@ const Offtake = () => {
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)
-                dispatch(setActiveOfftake({}));
+                setTimeout(() => {
+                    dispatch(setActiveOfftake({}));
+                }, 1000);
             }} open={openOfftake} extra={
                 <Stack direction={'row'} gap={1}>
                     <Popconfirm title="Not Viable" description="Mark this offtake as non viable, meaning we cannot accommodate this request, proceed?" onConfirm={() => {

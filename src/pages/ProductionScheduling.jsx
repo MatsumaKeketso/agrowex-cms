@@ -14,7 +14,7 @@ import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import weekday from 'dayjs/plugin/weekday';
 import localeData from 'dayjs/plugin/localeData'
-import { DeleteOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, DeleteOutlined } from '@ant-design/icons'
 import { AuthService } from '../services/authService'
 import { SystemService } from '../services/systemService'
 dayjs.extend(weekday);
@@ -100,7 +100,12 @@ const ProductionScheduling = () => {
       const offtakeEnd = formatDate(schedule.offtake_start_and_end_date[1])
       new_schedule.offtake_start_and_end_date = [offtakeStart, offtakeEnd]
       // check ids for status
-      const offtake_with_dates = { ...offtake, offtake_start_and_end_date: new_schedule.offtake_start_and_end_date, submission_closing_date: new_schedule.submission_closing_date }
+      const offtake_with_dates = {
+        ...offtake,
+        offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
+        submission_closing_date: new_schedule.submission_closing_date,
+        production_cost: productionCost
+      }
       if (!missing_steps) {
         new_schedule.status.forEach((stat, i) => {
           const status_doc_id = schedule.status[i].key
@@ -288,9 +293,10 @@ const ProductionScheduling = () => {
         }}>
           <AppBar variant='outlined' position='sticky'>
             <Toolbar>
+              <Button onClick={() => {navigate("/offtakes")}} icon={<ArrowLeftOutlined />} ></Button>
               <Stack flex={1} direction={'row'} gap={1}>
                 <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
-                <Typography variant='subtitle1' p={2}>Production Cost : R{productionCost}</Typography>
+                <Typography variant='subtitle1' p={2}>Production Cost : R {productionCost}</Typography>
               </Stack>
             </Toolbar>
           </AppBar>

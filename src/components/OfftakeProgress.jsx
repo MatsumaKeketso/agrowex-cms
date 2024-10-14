@@ -51,7 +51,7 @@ const OfftakeProgress = ({ status }) => {
 
         return (
           <Step key={index}          >
-            <StepLabel {...labelProps}>{step.title}</StepLabel>
+            <StepLabel {...labelProps}>{SystemService.converStringToSentenceCase(step.title)}</StepLabel>
           </Step>
         )
       })}

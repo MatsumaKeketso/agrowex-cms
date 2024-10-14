@@ -20,6 +20,7 @@ import { AuthService, firestoreDB } from '../services/authService';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { getDownloadURL, ref as sRef, uploadBytesResumable } from 'firebase/storage';
 import moment from 'moment';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
     const offtake = useSelector((state) => state.offtake)
@@ -257,6 +258,34 @@ const MasterContractDialog = ({ open, onClose }) => {
     )
 
 }
+export function getDaysBetween(dateArray) {
+    // Ensure moment.js is available
+    if (typeof moment === 'undefined') {
+        return "Error: moment.js is not loaded";
+    }
+
+    // Check if the input is an array with exactly two elements
+    if (!Array.isArray(dateArray) || dateArray.length !== 2) {
+        return "Error: Input must be an array with exactly two date strings";
+    }
+
+    const [date1, date2] = dateArray;
+
+    // Parse the dates using moment.js
+    const momentDate1 = moment(date1);
+    const momentDate2 = moment(date2);
+
+    // Check if both dates are valid
+    if (!momentDate1.isValid() || !momentDate2.isValid()) {
+        return "Error: Invalid date format";
+    }
+
+    // Calculate the difference in days
+    const daysDifference = Math.abs(momentDate1.diff(momentDate2, 'days'));
+
+    // Return the result as a string
+    return `${daysDifference} days`;
+}
 const OfftakeDetails = (props) => {
     const [disableForm, setDisableForm] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
@@ -281,6 +310,7 @@ const OfftakeDetails = (props) => {
     const [production, setProduction] = useState(false)
     const [userProfile, setUserProfile] = useState({})
     const [masterContract, setMasterContract] = useState(null)
+    const [showBack, setShowBack] = useState(false)
     const description = 'This is a description.';
     const {
         order_date,
@@ -297,6 +327,7 @@ const OfftakeDetails = (props) => {
         delivery_frequency,
         supply_duration,
         quality_grade,
+        production_cost,
         permissions,
         // offtake_id,
         price,
@@ -358,34 +389,7 @@ const OfftakeDetails = (props) => {
             return "Neither string nor object";
         }
     }
-    function getDaysBetween(dateArray) {
-        // Ensure moment.js is available
-        if (typeof moment === 'undefined') {
-            return "Error: moment.js is not loaded";
-        }
 
-        // Check if the input is an array with exactly two elements
-        if (!Array.isArray(dateArray) || dateArray.length !== 2) {
-            return "Error: Input must be an array with exactly two date strings";
-        }
-
-        const [date1, date2] = dateArray;
-
-        // Parse the dates using moment.js
-        const momentDate1 = moment(date1);
-        const momentDate2 = moment(date2);
-
-        // Check if both dates are valid
-        if (!momentDate1.isValid() || !momentDate2.isValid()) {
-            return "Error: Invalid date format";
-        }
-
-        // Calculate the difference in days
-        const daysDifference = Math.abs(momentDate1.diff(momentDate2, 'days'));
-
-        // Return the result as a string
-        return `${daysDifference} days`;
-    }
     useEffect(() => {
         if (ot) {
             getMasterContract()
@@ -433,7 +437,17 @@ const OfftakeDetails = (props) => {
 
     }, [offtake])
     useEffect(() => {
-        // todo pull the customer's information from collection
+        console.log(location);
+        if (location) {
+            const pathLength = location.pathname.split("/")
+            const currentPage = pathLength[pathLength.length - 1]
+            if (currentPage === "chat") {
+                setShowBack(true)
+            } else {
+                setShowBack(false)
+            }
+
+        }
         getAndWatchDocuments()
         setContractModel([
             { value: 'f-h-m', label: 'Fresh Hub Model' },
@@ -476,12 +490,14 @@ const OfftakeDetails = (props) => {
                 {/* Offtake header */}
                 <Stack direction={'row'}>
                     <Stack flex={1} direction={'row'} gap={2} alignItems={'center'}>
+                        {showBack && (<Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>)}
                         <Stack>
                             <Typography variant='h5'>Offtake Details</Typography>
                             <Typography variant='caption'>{ot?.offtake_id}</Typography>
                         </Stack>
                         {ot.status ? (<StatusTag status={ot?.status} />) : (<StatusTag status="inprogress" />)}
                     </Stack>
+                    <Typography>{SystemService.converStringToSentenceCase(ot?.offtake_type ? ot?.offtake_type : 'Unknown')} Offtake</Typography>
                     {/* {offtake?.assigned && (<Persona user={offtake?.assigned} onUnsasign={unassign} />)} */}
                     {/* {!offtake?.assigned && (<Assign />)} */}
                 </Stack>
@@ -490,7 +506,79 @@ const OfftakeDetails = (props) => {
                     <OfftakeProgress status={ot?.status} />
                 </Stack>
             </Stack>
+            {production && (<Stack gap={2}>
+                <Divider ></Divider>
+                <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                    <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
+                        navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                    }}>Production Plan</Button>
+                    {/* Removed to because processes are merged */}
+                    {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
+                            navigate(`/offtakes/${ot.offtake_id}/costing`);
+                        }}>Production Cost</Button> */}
 
+                    <Button color={colors.green[400]} type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                        if (currentStatus === 'planning' ||
+                            currentStatus === 'finalstage' ||
+                            currentStatus === 'active' ||
+                            currentStatus === 'submitted') {
+                            navigate(`/offtakes/${ot.offtake_id}/chat`);
+                        }
+                        // else if (currentStatus === 'submitted') {
+                        //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
+                        // }
+                    }}>Chat </Button>
+                </Stack>
+                <Divider />
+            </Stack>)}
+            <Grid container spacing={1}>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title="Order date" value={SystemService.convertTimestampToDateString(ot?.created_at)} />
+                </Grid>
+                {/* <Grid item md={4} flex={1} p={1} >
+                    <Statistics title="Delivery Date" value={SystemService.formatTimestamp(supply_duration)} />
+                </Grid> */}
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title="Packaging" value={ot?.packaging} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title="Payment Method" value={ot?.payment_instrument} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title="Contract Type" value={contract} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title={'Country of Origin'} value={country} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title={'Payment Terms'} value={ot?.payment_terms} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title={'Position'} value={ot?.position} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title={'Pricing Option'} value={ot?.pricing_option} />
+                </Grid>
+                <Grid item md={4} flex={1} p={1} >
+                    <Statistics title={'Production Cost'} value={`R ${ot?.production_cost ? ot?.production_cost : 0}`} />
+                </Grid>
+            </Grid>
+
+            {/* Contact Details */}
+            <Stack>
+                <Accordion defaultExpanded={true} variant='elevation' elevation={0}>
+                    <AccordionSummary sx={{ px: 0 }}>
+                        <Chip icon={<FaceOutlined />} label={`Contact Details - ${userProfile?.name} ${userProfile?.surname}`} />
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Stack p={0} direction={'row'} gap={3}>
+                            <Statistics title={'Phone Number'} value={userProfile?.phone?.phone_number} />
+                            <Statistics title={'Email'} value={userProfile?.email} />
+                            <Statistics title={'Location'} value={userProfile?.place_name} />
+                        </Stack>
+                    </AccordionDetails>
+                </Accordion>
+            </Stack>
             <Stack spacing={2}>
                 {/* Offtake is in planning */}
 
@@ -523,31 +611,7 @@ const OfftakeDetails = (props) => {
 
                     ]} />
                 </Stack>)}
-                {production && (<Stack gap={2}>
-                    <Divider >Production</Divider>
-                    <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                        <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
-                            navigate(`/offtakes/${ot.offtake_id}/schedule`);
-                        }}>Production Plan</Button>
-                        {/* Removed to because processes are merged */}
-                        {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
-                            navigate(`/offtakes/${ot.offtake_id}/costing`);
-                        }}>Production Cost</Button> */}
 
-                        <Button color={colors.green[400]} type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
-                            if (currentStatus === 'planning' ||
-                                currentStatus === 'finalstage' ||
-                                currentStatus === 'active' ||
-                                currentStatus === 'submitted') {
-                                navigate(`/offtakes/${ot.offtake_id}/chat`);
-                            }
-                            // else if (currentStatus === 'submitted') {
-                            //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
-                            // }
-                        }}>Chat </Button>
-                    </Stack>
-                    <Divider />
-                </Stack>)}
 
                 {currentStatus === 'active' && showSubmissions && (
                     <Stack>
@@ -588,7 +652,7 @@ const OfftakeDetails = (props) => {
                 {currentStatus === 'active' && (
                     <Stack>
                         <Stack p={2}>
-                            <Typography variant='subtitle1' fontWeight={'bold'}>Production Tracker</Typography>
+                            <Typography variant='subtitle1' fontWeight={'bold'}>Offtake Progress</Typography>
                         </Stack>
                         <Stack px={2}>
                             <Typography>Production Progress</Typography>
@@ -692,51 +756,7 @@ const OfftakeDetails = (props) => {
 
                     ]} />
                 </Stack>)}
-                <Grid container spacing={1}>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title="Order date" value={SystemService.convertTimestampToDateString(ot?.created_at)} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title="Delivery Date" value={SystemService.formatTimestamp(supply_duration)} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title="Packaging" value={ot?.packaging} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title="Payment Method" value={ot?.payment_instrument} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title="Contract Type" value={contract} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title={'Country of Origin'} value={country} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title={'Payment Terms'} value={ot?.payment_terms} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title={'Position'} value={ot?.position} />
-                    </Grid>
-                    <Grid item md={4} flex={1} p={1} >
-                        <Statistics title={'Pricing Option'} value={ot?.pricing_option} />
-                    </Grid>
-                </Grid>
 
-                {/* Contact Details */}
-                <Stack>
-                    <Accordion defaultExpanded={true} variant='elevation' elevation={0}>
-                        <AccordionSummary sx={{ px: 0 }}>
-                            <Chip icon={<FaceOutlined />} label={`Contact Details - ${userProfile?.name} ${userProfile?.surname}`} />
-                        </AccordionSummary>
-                        <AccordionDetails>
-                            <Stack p={0} direction={'row'} gap={3}>
-                                <Statistics title={'Phone Number'} value={userProfile?.phone?.phone_number} />
-                                <Statistics title={'Email'} value={userProfile?.email} />
-                                <Statistics title={'Location'} value={userProfile?.place_name} />
-                            </Stack>
-                        </AccordionDetails>
-                    </Accordion>
-                </Stack>
 
                 <Form form={contractModelForm} layout='vertical' onFinish={(v) => {
                     OfftakeService.updateContractModel(offtake.offtake_id, v.contract_model).then(() => {
@@ -830,6 +850,7 @@ const OfftakeDetails = (props) => {
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Quality/Grade"} name="quality_grade" value={quality_grade} form={offtakeForm} />
                             </Grid>
+
                         </Grid>
                         <Stack gap={2}>
                             <Button

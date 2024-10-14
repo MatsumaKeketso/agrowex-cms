@@ -13,7 +13,7 @@ import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounde
 import StatusTag from '../components/StatusTag';
 import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
-import { PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
 import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 export const FarmSubmissionColumns = [
@@ -625,7 +625,10 @@ const FarmSubmissions = () => {
 
       <Stack gap={0} sx={{ overflow: 'hidden' }} flex={1} direction={'row'} position={'relative'}>
         <Stack flex={1} sx={{ overflow: 'auto' }}>
-          <Stack direction={'row'} gap={1} alignItems={'center'}>
+          <Stack pl={2} direction={'row'} gap={1} alignItems={'center'}>
+            <Button onClick={() => {
+              navigate(`/offtakes`)
+            }} icon={<ArrowLeftOutlined />}></Button>
             <Stack gap={0} p={2} flex={1}>
               <Typography variant='h6' flex={1}>Farmers who are interested</Typography>
               <Typography variant='body2' flex={1}>Closing Date : { }</Typography>
