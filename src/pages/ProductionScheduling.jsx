@@ -14,7 +14,7 @@ import dayjs from 'dayjs'
 import StatusTag from '../components/StatusTag'
 import weekday from 'dayjs/plugin/weekday';
 import localeData from 'dayjs/plugin/localeData'
-import { ArrowLeftOutlined, DeleteOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
 import { AuthService } from '../services/authService'
 import { SystemService } from '../services/systemService'
 dayjs.extend(weekday);
@@ -45,6 +45,7 @@ const ProductionScheduling = () => {
   const [next, setNext] = useState(false)
   const [productionCost, setProductionCost] = useState(0)
   const [messageApi, contextHolder] = message.useMessage();
+  const [productionPlan, setProductionPlan] = useState(null)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const statusValues = Form.useWatch("status", scheduleForm)
@@ -147,6 +148,8 @@ const ProductionScheduling = () => {
   const getProductionStatuses = () => {
     OfftakeService.getProductionPlan(offtake_id).then(status => {
       if (status) {
+        console.log(status);
+        setProductionPlan(status)
         scheduleForm.setFieldValue("status", status.map((stat: any) => {
           const { name, description, _steps, key } = stat
           return {
@@ -172,9 +175,6 @@ const ProductionScheduling = () => {
             }) : []
           }
         }))
-
-
-
       }
 
     })
@@ -313,6 +313,14 @@ const ProductionScheduling = () => {
                 <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
                 <Typography variant='subtitle1' p={2}>Production Cost : R {productionCost}</Typography>
               </Stack>
+              <Button disabled={!disableForm} icon={<DownloadOutlined />} onClick={() => {
+                OfftakeService.generateProductionPDF(productionPlan, redux_offtake).then((res) => {
+                  console.log(res);
+                }).catch(err => {
+                  console.log(err);
+
+                })
+              }} >Download PDF</Button>
             </Toolbar>
           </AppBar>
           <Stack flex={1}>

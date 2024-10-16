@@ -5,8 +5,10 @@ import { get, push, ref, remove } from "firebase/database";
 import { SystemService } from "./systemService";
 import moment from 'moment';
 import { FarmerService } from "./farmerService";
+const pdfMake = require('pdfmake/build/pdfmake');
+const pdfFonts = require('pdfmake/build/vfs_fonts');
 const offtakesCollection = collection(firestoreDB, "offtakes");
-
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 const farms = [
   {
     key: '1',
@@ -121,6 +123,97 @@ export const OfftakeService = {
       // docSnap.data() will be undefined in this case
       console.log("No such document!");
     }
+  },
+  generateProductionPDF: async (data, offtake) => {
+
+    const docDefinition = {
+      content: [],
+      styles: {
+        header: {
+          fontSize: 16,
+          bold: true,
+          margin: [0, 0, 0, 10]
+        },
+        page_header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10]
+        },
+        description: {
+          fontSize: 12,
+          margin: [0, 0, 0, 20]
+        }
+      }
+    };
+    docDefinition.content.push(
+      { text: `Offtake Production Plan`, style: 'page_header' },
+      { text: offtake.offtake_id, style: 'description' });
+    data.forEach((item, index) => {
+      // Add a page break before each new item, except the first one
+      if (index > 0) {
+        docDefinition.content.push({ text: '      ' });
+      }
+
+      docDefinition.content.push(
+        { text: item.name, style: 'header' },
+        { text: item.description, style: 'description' },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', '*', '*', '*'],
+            body: [
+              ['Step', 'Duration', 'Costing Item', 'Amount']
+            ]
+          }
+        }
+      );
+
+      let totalAmount = 0;
+
+      item._steps.forEach(step => {
+        const startDate = moment(step.duration[0]).format('DD MMM, YYYY');
+        const endDate = moment(step.duration[1]).format('DD MMM, YYYY');
+        const duration = `${startDate} - ${endDate}`;
+
+        step._costing.forEach(costing => {
+          docDefinition.content[docDefinition.content.length - 1].table.body.push([
+            step.name,
+            duration,
+            costing.name,
+            `R${costing.amount}`
+          ]);
+          totalAmount += parseInt(costing.amount);
+        });
+      });
+
+      // Add total row
+      docDefinition.content[docDefinition.content.length - 1].table.body.push([
+        'Total', '', '', `R${totalAmount}`
+      ]);
+
+      // Apply styles to the table
+      docDefinition.content[docDefinition.content.length - 1].layout = {
+        hLineWidth: function (i, node) {
+          return (i === 0 || i === node.table.body.length) ? 2 : 1;
+        },
+        vLineWidth: function (i, node) {
+          return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+        },
+        hLineColor: function (i, node) {
+          return (i === 0 || i === node.table.body.length) ? 'black' : 'gray';
+        },
+        vLineColor: function (i, node) {
+          return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
+        },
+        fillColor: function (rowIndex, node, columnIndex) {
+          return (rowIndex === 0) ? '#CCCCCC' : null;
+        }
+      };
+    });
+
+    // Generate PDF
+    pdfMake.createPdf(docDefinition).download(`${offtake.offtake_id}_production_plan.pdf`);
+
   },
   getOfftakeStatusTracker: async (offtake_id) => {
     const trackersRef = await getDocs(collection(firestoreDB, "offtakes", offtake_id, "status_trackers"));
