@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
-import { Accordion, AccordionDetails, AccordionSummary, AppBar, Box, colors, Divider, IconButton, Stack, TextField, Toolbar, Typography } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, Box, colors, Divider, IconButton, Stack, TextField, Toolbar, Typography } from '@mui/material'
 import OfftakeDetails from '../components/OfftakeDetails'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { OfftakeService } from '../services/offtakeService'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -37,6 +37,7 @@ export const formatDate = (dateObject) => {
 const ProductionScheduling = () => {
   const [disableForm, setDisableForm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
   const [offtake, setOfftake] = useState({})
   const { offtake_id } = useParams()
   const [scheduleForm] = Form.useForm()
@@ -47,7 +48,7 @@ const ProductionScheduling = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const statusValues = Form.useWatch("status", scheduleForm)
-
+  const redux_offtake = useSelector((state) => state.offtake?.active);
   const submitSchedule = (schedule) => {
     console.log(schedule);
 
@@ -202,21 +203,30 @@ const ProductionScheduling = () => {
     }
   }, [statusValues])
   useEffect(() => {
-
+    setPageLoading(true)
     // Get offtake
-    OfftakeService.getOfftake(offtake_id).then(o => {
-      // dispatch(setActiveOfftake(offtake))
+    if (redux_offtake.offtake_id) {
+      console.log("no need to get storage data");
+
+    } else {
+      console.log("get storage data first");
+
+    }
+    OfftakeService.getOfftake(offtake_id).then(async (o: any) => {
       if (o) {
         if (o.submission_closing_date) {
-          const closingDate = dayjs(o.submission_closing_date);
+          const closingDate = await dayjs(o.submission_closing_date);
           scheduleForm.setFieldValue("submission_closing_date", closingDate);
         }
         if (o.offtake_start_and_end_date) {
-          const startDate = dayjs(o.offtake_start_and_end_date[0])
-          const endDate = dayjs(o.offtake_start_and_end_date[1])
+          const startDate = await dayjs(o.offtake_start_and_end_date[0])
+          const endDate = await dayjs(o.offtake_start_and_end_date[1])
           scheduleForm.setFieldValue("offtake_start_and_end_date", [startDate, endDate]);
         }
-
+        setTimeout(() => {
+          dispatch(setActiveOfftake(o))
+          setPageLoading(false)
+        }, 500);
         if (
           OfftakeService.getStatus.Name(o.status) === 'submitted' ||
           OfftakeService.getStatus.Name(o.status) === 'published' ||
@@ -238,6 +248,11 @@ const ProductionScheduling = () => {
   return (
     <Layout>
 
+      <Backdrop sx={{ zIndex: 20 }} open={pageLoading} >
+        <Stack>
+          <Spin />
+        </Stack>
+      </Backdrop>
 
       <Modal title="Submit Offtake"
         open={next}
@@ -291,9 +306,9 @@ const ProductionScheduling = () => {
           maxHeight: '100%',
           overflowY: 'auto'
         }}>
-          <AppBar variant='outlined' position='sticky'>
+          <AppBar sx={{ zIndex: 10 }} variant='outlined' position='sticky'>
             <Toolbar>
-              <Button onClick={() => {navigate("/offtakes")}} icon={<ArrowLeftOutlined />} ></Button>
+              <Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>
               <Stack flex={1} direction={'row'} gap={1}>
                 <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
                 <Typography variant='subtitle1' p={2}>Production Cost : R {productionCost}</Typography>
@@ -403,7 +418,7 @@ const ProductionScheduling = () => {
                                                             <Input />
                                                           </Form.Item>
                                                           <Form.Item label="Cost Amount" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
-                                                            <Input addonBefore="R" />
+                                                            <InputNumber addonBefore="R" />
                                                           </Form.Item>
                                                           <Stack pt={3.5}>
                                                             {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}

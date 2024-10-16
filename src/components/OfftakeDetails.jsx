@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload } from 'antd';
+import { Button, Card, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
@@ -461,18 +461,23 @@ const OfftakeDetails = (props) => {
                 setFarms(f)
             }
         })
-        OfftakeService.getUserProfile(offtake.uid).then((user) => {
-            console.log(user);
-            if (user) {
-                setUserProfile(user)
-            }
-        })
-        OfftakeService.getProductionPlan(offtake.offtake_id).then(status => {
-            console.log(status);
-            if (status) {
-                setProductionProgress(status)
-            }
-        })
+        if (offtake.uid) {
+            OfftakeService.getUserProfile(offtake.uid).then((user) => {
+                console.log(user);
+                if (user) {
+                    setUserProfile(user)
+                }
+            })
+        }
+        if (offtake.offtake_id) {
+            OfftakeService.getProductionPlan(offtake.offtake_id).then(status => {
+                console.log(status);
+                if (status) {
+                    setProductionProgress(status)
+                }
+            })
+        }
+
         if (offtake.suppliers) {
             var a = []
             offtake.suppliers.forEach(supplier => {
@@ -559,11 +564,29 @@ const OfftakeDetails = (props) => {
                 <Grid item md={4} flex={1} p={1} >
                     <Statistics title={'Pricing Option'} value={ot?.pricing_option} />
                 </Grid>
-                <Grid item md={4} flex={1} p={1} >
-                    <Statistics title={'Production Cost'} value={`R ${ot?.production_cost ? ot?.production_cost : 0}`} />
+
+            </Grid>
+            <Grid container spacing={1} >
+                <Grid item flex={1}>
+                    <Card title="Production Cost">
+                        <Typography>Total: R{ot?.production_cost ? ot?.production_cost : 0}</Typography>
+                    </Card>
+
+                </Grid>
+                <Grid item flex={1}>
+                    <Card title="Packaging Cost">
+                        <Stack spacing={1}>
+                            <Typography>Unit Quantity: {ot?.quantity ? ot?.quantity : 0}</Typography>
+                            <Typography>Packaging Amount: R184.00</Typography>
+                            <Divider></Divider>
+                            <Typography variant='h6'>
+                                Total : {ot?.quantity ? `R${ot?.quantity * 184}` : 0}
+                            </Typography>
+                        </Stack>
+                    </Card>
+
                 </Grid>
             </Grid>
-
             {/* Contact Details */}
             <Stack>
                 <Accordion defaultExpanded={true} variant='elevation' elevation={0}>

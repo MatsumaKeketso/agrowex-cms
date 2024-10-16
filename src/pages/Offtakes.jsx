@@ -112,7 +112,6 @@ const Offtake = () => {
     const [offtakesReset, setOfftakesReset] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
     const [offtakeId, setOfftake_id] = useState('');
-    const [offtakeStatus, setOfftakeStatus] = useState('');
 
     const [filterOptions, setFilterOptions] = useState(false)
     const navigate = useNavigate();
@@ -153,6 +152,7 @@ const Offtake = () => {
                     return (<Stack>
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
+                            localStorage.setItem(r.offtake_id, r)
                             navigate(`/offtakes/${r.offtake_id}/schedule`)
                         }}>View More</Button>
                     </Stack>)
@@ -161,6 +161,7 @@ const Offtake = () => {
                     return (<Stack>
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
+                            localStorage.setItem(r.offtake_id, r)
                             navigate(`/offtakes/${r.offtake_id}/chat`)
                         }}>View More</Button>
                     </Stack>)
@@ -169,6 +170,7 @@ const Offtake = () => {
                     return (<Stack>
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
+                            localStorage.setItem(r.offtake_id, r)
                             navigate(`/offtakes/${r.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>)
@@ -177,6 +179,7 @@ const Offtake = () => {
                     return (<Stack>
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
+                            localStorage.setItem(r.offtake_id, r)
                             navigate(`/offtakes/${r.offtake_id}/submissions`)
                         }}>Review Details</Button>
                     </Stack>)
@@ -184,11 +187,8 @@ const Offtake = () => {
                 default:
                     return (<Stack>
                         <Button onClick={() => {
-                            console.log(r);
-                            setOfftakeStatus(OfftakeService.getStatus.Name(r.status))
-                            setOfftakeId(r.offtake_id)
                             dispatch(setActiveOfftake(r))
-                            dispatch(setActiveOfftake(r))
+                            localStorage.setItem(r.offtake_id, r)
                             setOfftakeBackup(r)
                             setOpenOfftake(true)
                         }}>View More</Button>
@@ -221,7 +221,6 @@ const Offtake = () => {
         setOfftakes(filtered)
     };
     const closeDrawer = (id) => {
-        // setOpenOfftake(false)
         refresh()
     }
     const setOfftakeId = (id) => {
@@ -249,17 +248,6 @@ const Offtake = () => {
     }
     useEffect(() => {
         getStableOfftakes()
-        return
-        OfftakeService.getOfftakes().then(data => {
-            console.log(data);
-            setOfftakes(data)
-            setOfftakesReset(data)
-            setOpenOfftake(false)
-        }).catch(err => {
-            console.log('====================================');
-            console.log(err);
-            console.log('====================================');
-        })
     }, [])
     return (
         <Layout>
@@ -344,6 +332,7 @@ const Offtake = () => {
             {/* Offtake Details */}
             <Drawer size="large" onClose={() => {
                 setOpenOfftake(false)
+                localStorage.removeItem(offtakeBackup.offtake_id)
                 setTimeout(() => {
                     dispatch(setActiveOfftake({}));
                 }, 1000);

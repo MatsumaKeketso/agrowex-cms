@@ -221,7 +221,7 @@ export const OfftakeService = {
       }
     } catch (error) {
       console.error("Error fetching production plan:", error);
-      throw error;
+      // throw error;
     }
   },
   getRespondents: async (offtake_id) => {

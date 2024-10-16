@@ -11,11 +11,12 @@ import ChatMessage from '../components/ChatMessage'
 import { AuthService, firestoreDB, realtimeDB } from '../services/authService'
 import { doc, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { ChatService, convertTimestampToDateString, createCurrentTimestamp } from '../services/chatService'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { onValue, ref } from 'firebase/database'
 import StatusTag from '../components/StatusTag'
 import { storage, SystemService } from '../services/systemService'
 import { getDownloadURL, uploadBytesResumable, ref as sRef } from 'firebase/storage'
+import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 
 
 const OfftakeChat = () => {
@@ -31,6 +32,7 @@ const OfftakeChat = () => {
   const [chatform] = Form.useForm()
   const chatEndRef = useRef(null);
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const { uid } = useSelector((state) => state?.user.profile || {})
   const offtake = useSelector((state) => state?.offtake.active || {})
   const sendMessage = (data) => {
@@ -142,6 +144,7 @@ const OfftakeChat = () => {
     setLoading(true)
     OfftakeService.getOfftake(offtake_id).then(o => {
       if (o) {
+        dispatch(setActiveOfftake(o))
         setOfftakeBackup(o)
       }
     })

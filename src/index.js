@@ -9,6 +9,8 @@ import { store } from "./services/redux/store";
 import "swiper/css";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
+// Supports weights 100-900
+import '@fontsource-variable/inter';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
@@ -75,7 +77,7 @@ export const theme = createTheme({
     }
   },
   typography: {
-    fontFamily: ["Plus Jakarta Sans Variable"],
+    fontFamily: ["Inter"],
     h1: {
       fontWeight: "bold",
     },

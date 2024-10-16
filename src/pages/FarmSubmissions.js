@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
 import { realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Statistic, Table, Tooltip, Upload } from 'antd';
+import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -536,15 +536,26 @@ const FarmSubmissions = () => {
     });
   };
   const getRespondents = () => {
-    OfftakeService.getRespondents(offtake.offtake_id).then(respondents => {
-      console.log('====================================');
-      console.log(respondents);
-      console.log('====================================');
-    })
+    if (offtake.offtake_id) {
+      OfftakeService.getRespondents(offtake.offtake_id).then(respondents => {
+        console.log('====================================');
+        console.log(respondents);
+        console.log('====================================');
+      })
+    }
+
   }
   useEffect(() => {
-    getRespondents()
-    listenForFarmSubmissions()
+    OfftakeService.getOfftake(offtake_id).then(o => {
+      if (o) {
+        dispatch(setActiveOfftake(o))
+        setTimeout(() => {
+          getRespondents()
+          listenForFarmSubmissions()
+        }, 500);
+      }
+    })
+
   }, [])
   return (
     <Layout >
@@ -622,8 +633,7 @@ const FarmSubmissions = () => {
 
         </Stack>
       </Modal>
-
-      <Stack gap={0} sx={{ overflow: 'hidden' }} flex={1} direction={'row'} position={'relative'}>
+      {offtake.offtake_id ? (<Stack gap={0} sx={{ overflow: 'hidden' }} flex={1} direction={'row'} position={'relative'}>
         <Stack flex={1} sx={{ overflow: 'auto' }}>
           <Stack pl={2} direction={'row'} gap={1} alignItems={'center'}>
             <Button onClick={() => {
@@ -677,7 +687,14 @@ const FarmSubmissions = () => {
         <Stack position={'sticky'} flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto' }}>
           <OfftakeDetails setOfftakeId={() => { }} showSubmissions={true} />
         </Stack>
-      </Stack>
+      </Stack>) : (
+        <Stack flex={1} alignItems={'center'} alignContent={'center'}>
+          <Stack py={10} >
+            <Spin size='large' />
+            <Typography>Getting Offtake...</Typography>
+          </Stack>
+        </Stack>)}
+
     </Layout>
   )
 }

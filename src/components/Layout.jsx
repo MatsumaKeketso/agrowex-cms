@@ -269,11 +269,16 @@ const Layout = (props) => {
   const location = useLocation();
   useEffect(() => {
     AuthService.getUser().then((user) => {
-      dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }))
-      ProfileService.getProfile(user.uid).then(profile => {
-        dispatch(updateProfile(profile))
-        dispatch(toggleOnline(true))
-      })
+      if (user) {
+        dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }))
+        ProfileService.getProfile(user.uid).then(profile => {
+          dispatch(updateProfile(profile))
+          dispatch(toggleOnline(true))
+        })
+      }
+    }).catch(err => {
+      console.log(err);
+
     })
     const splitter = location.pathname.split("/");
 
