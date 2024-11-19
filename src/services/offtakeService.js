@@ -259,7 +259,7 @@ export const OfftakeService = {
   addProductionStatus: async (offtake_id, status) => {
     try {
       // Create a reference to the 'production-plan' collection
-      const productionPlanCollectionRef = collection(firestoreDB, 'offtakes', offtake_id, 'production-plan');
+      const productionPlanCollectionRef = collection(firestoreDB, 'offtakes', offtake_id, '_production-plan');
 
       // Add a new document to the collection with the provided status data
       const docRef = await addDoc(productionPlanCollectionRef, status);
@@ -275,7 +275,7 @@ export const OfftakeService = {
   removeProductionStatus: async (offtake_id, status_id) => {
     try {
       // Create a reference to the specific document in the 'production-plan' subcollection
-      const statusDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', status_id);
+      const statusDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_production-plan', status_id);
 
       // Delete the document
       await deleteDoc(statusDocRef);
@@ -284,12 +284,12 @@ export const OfftakeService = {
       return status_id; // Return the ID of the removed document
     } catch (error) {
       console.error('Error removing production status:', error);
-      throw error;
+      return error
     }
   },
   updateProductionPlan: async (offtake_id, status_id, status) => {
     // Create a reference to the 'tracker' document in the 'production-plan' collection
-    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, 'production-plan', status_id);
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_production-plan', status_id);
 
     // Set the document with the provided schedule data
     await setDoc(trackerDocRef, status)
@@ -297,9 +297,19 @@ export const OfftakeService = {
     console.log('Offtake schedule updated successfully!');
     return trackerDocRef.id; // Return the reference to the updated document
   },
+  updateSubmission: async (offtake_id, doc_id, data) => {
+    // Create a reference to the 'tracker' document in the 'production-plan' collection
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_farm_applications', doc_id);
+
+    // Set the document with the provided schedule data
+    await setDoc(trackerDocRef, data)
+
+    console.log('Applications updated successfully!');
+    return trackerDocRef.id; // Return the reference to the updated document
+  },
   getProductionPlan: async (offtake_id) => {
     try {
-      const productionPlanRef = collection(firestoreDB, "offtakes", offtake_id, "production-plan");
+      const productionPlanRef = collection(firestoreDB, "offtakes", offtake_id, "_production-plan");
       const querySnapshot = await getDocs(productionPlanRef);
 
       if (!querySnapshot.empty) {
@@ -319,7 +329,7 @@ export const OfftakeService = {
   },
   getRespondents: async (offtake_id) => {
     try {
-      const respondentsRef = collection(firestoreDB, "offtakes", offtake_id, "respondents");
+      const respondentsRef = collection(firestoreDB, "offtakes", offtake_id, "_farm_applications");
       const querySnapshot = await getDocs(respondentsRef);
 
       if (!querySnapshot.empty) {
@@ -440,8 +450,29 @@ export const OfftakeService = {
       throw error;
     }
   },
-  getFarmSubmissions: async () => {
-    return farms
+  getFarmSubmissions: async (offtake_id) => {
+    const q = query(collection(firestoreDB, `/offtakes/${offtake_id}/_farm_applications`));
+    const querySnapshot = await getDocs(q);
+    var d = []
+    var submissions = []
+    querySnapshot.forEach((doc) => {
+      // doc.data() is never undefined for query doc snapshots
+      if (doc.exists()) {
+        d.push({ ...doc.data() })
+      } else {
+        // docSnap.data() will be undefined in this case
+        console.log("No such document!");
+      }
+    });
+    if (d.length !== 0) {
+      await d.forEach((submission, i) => {
+        FarmerService.getSingleFarm(submission.uid).then(profile => {
+          submissions.push({ ...submission, farm_profile: profile })
+        })
+      });
+    }
+    return submissions
+    // return farms
   },
   updateContractModel: async (offtake_id, contract_model) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);

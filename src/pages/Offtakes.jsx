@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import {
     Avatar,
+    Backdrop,
     Box,
     ButtonBase,
     Collapse,
@@ -15,7 +16,7 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker } from "antd";
+import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker, Spin } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails, { getDaysBetween } from "../components/OfftakeDetails";
 import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
@@ -112,22 +113,22 @@ const Offtake = () => {
     const [offtakesReset, setOfftakesReset] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
     const [offtakeId, setOfftake_id] = useState('');
-
+    const [pageLoading, setPageLoading] = useState(true)
     const [filterOptions, setFilterOptions] = useState(false)
     const navigate = useNavigate();
     const params = useParams()
     const dispatch = useDispatch();
     const offtake = useSelector((state) => state?.active);
-
     const [confirmForm] = Form.useForm()
     const offtakeUpdated = useSelector((state) => state?.updated);
     const filterSegmentOptions = [
         { label: 'All', value: 'all' },
+        { label: 'In Progress', value: 'inprogress' },
         { label: 'Negotioation', value: 'negotiation' },
         { label: 'Planning', value: 'planning' },
         { label: 'Submitted', value: 'submitted' },
-        { label: 'In Progress', value: 'inprogress' },
-        { label: 'Not Viable', value: 'notViable' }
+        { label: 'Active', value: 'active' },
+        { label: 'Not Viable', value: 'notviable' }
     ]
     const columns = [..._columns,
     {
@@ -181,7 +182,7 @@ const Offtake = () => {
                             dispatch(setActiveOfftake(r))
                             localStorage.setItem(r.offtake_id, r)
                             navigate(`/offtakes/${r.offtake_id}/submissions`)
-                        }}>Review Details</Button>
+                        }}>View More</Button>
                     </Stack>)
                     break;
                 default:
@@ -209,15 +210,16 @@ const Offtake = () => {
 
         // If the filter value is 'all', return the entire list
         if (filterValue === 'all') {
-            console.log('all');
+            setPageLoading(true)
             OfftakeService.getOfftakes().then((data: any) => {
                 setOfftakes(data)
                 setOfftakesReset(data)
+                setPageLoading(false)
             }).catch(err => { console.log(err) })
         }
 
         // Otherwise, filter the offtakes based on the status
-        const filtered = updatedOfftakes.filter(offtake => offtake.status === filterValue);
+        const filtered = updatedOfftakes.filter(offtake => OfftakeService.getStatus.Name(offtake.status) === filterValue);
         setOfftakes(filtered)
     };
     const closeDrawer = (id) => {
@@ -234,17 +236,12 @@ const Offtake = () => {
         })
     }
     const getStableOfftakes = async () => {
-        // stable offtake => 1725998980488
-        var ot = [];
+        setPageLoading(true)
         setOfftakes([])
         OfftakeService.getOfftakes().then(data => {
-            // setOfftakesReset([])
+            setPageLoading(false)
             setOfftakes(data)
         })
-        console.log(ot);
-
-        // setOfftakes(ot)
-        // setOfftakesReset(ot)
     }
     useEffect(() => {
         getStableOfftakes()
@@ -252,7 +249,11 @@ const Offtake = () => {
     return (
         <Layout>
 
-
+            <Backdrop sx={{zIndex: 99}} open={pageLoading}>
+                <Stack alignItems={'center'} justifyContent={'center'} p={2}>
+                    <Spin size="large" />
+                </Stack>
+</Backdrop>
 
             {/* Confirm Assessment */}
             <Modal open={openConfirm} onOk={() => {

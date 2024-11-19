@@ -9,7 +9,7 @@ function Documents({ upload, url, type, name }) {
 
     return (
         <Stack>
-            <Backdrop sx={{ zIndex: 99, }} onClick={() => {
+            <Backdrop sx={{ zIndex: (theme) => theme.zIndex.drawer + 2, }} onClick={() => {
                 setPreview(false)
             }} open={preview}>
                 <Stack width={'70vw'} height={'80vh'} overflow={'hidden'} p={1} borderRadius={1} bgcolor={colors.common.white}>
@@ -17,7 +17,6 @@ function Documents({ upload, url, type, name }) {
                 </Stack>
             </Backdrop>
             <Stack minWidth={183} maxWidth={183} overflow={'hidden'} borderRadius={2} >
-
                 {upload ? (
                     <Dragger style={{ maxWidth: 225, height: 276, objectFit: 'cover' }} >
                         <IconButton disabled>
@@ -45,14 +44,17 @@ function Documents({ upload, url, type, name }) {
                             height: '100%',
                             zIndex: (theme) => theme.zIndex.drawer + 1,
                             backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black
-                        }} open={hover}>
+                        }} open={hover} onClick={() => {
+                            setPreview(true)
+                        }}>
                             <Stack>
-                                <IconButton onClick={() => {
-                                    setPreview(true)
-                                }}><RemoveRedEyeRounded sx={{ color: colors.common.white }} /></IconButton>
+                                <IconButton ><RemoveRedEyeRounded sx={{ color: colors.common.white }} /></IconButton>
                             </Stack>
                         </Backdrop>
                         <iframe style={{ minWidth: '100%', height: 258, objectFit: 'cover', border: 'solid 0px', overflow: 'hidden' }} src={url} />
+                        <Stack position={'absolute'} bottom={0} left={0} right={0} p={1} bgcolor={'white'}>
+                                <Typography variant='caption'>{ name}</Typography>
+                        </Stack>
                     </Stack>
                 )
                 }

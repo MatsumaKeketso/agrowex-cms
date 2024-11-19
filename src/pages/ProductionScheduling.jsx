@@ -7,7 +7,7 @@ import { OfftakeService } from '../services/offtakeService'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -52,7 +52,6 @@ const ProductionScheduling = () => {
   const redux_offtake = useSelector((state) => state.offtake?.active);
   const submitSchedule = (schedule) => {
     console.log(schedule);
-
     // will be edited
     // setLoading(true)
     var missing_steps = false
@@ -135,20 +134,32 @@ const ProductionScheduling = () => {
           setLoading(false)
         })
       }
-
-
     } else {
       messageApi.error("Missing status")
     }
-
-
   }
+  const getCostingPerStep = (cateogry, step) => {
+    if (statusValues[cateogry]) {
+      if (statusValues[cateogry]?._steps[step]) {
+        if (statusValues[cateogry]?._steps[step]._costing) {
+          var step_costing = 0
+          statusValues[cateogry]?._steps[step]._costing.forEach(step_cost => {
+            if (step_cost) {
+              step_costing = step_costing + (step_cost?.amount * 1) | 0
+            }
+          });
 
+          return step_costing
+        } else {
+          return 0
+        }
 
+      } else { return 0 }
+    } else { return 0 }
+  }
   const getProductionStatuses = () => {
     OfftakeService.getProductionPlan(offtake_id).then(status => {
       if (status) {
-        console.log(status);
         setProductionPlan(status)
         scheduleForm.setFieldValue("status", status.map((stat: any) => {
           const { name, description, _steps, key } = stat
@@ -160,8 +171,6 @@ const ProductionScheduling = () => {
               const { name, duration } = step
               const start = dayjs(duration[0])
               const end = dayjs(duration[1])
-              console.log(step);
-
               return {
                 name: name,
                 duration: [start, end],
@@ -176,7 +185,6 @@ const ProductionScheduling = () => {
           }
         }))
       }
-
     })
   }
   useEffect(() => {
@@ -299,7 +307,6 @@ const ProductionScheduling = () => {
         </Stack>
       </Modal>
 
-
       <Stack gap={1} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'}>
         {contextHolder}
         <Stack flex={1} sx={{
@@ -331,7 +338,6 @@ const ProductionScheduling = () => {
               }}>
                 <Form.Item rules={[{ required: true }]} label="Offtake Submission ads closing date" name="submission_closing_date">
                   <DatePicker picker="date" />
-
                 </Form.Item>
                 <Form.Item rules={[{ required: true }]} label="Offtake start and end date" name="offtake_start_and_end_date">
                   <DatePicker.RangePicker picker="date" />
@@ -345,26 +351,35 @@ const ProductionScheduling = () => {
                             <Divider>
                               <Stack direction={'row'} gap={1}>Production Category {field.name + 1} {field.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
-                                  const key = statusValues[field.name].key
-                                  console.log();
-                                  OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
-                                    remove(field.name);
-                                  })
+                                  const key = statusValues[field.name]?.key ? statusValues[field.name].key : field.name
+                                  if (key) {
+                                    OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
+                                      remove(field.name);
+                                    }).catch(err => {
+                                      console.log(err);
+                                      remove(field.name)
+                                    })
+                                  } else {
+                                    remove(field.name)
+                                  }
                                 }}>
                                   <CloseRounded />
-                                </IconButton>) : null}</Stack>
+                                </IconButton>) : null}
+                              </Stack>
                             </Divider>
                           </Stack>
                           <Accordion
                             elevation={0}
                             variant='elevation'
                             key={field.key}
+                            defaultExpanded={true}
+
                           >
                             <AccordionSummary>
                               <Stack flex={1}>
                                 <Form.Item hidden
                                   name={[field.name, 'key']}>
-                                  <Input disabled />
+                                  <Input onClick={(e) => { e.preventDefault() }} onFocus={(e) => { e.preventDefault() }} disabled />
                                 </Form.Item>
                                 <Form.Item rules={[{ required: true, message: 'Please enter Step name' }]}
                                   label="Name" name={[field.name, 'name']}>
@@ -384,66 +399,115 @@ const ProductionScheduling = () => {
                                 <Form.List name={[field.name, '_steps']}>
                                   {(steps, { add, remove }) => (
                                     <Timeline>
-                                      {steps.map((step) => {
-
-                                        return (
-                                          <Timeline.Item key={step.name} dot={<Spin />}>
-                                            <Card title={`Production Step ${step.name + 1}`
+                                      {
+                                        steps.map((step) => {
+                                          // Calculate overall cost per production step
+                                          const lamdba = () => {
+                                            var ov_cost = 0
+                                            const costing = statusValues[field.name]?._steps[step.name]?._costing
+                                            costing?.map((cost_item) => {
+                                              ov_cost = ov_cost + cost_item.amount
+                                            })
+                                            if (productionPlan) {
+                                              scheduleForm.setFieldValue("status", productionPlan.map((stat: any) => {
+                                                const { _steps } = stat
+                                                return {
+                                                  _steps: _steps ? _steps?.map(step => {
+                                                    return {
+                                                      overal_cost: ov_cost
+                                                    }
+                                                  }) : []
+                                                }
+                                              }))
                                             }
-                                              extra={
-                                                <>
-                                                  {step.name !== 0 ? (<IconButton onClick={() => { remove(step.name) }}><CloseRounded /></IconButton>) : null}
-                                                </>
+                                          }
+                                          return (
+                                            <Timeline.Item key={step.name} dot={<Spin />}>
+                                              <Card title={`Production Step ${step.name + 1} - R${getCostingPerStep(field.name, step.name)}`
                                               }
-                                            >
-                                              <Stack direction={'row'} gap={1}>
-                                                <Form.Item
-                                                  rules={[{ required: true, message: 'Please enter the name of this step' }]}
-                                                  name={[step.name, 'name']}
-                                                  label={`Name`}
-                                                  style={{ width: '100%' }}
-                                                >
-                                                  <Input style={{ width: '100%' }} />
-                                                </Form.Item>
-                                                <Form.Item rules={[{ required: true, message: 'Please enter the duration of this step' }]}
-                                                  name={[step.name, 'duration']}
-                                                  label={`Duration`}
-                                                >
-                                                  <DatePicker.RangePicker picker="date" />
-                                                </Form.Item>
-                                              </Stack>
-                                              <Stack py={1}>
-                                                <Divider>Production Cost</Divider>
-                                              </Stack>
-                                              <Form.List name={[step.name, '_costing']}>
-                                                {(items, { add, remove }) => (
-                                                  <Stack>
-                                                    {items.map((item, i) => {
-                                                      return (
-
-                                                        <Stack key={item.key} direction={'row'} spacing={1} >
-                                                          <Form.Item label="Cost Item" name={[item.name, 'name']} rules={[{ required: true }]} >
-                                                            <Input />
-                                                          </Form.Item>
-                                                          <Form.Item label="Cost Amount" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
-                                                            <InputNumber addonBefore="R" />
-                                                          </Form.Item>
-                                                          <Stack pt={3.5}>
-                                                            {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
-                                                          </Stack>
-                                                        </Stack>
-                                                      )
-                                                    })}
-                                                    <Stack alignItems={'start'}>
-                                                      <Button onClick={() => { add() }}>Add Cost Item</Button>
-                                                    </Stack>
+                                                extra={
+                                                  <>
+                                                    {step.name !== 0 ? (<IconButton onClick={() => { remove(step.name) }}><CloseRounded /></IconButton>) : null}
+                                                  </>
+                                                }
+                                              >
+                                                <Stack direction={'row'} gap={1}>
+                                                  <Stack flex={1}>
+                                                    <Form.Item
+                                                      rules={[{ required: true, message: 'Please enter the name of this step' }]}
+                                                      name={[step.name, 'name']}
+                                                      label={`Name`}
+                                                      style={{ width: '100%' }}
+                                                    >
+                                                      <Input style={{ width: '100%' }} />
+                                                    </Form.Item>
                                                   </Stack>
-                                                )}
-                                              </Form.List>
-                                            </Card>
-                                          </Timeline.Item>
-                                        )
-                                      })}
+                                                  <Stack flex={1} direction={'row'} gap={1}>
+                                                    <Stack flex={1}>
+                                                      <Form.Item rules={[{ required: true, message: 'Please enter the duration of this step' }]}
+                                                        name={[step.name, 'duration']}
+                                                        label={`Duration`}
+                                                      >
+                                                        <DatePicker.RangePicker picker="date" />
+                                                      </Form.Item></Stack>
+                                                    {/* <Stack flex={1}>
+                                                      <Form.Item
+                                                        initialValue={0}
+                                                        name={[step.name, 'overal_cost']}
+                                                        label={`Overall Cost`}
+                                                      >
+                                                        <InputNumber disabled addonBefore="R" />
+                                                      </Form.Item>
+                                                    </Stack> */}
+                                                  </Stack>
+                                                </Stack>
+                                                <Stack py={1}>
+                                                  <Divider>Production Cost</Divider>
+                                                </Stack>
+                                                <Form.List name={[step.name, '_costing']}>
+                                                  {(items, { add, remove }) => (
+                                                    <Stack>
+                                                      {items.map((item, i) => {
+                                                        return (
+                                                          <Stack gap={1} p={1} borderRadius={1} bgcolor={i % 2 ? colors.grey[100] : colors.common.white}>
+
+                                                            <Form.Item label="Cost item" name={[item.name, 'name']} rules={[{ required: true }]} >
+                                                              <Input />
+                                                            </Form.Item>
+                                                            <Stack key={item.key} direction={'row'} spacing={1} >
+
+                                                              <Form.Item label="Cost per unit" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
+                                                                <InputNumber addonBefore="R" />
+                                                              </Form.Item>
+                                                              <Form.Item label="Application&nbsp;intervals" initialValue={(0).toFixed(2)} name={[item.name, 'interval']} rules={[{ required: true }]} >
+                                                                <InputNumber />
+                                                              </Form.Item>
+                                                              <Form.Item label="QTY used per Ha/Tune" initialValue={0} name={[item.name, 'used_per_hactor']} rules={[{ required: true }]} >
+                                                                <InputNumber addonAfter={<Select defaultActiveFirstOption={true} defaultValue={'kg'} options={[{ label: 'kg', value: 'kg' }]} />} />
+                                                              </Form.Item>
+                                                              <Form.Item label="Total unit cost" initialValue={0} name={[item.name, 'total_unit_cost']} rules={[{ required: true }]} >
+                                                                <InputNumber addonBefore={"R"} />
+                                                              </Form.Item>
+                                                              <Stack pt={3.5}>
+                                                                {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
+                                                              </Stack>
+                                                            </Stack>
+                                                            <Divider />
+                                                          </Stack>
+
+                                                        )
+                                                      })}
+                                                      <Stack py={1} alignItems={'start'}>
+                                                        <Button onClick={() => { add() }}>Add Cost Item</Button>
+                                                      </Stack>
+                                                    </Stack>
+                                                  )}
+                                                </Form.List>
+                                              </Card>
+                                            </Timeline.Item>
+                                          )
+                                        })
+                                      }
 
                                       <Stack alignItems={'flex-end'}>
                                         <Button disabled={disableForm} type='default' onClick={() => add()} >

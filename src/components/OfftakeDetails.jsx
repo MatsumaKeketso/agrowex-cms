@@ -176,9 +176,6 @@ const MasterContractDialog = ({ open, onClose }) => {
                 }
             },
             (error) => {
-                console.log('====================================');
-                console.log(error);
-                console.log('====================================');
                 // A full list of error codes is available at
                 switch (error.code) {
 
@@ -311,6 +308,7 @@ const OfftakeDetails = (props) => {
     const [userProfile, setUserProfile] = useState({})
     const [masterContract, setMasterContract] = useState(null)
     const [showBack, setShowBack] = useState(false)
+    const [prodPlan, setProdPlan] = useState(null)
     const description = 'This is a description.';
     const {
         order_date,
@@ -320,7 +318,6 @@ const OfftakeDetails = (props) => {
         phone_number,
         email,
         commodity_name,
-
         status,
         production_method,
         quantity,
@@ -334,7 +331,22 @@ const OfftakeDetails = (props) => {
         comment
     } = useSelector((state) => state.offtake?.active);
     const ot = useSelector((state) => state.offtake?.active);
-
+    const profitabilityCalucation = () => {
+        var tot_cost = 0
+        if (prodPlan) {
+            prodPlan.forEach(category => {
+                category._steps.map((step) => {
+                    step._costing.map((cost) => {
+                        tot_cost = tot_cost + cost.amount
+                    })
+                })
+            });
+            const total_offtake_offer = ot.quantity * ot.offer_price_per_unit
+            const total_cost_of_production = tot_cost
+            const offtake_gross_profit = total_offtake_offer - total_cost_of_production
+            return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
+        }
+    }
     const unassign = () => {
         const unassigned = { ...offtake.active, assigned: null }
         dispatch(setActiveOfftake(unassigned))
@@ -343,7 +355,7 @@ const OfftakeDetails = (props) => {
         setMasterContractDialog(false)
     }
     const getAndWatchDocuments = () => {
-        const collectionPath = `offtakes/${offtake?.offtake_id}/documents`;
+        const collectionPath = `offtakes/${offtake?.offtake_id}/_documents`;
         // Create a query to get all documents in the collection
         const q = query(collection(firestoreDB, collectionPath));
 
@@ -437,7 +449,9 @@ const OfftakeDetails = (props) => {
 
     }, [offtake])
     useEffect(() => {
-        console.log(location);
+        OfftakeService.getProductionPlan(ot.offtake_id).then((plan) => {
+            setProdPlan(plan)
+        })
         if (location) {
             const pathLength = location.pathname.split("/")
             const currentPage = pathLength[pathLength.length - 1]
@@ -566,27 +580,24 @@ const OfftakeDetails = (props) => {
                 </Grid>
 
             </Grid>
-            <Grid container spacing={1} >
-                <Grid item flex={1}>
-                    <Card title="Production Cost">
-                        <Typography>Total: R{ot?.production_cost ? ot?.production_cost : 0}</Typography>
-                    </Card>
+            {currentStatus === 'published' ||
+                currentStatus === 'finalstage' ||
+                currentStatus === "active"
+                && (
+                    <Grid container spacing={1} >
 
-                </Grid>
-                <Grid item flex={1}>
-                    <Card title="Packaging Cost">
-                        <Stack spacing={1}>
-                            <Typography>Unit Quantity: {ot?.quantity ? ot?.quantity : 0}</Typography>
-                            <Typography>Packaging Amount: R184.00</Typography>
-                            <Divider></Divider>
-                            <Typography variant='h6'>
-                                Total : {ot?.quantity ? `R${ot?.quantity * 184}` : 0}
-                            </Typography>
-                        </Stack>
-                    </Card>
+                        <Grid item flex={1}>
+                            <Card title="Profitability">
+                                <Stack spacing={1}>
+                                    <Typography>Offtake total offer : R{profitabilityCalucation()?.total_offtake_offer | 0}</Typography>
+                                    <Typography>Total production cost : R{profitabilityCalucation()?.total_cost_of_production | 0}</Typography>
+                                    <Typography>Gross Profit : R{profitabilityCalucation()?.offtake_gross_profit | 0}</Typography>
+                                </Stack>
+                            </Card>
 
-                </Grid>
-            </Grid>
+                        </Grid>
+                    </Grid>
+                )}
             {/* Contact Details */}
             <Stack>
                 <Accordion defaultExpanded={true} variant='elevation' elevation={0}>

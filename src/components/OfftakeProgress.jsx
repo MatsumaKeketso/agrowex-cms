@@ -23,7 +23,6 @@ const OfftakeProgress = ({ status }) => {
     return step === null;
   };
   useEffect(() => {
-    console.log(offtake);
     if (offtake?.status) {
       if (offtake.status?.length) {
         const currentStatus = status[status?.length - 1].status_name
@@ -37,7 +36,7 @@ const OfftakeProgress = ({ status }) => {
 
   })
   return (
-    <Stepper activeStep={currentStep}>
+    <Stepper alternativeLabel activeStep={currentStep}>
       {stepData.map((step, index) => {
         const labelProps = {};
         if (isStepFailed(index)) {
@@ -50,8 +49,8 @@ const OfftakeProgress = ({ status }) => {
         }
 
         return (
-          <Step key={index}          >
-            <StepLabel {...labelProps}>{SystemService.converStringToSentenceCase(step.title)}</StepLabel>
+          <Step key={index} >
+            <StepLabel  {...labelProps}>{SystemService.converStringToSentenceCase(step.title)}</StepLabel>
           </Step>
         )
       })}

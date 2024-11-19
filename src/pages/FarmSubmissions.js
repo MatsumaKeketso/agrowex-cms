@@ -3,7 +3,7 @@ import Layout from '../components/Layout'
 import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref } from 'firebase/database';
-import { realtimeDB } from '../services/authService';
+import { firestoreDB, realtimeDB } from '../services/authService';
 import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
 import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
@@ -16,16 +16,30 @@ import { setActiveOfftake } from '../services/offtake/offtakeSlice';
 import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
 import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
-    dataIndex: 'name',
-    key: 'name',
+    dataIndex: ['farm_profile', 'farm_name'],
+    key: 'farm_name',
   },
   {
-    title: 'Type',
-    dataIndex: 'type',
-    key: 'type',
+    title: 'Stock Available',
+    dataIndex: 'is_stock_available',
+    key: 'is_stock_available',
+  },
+  {
+    title: 'Offer Quantity',
+    dataIndex: ['offer_quantity'], // Accessing nested property
+    key: 'offer_quantity',
+  },
+  {
+    title: 'Submitted',
+    dataIndex: ['timestamp'], // Accessing nested property
+    key: 'timestamp',
+    render: (v, r) => {
+      return <Stack>{SystemService.formatTimestamp(v)}</Stack>
+    }
   },
   // {
   //   title: 'Phone Number',
@@ -37,16 +51,12 @@ export const FarmSubmissionColumns = [
   //   dataIndex: ['contact', 'email'], // Accessing nested property
   //   key: 'email',
   // },
-  {
-    title: 'Suggested Offer',
-    dataIndex: ['offers', 'suggestedOffer'], // Accessing nested property
-    key: 'suggestedOffer',
-  },
-  {
-    title: 'Requested Offer',
-    dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
-    key: 'requestedOffer',
-  },
+
+  // {
+  //   title: 'Requested Offer',
+  //   dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
+  //   key: 'requestedOffer',
+  // },
   // {
   //   title: 'Delivered',
   //   dataIndex: ['offers', 'delivered'], // Accessing nested property
@@ -205,6 +215,7 @@ const FarmerView = ({ record }) => {
   const offtake = useSelector((state) => state.offtake.active)
   const [tableModal, setTableModal] = useState(false)
   const navigate = useNavigate()
+  const { farm_profile } = record
   const deliveryUpdates = [
     {
       key: '1',
@@ -278,10 +289,10 @@ const FarmerView = ({ record }) => {
         {/* Profile */}
         <Stack p={2}>
           <Stack direction={'row'} gap={2}>
-            <Avatar size={'large'}></Avatar>
+            <Avatar size={'large'} src={farm_profile.logo_url}></Avatar>
             <Stack gap={1}>
-              <Typography variant='h5'>{record.name}</Typography>
-              <Typography variant='subtitle1'>{record.type}</Typography>
+              <Typography variant='h5'>{farm_profile.farm_name}</Typography>
+              <Typography variant='subtitle1'>{farm_profile.farm_type}</Typography>
               <Stack>
                 <Button onClick={() => {
                   navigate(`/offtakes/${offtake.offtake_id}/chat`)
@@ -291,10 +302,10 @@ const FarmerView = ({ record }) => {
           </Stack>
           <Stack direction={'row'} flexWrap={'wrap'} gap={5}>
             <Statistic title="Farm Hecters" value={50} />
-            <Statistic title="Email" value={record.contact.email} />
+            <Statistic title="Email" value={farm_profile.email} />
             <Statistic title="Phone Number" formatter={(value) => {
               return value
-            }} value={record.contact.phoneNumber} />
+            }} value={`(${farm_profile.phone.country_calling_code}) ${farm_profile.phone.phone_number}`} />
             <Statistic title="Address" value={record.address} />
           </Stack>
         </Stack>
@@ -314,7 +325,7 @@ const FarmerView = ({ record }) => {
                 scrollableTarget="scrollableDiv"
               >
                 <List
-                  dataSource={documents}
+                  dataSource={farm_profile.certificates}
                   renderItem={(document) => (
                     <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
                       <List.Item.Meta
@@ -445,9 +456,10 @@ const FarmSubmissions = () => {
   const [active, setActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [farms, setFarms] = useState([])
+  const [submissions, setSubmissions] = useState([])
   const [selectedFarms, setSelectedFarms] = useState([])
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [required, setRequired] = useState(2700)
+  const [required, setRequired] = useState(0)
   const [tonsSelected, setTons] = useState(0)
   const { offtake_id } = useParams()
   const offtake = useSelector((state) => state.offtake?.active);
@@ -455,7 +467,6 @@ const FarmSubmissions = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const onSelectChange = (newSelectedRowKeys, c) => {
-    console.log('selectedRowKeys changed: ', c);
     setSelectedRowKeys(newSelectedRowKeys);
     const t = calculateTotalRequestedOffer(newSelectedRowKeys)
     setTons(t)
@@ -502,15 +513,21 @@ const FarmSubmissions = () => {
   const currentStatus = OfftakeService.getStatus.Name(offtake.status);
 
   const calculateTotalRequestedOffer = (keysArray) => {
-    return farms
-      .filter(farm => keysArray.includes(farm.key)) // Filter the farms by the keys in the array
-      .reduce((total, farm) => total + farm.offers.requestedOffer, 0); // Sum the requestedOffer values
+    const a = submissions
+      .filter(sub => keysArray.includes(sub.uid)) // Filter the farms by the keys in the array
+      .reduce((total, sub) => total + (sub.offer_quantity * 1), 0); // Sum the requestedOffer values
+    return a
   };
   const getSelectedFarms = (keysArray) => {
-    return farms
-      .filter(farm => keysArray.includes(farm.key)) // Filter the farms by the keys in the array
+    return submissions
+      .filter(sub => keysArray.includes(sub.uid)) // Filter the farms by the keys in the array
   };
   const listenForFarmSubmissions = () => {
+    OfftakeService.getFarmSubmissions(offtake_id).then(f => {
+      setFarms(f)
+      console.log(f);
+    })
+    return
     if (offtake.suppliers) {
       setFarms(offtake.suppliers)
       let a = 0
@@ -519,8 +536,9 @@ const FarmSubmissions = () => {
       });
       setTons(a)
     } else {
-      OfftakeService.getFarmSubmissions().then(f => {
+      OfftakeService.getFarmSubmissions(offtake_id).then(f => {
         setFarms(f)
+        console.log(f);
       })
     }
 
@@ -535,46 +553,85 @@ const FarmSubmissions = () => {
       }
     });
   };
-  const getRespondents = () => {
-    if (offtake.offtake_id) {
-      OfftakeService.getRespondents(offtake.offtake_id).then(respondents => {
-        console.log('====================================');
-        console.log(respondents);
-        console.log('====================================');
-      })
-    }
+  const getRespondents = async (ot) => {
+    const q = query(collection(firestoreDB, `/offtakes/${ot.offtake_id}/_farm_applications`));
+    const querySnapshot = await getDocs(q);
+    setSubmissions([])
+    var subs = []
+    await querySnapshot.forEach(async (sub) => { // submission info
+      if (sub.exists()) {
+        const docRef = doc(firestoreDB, "users", sub.id);
+        const farm_profile = await getDoc(docRef); // farmer info
+        if (farm_profile.exists()) {
+          subs.push({ ...sub.data(), key: sub.id, farm_profile: { ...farm_profile.data(), farm_id: farm_profile.id } })
+          if (sub.data().selected) {
+            setTons(tonsSelected + (sub.data().offer_quantity * 1))
+          }
+        }
+      } else {
+        console.log("No such document!");
+      }
+    });
 
+    setTimeout(() => {
+      setSubmissions(subs)
+    }, 1000);
   }
+  const updateSubmissionSelections = (originalSubmissions, selectedSubmissions) => {
+    // Create a Set of selected submission IDs for efficient lookup
+    const selectedIds = new Set(selectedSubmissions.map(sub => sub.uid));
+
+    // Map over original submissions and update each one
+    return originalSubmissions.map(submission => ({
+      ...submission,
+      selected: selectedIds.has(submission.uid)
+    }));
+  };
   useEffect(() => {
     OfftakeService.getOfftake(offtake_id).then(o => {
       if (o) {
+        setRequired(o.quantity)
         dispatch(setActiveOfftake(o))
-        setTimeout(() => {
-          getRespondents()
-          listenForFarmSubmissions()
-        }, 500);
+        getRespondents(o)
       }
     })
-
   }, [])
   return (
     <Layout >
       {useContext}
       <Modal title="Status Update" open={finalstage} onOk={() => {
         setLoading(true)
-        OfftakeService.getOfftake(offtake_id).then(ot => {
-          const _status = {
-            status_name: 'finalstage',
-            updated_at: SystemService.generateTimestamp()
+        const _status = {
+          status_name: 'finalstage',
+          updated_at: SystemService.generateTimestamp()
+        }
+        const updated_offtake = { ...offtake, status: [...offtake.status, _status] }
+        // UPDATE SELECTED SUBMISSIONS to true
+        const updatedSubmissions = updateSubmissionSelections(submissions, selectedFarms);
+        // update unselected submission to false
+        console.log(updatedSubmissions);
+        updatedSubmissions.forEach(sub => {
+          const _sub = {
+            "unit": sub.unit,
+            "is_stock_available": sub.is_stock_available,
+            "comments": sub.comments,
+            "offer_quantity": sub.offer_quantity,
+            "timestamp": sub.timestamp,
+            "selected": sub.selected,
+            "uid": sub.uid,
+            "id": sub.id
           }
-          const updated_offtake = { ...ot, suppliers: selectedFarms, status: [...ot.status, _status] }
-          OfftakeService.updateOfftake(ot.offtake_id, updated_offtake).then(() => {
-            dispatch(setActiveOfftake(updated_offtake))
-            setFinalStage(false)
-            setLoading(false)
+          OfftakeService.updateSubmission(offtake.offtake_id, sub.uid, _sub).then(() => {
+            console.log('Sub updated');
           })
+        });
+        OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(() => {
+          dispatch(setActiveOfftake(updated_offtake))
+          setFinalStage(false)
+          setLoading(false)
         })
-      }} okButtonProps={{ loading: loading }}
+      }}
+        okButtonProps={{ loading: loading }}
         onCancel={() => {
           setFinalStage(false)
         }}>
@@ -641,20 +698,15 @@ const FarmSubmissions = () => {
             }} icon={<ArrowLeftOutlined />}></Button>
             <Stack gap={0} p={2} flex={1}>
               <Typography variant='h6' flex={1}>Farmers who are interested</Typography>
-              <Typography variant='body2' flex={1}>Closing Date : { }</Typography>
             </Stack>
-            <Typography variant='h6' p={2} flex={1}>{tonsSelected}t / {tonsSelected < required ? required : tonsSelected}t</Typography>
+            <Typography variant='h6' p={2} flex={1}>{tonsSelected} / {tonsSelected < required ? required : tonsSelected}</Typography>
             {currentStatus !== 'finalstage' && currentStatus !== 'active' && (<Button onClick={() => {
-              OfftakeService.getOfftake(offtake_id).then(_offtake => {
-                // check for master contract
-                const { master_contract } = _offtake;
-                if (master_contract) {
-                  setFinalStage(true)
-                } else {
-                  messageAPI.warning('Master Contract required')
-                }
+              if (offtake.master_contract) {
+                setFinalStage(true)
+              } else {
+                messageAPI.warning('Master Contract required')
+              }
 
-              })
             }} disabled={tonsSelected < required} size='large' type='primary'>Final Stage</Button>)}
             {currentStatus === 'finalstage' && (<Button onClick={() => {
               setActive(true)
@@ -662,7 +714,7 @@ const FarmSubmissions = () => {
           </Stack>
           <Table
             rowSelection={currentStatus === 'finalstage' || currentStatus === 'active' ? null : rowSelection}
-            dataSource={farms}
+            dataSource={submissions}
             columns={[...FarmSubmissionColumns, {
               title: "Actions",
               dataIndex: ['offers', 'actions'],
