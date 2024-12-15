@@ -211,9 +211,18 @@ root.render(
             Input: {
               colorTextDisabled: "rgb(0,0,0)",
               colorTextPlaceholder: "rgb(84,82,82)"
-            }, Progress: {
+            },
+            Progress: {
               defaultColor: theme.palette.primary.main
+            },
+            Layout: {
+              "headerBg": "rgb(255,255,255)",
+              "siderBg": "rgb(255,255,255)",
+              "headerColor": "rgba(30,30,30,0.88)",
+              "triggerBg": "rgb(239,239,239)",
+              "triggerColor": "rgb(88,88,88)"
             }
+
           },
         }}
       >

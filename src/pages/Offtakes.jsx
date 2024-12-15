@@ -16,7 +16,7 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker, Spin } from "antd";
+import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Checkbox, Switch, Popconfirm, Segmented, DatePicker, Spin, Layout as ANTDLayout, List, Card } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails, { getDaysBetween } from "../components/OfftakeDetails";
 import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
@@ -28,6 +28,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AuthService } from "../services/authService";
 import { SystemService } from "../services/systemService";
 import dayjs from "dayjs";
+import { EditOutlined, EllipsisOutlined, SettingOutlined } from "@ant-design/icons";
+import { Permissions } from "../services/system/permissions";
+const { Header, Footer, Sider, Content } = ANTDLayout;
 const UserProfile = ({ user_id }) => {
     const [user, setUser] = useState({})
     useEffect(() => {
@@ -106,6 +109,38 @@ const _columns = [
 ];
 
 
+const AgentListItem = ({ agent, index, onViewClick, activeAgent, agentDataLoading, drawerCollapsed }) => {
+    switch (drawerCollapsed) {
+        case true:
+            return (<Button onClick={() => { onViewClick() }} icon={<Avatar src={agent.img} />} />)
+            break;
+        case false:
+            return (
+                <Card
+                    style={{
+                        width: '100%',
+                        background: activeAgent === agent.uid ? colors.green[300] : 'white'
+                    }}
+                    actions={[
+                        <Button type="text" icon={<EllipsisOutlined key="ellipsis" />}></Button>,
+                        <Button loading={agentDataLoading} onClick={() => { onViewClick() }} style={{ width: '90%' }}
+                        >view offtakes</Button>
+                    ]}
+                >
+                    <Card.Meta
+                        avatar={<Avatar src={agent.img} />}
+                        title={`${agent.fullnames}`}
+                        description={`${agent.email}`}
+                    />
+                </Card>
+            )
+            break;
+
+        default:
+            break;
+    }
+
+}
 const Offtake = () => {
     const [openOfftake, setOpenOfftake] = useState(false);
     const [openConfirm, setOpenConfirm] = useState(false);
@@ -115,10 +150,16 @@ const Offtake = () => {
     const [offtakeId, setOfftake_id] = useState('');
     const [pageLoading, setPageLoading] = useState(true)
     const [filterOptions, setFilterOptions] = useState(false)
+    const [activeAgent, setActiveAgent] = useState('')
+    const [agentProfiles, setAgentProfiles] = useState([])
+    const [agentDataLoading, setDataLoading] = useState(false)
+    const [drawerCollapsed, setDrawerCollapsed] = useState(false)
     const navigate = useNavigate();
     const params = useParams()
     const dispatch = useDispatch();
-    const offtake = useSelector((state) => state?.active);
+    const [userRole, setUserRole] = useState('')
+    const offtake = useSelector((state) => state?.offtake?.active);
+    const user = useSelector((state) => state?.user);
     const [confirmForm] = Form.useForm()
     const offtakeUpdated = useSelector((state) => state?.updated);
     const filterSegmentOptions = [
@@ -236,24 +277,83 @@ const Offtake = () => {
         })
     }
     const getStableOfftakes = async () => {
+        console.log('Getting stable offtakes');
+
         setPageLoading(true)
         setOfftakes([])
-        OfftakeService.getOfftakes().then(data => {
-            setPageLoading(false)
-            setOfftakes(data)
-        })
+        if (user.profile.role == "om") {
+            console.log('Role: ', user.profile.role)
+            console.log('Getting profiles first');
+
+
+            //get profiles
+            OfftakeService.getPMProfiles().then(res => {
+                setAgentProfiles(res)
+                setActiveAgent(res[0].uid)
+                setPageLoading(false)
+            })
+        } else if (user.profile.role == "pm") {
+            console.log('Role: ', user.profile.role)
+            console.log('Getting assigned & new offtakes');
+            // procurement manage
+            // must only see offtakes assigned their uid
+            // must get all inprogress offtakes
+            OfftakeService.getOfftakes().then(data => {
+                setPageLoading(false)
+                const f_offtakes = []
+                data.map((_offtake => {
+                    const _offtake_status = OfftakeService.getStatus.Name(_offtake?.status)
+                    const permitted = Permissions[user.profile.role].read.offtake.status[_offtake_status]
+                    const assigned = user.profile.uid === _offtake.pm ? true : false
+                    if (permitted) {
+                        if (assigned) {
+                            f_offtakes.push(_offtake)
+                        } else if (OfftakeService.getStatus.Name(_offtake.status) === 'inprogress') {
+                            
+                            f_offtakes.push(_offtake)
+                        }
+                    }
+                }))
+                setOfftakes(f_offtakes)
+            })
+        }
+
     }
     useEffect(() => {
+
+        setDataLoading(true)
+        OfftakeService.getAgentAssignedOfftakes(activeAgent).then(agentOfftakes => {
+            setDataLoading(false)
+            const f_offtakes = []
+
+            agentOfftakes.map((_offtake => {
+                const _offtake_status = OfftakeService.getStatus.Name(_offtake?.status)
+                const permitted = Permissions[user.profile.role].read.offtake.status[_offtake_status]
+                if (permitted) {
+                    f_offtakes.push(_offtake)
+                }
+            }))
+
+
+            setOfftakes(f_offtakes)
+        })
+    }, [activeAgent])
+    useEffect(() => {
         getStableOfftakes()
+    }, [user.profile.role])
+    useEffect(() => {
+        console.log(user.profile.role);
+        setUserRole(user.profile.role)
+
     }, [])
     return (
         <Layout>
 
-            <Backdrop sx={{zIndex: 99}} open={pageLoading}>
+            <Backdrop sx={{ zIndex: 99 }} open={pageLoading}>
                 <Stack alignItems={'center'} justifyContent={'center'} p={2}>
                     <Spin size="large" />
                 </Stack>
-</Backdrop>
+            </Backdrop>
 
             {/* Confirm Assessment */}
             <Modal open={openConfirm} onOk={() => {
@@ -371,59 +471,117 @@ const Offtake = () => {
             {/* End Offtake details */}
 
 
+            {user.profile.role === "om" && (
+                <ANTDLayout >
+                    <Sider collapsible={true} onCollapse={(c) => {
+                        setDrawerCollapsed(c)
+                    }} collapsed={drawerCollapsed} width="25%" >
 
+                        <ANTDLayout>
+                            <Header style={{ fontWeight: 'bold' }}>
+                                Agents
+                            </Header>
+                            <Content>
+                                <List
+                                    style={{ padding: 20 }}
+                                    itemLayout="vertical"
+                                    dataSource={agentProfiles}
+                                    renderItem={(agent: any, index) => {
+                                        return (
+                                            <AgentListItem drawerCollapsed={drawerCollapsed} agentDataLoading={agentDataLoading} agent={agent} index={index} activeAgent={activeAgent} onViewClick={() => {
+                                                setActiveAgent(agent.uid)
+                                            }} />)
+                                        return (
+
+                                            <List.Item
+                                                actions={[<Button size="small" onClick={() => {
+                                                    setActiveAgent(agent.uid)
+
+                                                }} >offtakes</Button>]}
+                                            >
+                                                <List.Item.Meta
+                                                    avatar={<Avatar src={agent.img} />}
+                                                    title={`${agent.fullnames}`}
+                                                    description={`${agent.email}`} />
+                                                {agent.province}, {agent.region}
+                                            </List.Item>
+                                        )
+                                    }}
+                                />
+                            </Content>
+                        </ANTDLayout>
+
+                    </Sider>
+                    <ANTDLayout>
+                        <Header >Header</Header>
+                        <Content >
+                            <Table
+                                size="small"
+                                style={{ height: "100%" }}
+                                columns={columns}
+                                dataSource={offtakes}
+                                scroll={{ y: 700 }}
+                            />
+                        </Content>
+                        <Footer >Footer</Footer>
+                    </ANTDLayout>
+                </ANTDLayout>
+            )}
             {/* Page */}
-            <Stack position={"relative"} flex={1} p={2} spacing={2}>
-                <Stack
-                    position={"sticky"}
-                    direction={"row"}
-                    spacing={2}
-                    alignItems={"center"}
-                >
-                    <Typography variant="h5">Offtakes</Typography>
-                    <Segmented
-                        options={filterSegmentOptions}
-                        onChange={(value) => {
-                            console.log(value); // string
-                            filterOfftakesByStatus(value)
-                        }}
-                    />
-                    <IconButton onClick={() => {
-                        setFilterOptions(!filterOptions)
-                    }}>
-                        {filterOptions ? (<CloseRounded />) : (<FilterListRounded />)}
-                    </IconButton>
-                    <Box flex={1}></Box>
-                    <Input.Search style={{ width: 200 }} placeholder="Search Ofttakes..." />
-                </Stack>
-                <Collapse in={filterOptions}>
-                    <Stack bgcolor={colors.grey[100]} pt={3} borderRadius={1} px={2}>
-                        <Form layout="vertical" onFinish={(v) => {
-                            console.log(v);
-
+            {user.profile.role === "pm" && (
+                <Stack position={"relative"} flex={1} p={2} spacing={2}>
+                    <Stack
+                        position={"sticky"}
+                        direction={"row"}
+                        spacing={2}
+                        alignItems={"center"}
+                    >
+                        <Typography variant="h5">Offtakes</Typography>
+                        <Segmented
+                            options={filterSegmentOptions}
+                            onChange={(value) => {
+                                console.log(value); // string
+                                filterOfftakesByStatus(value)
+                            }}
+                        />
+                        <IconButton onClick={() => {
+                            setFilterOptions(!filterOptions)
                         }}>
-                            <Stack direction={'row'} gap={1} >
-                                <Form.Item label="Delivery Date" name="deliveryDate" rules={[{ required: true }]}>
-                                    <DatePicker.RangePicker picker="date" />
-                                </Form.Item>
-                                <Form.Item label="Due Date" name="dueDate" rules={[{ required: true }]}>
-                                    <DatePicker.RangePicker picker="date" />
-                                </Form.Item>
-                                <Stack py={3.8}>
-                                    <Button htmlType="submit">Filter</Button>
-                                </Stack>
-                            </Stack>
-                        </Form>
+                            {filterOptions ? (<CloseRounded />) : (<FilterListRounded />)}
+                        </IconButton>
+                        <Box flex={1}></Box>
+                        <Input.Search style={{ width: 200 }} placeholder="Search Ofttakes..." />
                     </Stack>
-                </Collapse>
-                <Table
-                    size="small"
-                    style={{ height: "100%" }}
-                    columns={columns}
-                    dataSource={offtakes}
-                    scroll={{ y: 700 }}
-                />
-            </Stack>
+                    <Collapse in={filterOptions}>
+                        <Stack bgcolor={colors.grey[100]} pt={3} borderRadius={1} px={2}>
+                            <Form layout="vertical" onFinish={(v) => {
+                                console.log(v);
+
+                            }}>
+                                <Stack direction={'row'} gap={1} >
+                                    <Form.Item label="Delivery Date" name="deliveryDate" rules={[{ required: true }]}>
+                                        <DatePicker.RangePicker picker="date" />
+                                    </Form.Item>
+                                    <Form.Item label="Due Date" name="dueDate" rules={[{ required: true }]}>
+                                        <DatePicker.RangePicker picker="date" />
+                                    </Form.Item>
+                                    <Stack py={3.8}>
+                                        <Button htmlType="submit">Filter</Button>
+                                    </Stack>
+                                </Stack>
+                            </Form>
+                        </Stack>
+                    </Collapse>
+                    <Table
+                        size="small"
+                        style={{ height: "100%" }}
+                        columns={columns}
+                        dataSource={offtakes}
+                        scroll={{ y: 700 }}
+                    />
+                </Stack>)
+            }
+
 
 
 

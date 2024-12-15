@@ -8,89 +8,14 @@ import { FarmerService } from "./farmerService";
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 const offtakesCollection = collection(firestoreDB, "offtakes");
+const agentsCollection = collection(firestoreDB, "agents");
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
-const farms = [
-  {
-    key: '1',
-    name: "Agrowex Test Farm",
-    type: "Agroponic Farming",
-    contact: {
-      phoneNumber: "0726390088",
-      email: "0726390088",
-    },
-    offers: {
-      suggestedOffer: 2000,
-      requestedOffer: 2500,
-      delivered: 500,
-    },
-    address: "Vaal University Of Technology, Andries Potgieter Blvd., Vereeniging, Gauteng 1939, South Africa",
-  },
-  {
-    key: '2',
-    name: "Green Valley Farms",
-    type: "Organic Farming",
-    contact: {
-      phoneNumber: "0734567890",
-      email: "info@greenvalley.co.za",
-    },
-    offers: {
-      suggestedOffer: 1500,
-      requestedOffer: 1800,
-      delivered: 1200,
-    },
-    address: "Plot 12, Green Valley, Stellenbosch, Western Cape 7600, South Africa",
-  },
-  {
-    key: '3',
-    name: "Sunrise Orchards",
-    type: "Fruit Farming",
-    contact: {
-      phoneNumber: "0712345678",
-      email: "contact@sunriseorchards.co.za",
-    },
-    offers: {
-      suggestedOffer: 3000,
-      requestedOffer: 3200,
-      delivered: 2800,
-    },
-    address: "123 Orchard Lane, Grabouw, Western Cape 7160, South Africa",
-  },
-  {
-    key: '4',
-    name: "Blue Sky Dairy",
-    type: "Dairy Farming",
-    contact: {
-      phoneNumber: "0789876543",
-      email: "info@blueskydairy.co.za",
-    },
-    offers: {
-      suggestedOffer: 5000,
-      requestedOffer: 5200,
-      delivered: 4900,
-    },
-    address: "Farm 24, Blue Sky Road, Kroonstad, Free State 9499, South Africa",
-  },
-  {
-    key: '5',
-    name: "Riverbend Vineyard",
-    type: "Viticulture",
-    contact: {
-      phoneNumber: "0798765432",
-      email: "sales@riverbendvineyard.co.za",
-    },
-    offers: {
-      suggestedOffer: 4500,
-      requestedOffer: 4800,
-      delivered: 4300,
-    },
-    address: "89 Riverbend Road, Franschhoek, Western Cape 7690, South Africa",
-  }
-];
 export const stableOfttakes = ["AGREF-OF-1726166927085", "AGREF-OF-1726166927086", "AGREF-OF-1726166927087", "AGREF-OF-1726166927088", "AGREF-OF-1726166927089", "AGREF-OF-1726166927090"]
 export const OfftakeService = {
   getOfftakes: async () => {
     // check for form completion first before fetch
     const q = query(offtakesCollection, where("form_completion_status", "==", "complete"))
+
     const querySnapshot = await getDocs(q);
     const offtakes = [];
     querySnapshot.forEach((doc) => {
@@ -271,7 +196,6 @@ export const OfftakeService = {
       throw error;
     }
   },
-
   removeProductionStatus: async (offtake_id, status_id) => {
     try {
       // Create a reference to the specific document in the 'production-plan' subcollection
@@ -477,6 +401,100 @@ export const OfftakeService = {
   updateContractModel: async (offtake_id, contract_model) => {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await updateDoc(offtakeRef, { contract_model: contract_model })
+  },
+  // Arrow function to extract all '_step' from categories
+  extractSteps: (productionPlan) => {
+    // Check if productionPlan and _category exist
+    if (!productionPlan || !productionPlan._steps) {
+      return [];
+    }
+
+    // Use flatMap with a safe check
+    return productionPlan._steps.reduce((acc, step) => {
+      if (step) {
+        return [...acc, ...step];
+      }
+      return acc;
+    }, []);
+  },
+  // Arrow function to extract all '_costing' from steps
+  extractCostings: (productionPlan) => {
+    console.log('====================================');
+    console.log(productionPlan);
+    console.log('====================================');
+    // Get all steps first
+    const steps = OfftakeService.extractSteps(productionPlan);
+
+    // Extract costings from steps
+    return steps.reduce((acc, step) => {
+      if (step && step._costing) {
+        return [...acc, ...step._costing];
+      }
+      return acc;
+    }, []);
+  },
+  // Arrow function to extract all '_category'
+  getPMProfiles: async () => {
+    console.log('Getting profiles');
+    try {
+      console.log('Getting PM profiles');
+
+      // Reference to the agents collection
+      const q = query(
+        agentsCollection,
+        where("role", "==", "pm") // Directly filter out active agents in query
+      );
+
+      // Execute the query
+      const querySnapshot = await getDocs(q);
+
+      // If no documents found, return empty array
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      // Map documents directly to agents, avoiding forEach loop
+      const pmAgents = querySnapshot.docs.map(doc => ({
+        key: doc.id,  // Include document ID
+        ...doc.data()
+      }));
+
+      return pmAgents;
+    } catch (error) {
+      console.error('Error fetching PM profiles:', error);
+      return [];
+    }
+  },
+  getAgentAssignedOfftakes: async (agent_uid) => {
+    console.log('Getting profiles');
+    try {
+      console.log(`Getting PM ${agent_uid} offtakes`);
+
+      // Reference to the agents collection
+      const q = query(
+        offtakesCollection,
+        where("pm", "==", agent_uid) // Directly filter out active agents in query
+      );
+
+      // Execute the query
+      const querySnapshot = await getDocs(q);
+
+      // If no documents found, return empty array
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      // Map documents directly to agents, avoiding forEach loop
+      const agentOfftakes = querySnapshot.docs.map(doc => ({
+        key: doc.id,  // Include document ID
+        ...doc.data()
+      }));
+
+      return agentOfftakes;
+    } catch (error) {
+      console.error('Error fetching PM profiles:', error);
+      return [];
+    }
   },
   getStatus: {
     Name: (status) => {

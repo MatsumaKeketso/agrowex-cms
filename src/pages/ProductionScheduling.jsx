@@ -7,7 +7,7 @@ import { OfftakeService } from '../services/offtakeService'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -19,6 +19,20 @@ import { AuthService } from '../services/authService'
 import { SystemService } from '../services/systemService'
 dayjs.extend(weekday);
 dayjs.extend(localeData)
+const yield_options = [
+  { label: 'Ha', value: 'ha' },
+  { label: 'Tunnel', value: 'tunnel' },
+  { label: 'Hives', value: 'hives' },
+  { label: 'Tank', value: 'tank' },
+  { label: 'Gallons', value: 'gallons' },
+  { label: 'Other', value: 'other' }
+];
+const production_stages = [
+  { label: 'Season Preparation', value: 'season_preparation' },
+  { label: 'In Production', value: 'in_production' },
+  { label: 'Harvesting', value: 'harvesting' },
+  { label: 'Delivery', value: 'delivery' }
+];
 const generateStepId = () => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -46,9 +60,11 @@ const ProductionScheduling = () => {
   const [productionCost, setProductionCost] = useState(0)
   const [messageApi, contextHolder] = message.useMessage();
   const [productionPlan, setProductionPlan] = useState(null)
+  const [unitCostTotal, setUnitCostTotal] = useState([])
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const statusValues = Form.useWatch("status", scheduleForm)
+  const total_of_ha = Form.useWatch("total_of_ha", scheduleForm)
   const redux_offtake = useSelector((state) => state.offtake?.active);
   const submitSchedule = (schedule) => {
     console.log(schedule);
@@ -74,6 +90,7 @@ const ProductionScheduling = () => {
         const formatted_status: any = {
           name: stat.name,
           description: stat.description,
+          phase: stat.phase,
           _steps: []
         }
         if (stat?._steps !== undefined) {
@@ -105,7 +122,14 @@ const ProductionScheduling = () => {
         ...offtake,
         offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
         submission_closing_date: new_schedule.submission_closing_date,
-        production_cost: productionCost
+        total_of_ha: schedule.total_of_ha,
+        production_cost: productionCost,
+        total_of_ha_unit: schedule.total_of_ha_unit,
+        production_capacity: schedule.production_capacity,
+        production_capacity_unit: schedule.production_capacity_unit,
+        yield_output: schedule.yield_output,
+        yield_output_unit: schedule.yield_output_unit,
+
       }
       if (!missing_steps) {
         new_schedule.status.forEach((stat, i) => {
@@ -138,18 +162,105 @@ const ProductionScheduling = () => {
       messageApi.error("Missing status")
     }
   }
-  const getCostingPerStep = (cateogry, step) => {
+  const getTotalUnitCost = (cateogry, step, cost_item) => {
+
     if (statusValues[cateogry]) {
       if (statusValues[cateogry]?._steps[step]) {
         if (statusValues[cateogry]?._steps[step]._costing) {
           var step_costing = 0
+          const a = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.amount || 0)
+          const i = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.interval || 0)
+          const uph = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.used_per_hactor || 0)
+          step_costing = step_costing + (a * i * uph * total_of_ha)
+          // .forEach(step_cost => {
+          //   if (step_cost) {
+          //     step_costing +=
+          //       (step_cost?.amount || 0) *
+          //       (step_cost?.interval || 0) *
+          //       (step_cost?.used_per_hactor || 0);
+          //   }
+          // });
+
+          return step_costing
+        } else {
+          return 0
+        }
+
+      } else { return 0 }
+    } else { return 0 }
+  }
+  const calculateTotalUnitCost = (form, categoryIndex, stepIndex, itemIndex) => {
+    // Get the current form values
+    const formValues = form.getFieldsValue(true);
+
+    // Extract relevant values
+    const unitCost = form.getFieldValue([
+      'status',
+      categoryIndex,
+      '_steps',
+      stepIndex,
+      '_costing',
+      itemIndex,
+      'amount'
+    ]) || 0;
+
+    const quantityUsedPerHa = form.getFieldValue([
+      'status',
+      categoryIndex,
+      '_steps',
+      stepIndex,
+      '_costing',
+      itemIndex,
+      'used_per_hactor'
+    ]) || 0;
+
+    const applicationInterval = form.getFieldValue([
+      'status',
+      categoryIndex,
+      '_steps',
+      stepIndex,
+      '_costing',
+      itemIndex,
+      'interval'
+    ]) || 0;
+
+    // Get total hectares from the form
+    const totalHectares = form.getFieldValue('total_of_ha') || 0;
+
+    // Calculate total unit cost
+    const totalUnitCost = unitCost * quantityUsedPerHa * applicationInterval * totalHectares;
+
+    // Set the calculated value in the form
+    form.setFieldsValue({
+      status: {
+        [categoryIndex]: {
+          _steps: {
+            [stepIndex]: {
+              _costing: {
+                [itemIndex]: {
+                  total_unit_cost: totalUnitCost
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return totalUnitCost.toFixed(2);
+  };
+  const getCostingPerStep = (cateogry, step) => {
+    if (statusValues[cateogry]) {
+      if (statusValues[cateogry]?._steps[step]) {
+        if (statusValues[cateogry]?._steps[step]._costing) {
+          var step_total_costing = 0
           statusValues[cateogry]?._steps[step]._costing.forEach(step_cost => {
             if (step_cost) {
-              step_costing = step_costing + (step_cost?.amount * 1) | 0
+              step_total_costing = step_total_costing + (step_cost?.total_unit_cost * 1 || 0)
             }
           });
 
-          return step_costing
+          return step_total_costing
         } else {
           return 0
         }
@@ -162,11 +273,12 @@ const ProductionScheduling = () => {
       if (status) {
         setProductionPlan(status)
         scheduleForm.setFieldValue("status", status.map((stat: any) => {
-          const { name, description, _steps, key } = stat
+          const { name, phase ,description, _steps, key } = stat
           return {
             key: key,
             name: name,
             description: description,
+            phase: phase,
             _steps: _steps ? _steps?.map(step => {
               const { name, duration } = step
               const start = dayjs(duration[0])
@@ -177,7 +289,10 @@ const ProductionScheduling = () => {
                 _costing: step?._costing ? step?._costing?.map((cost) => {
                   return {
                     name: cost.name,
-                    amount: cost.amount
+                    amount: cost.amount,
+                    interval: cost.interval,
+                    used_per_hactor: cost.used_per_hactor,
+                    total_unit_cost: cost.total_unit_cost
                   }
                 }) : []
               }
@@ -190,14 +305,16 @@ const ProductionScheduling = () => {
   useEffect(() => {
     var amount = 0
     if (statusValues) {
-      statusValues.map(_status => {
+      statusValues.map((_status, si) => {
         if (_status) {
           if (_status?._steps) {
-            _status?._steps.map(step => {
+            _status?._steps.map((step, si) => {
               if (step?._costing) {
-                step?._costing.map(cost => {
+                step?._costing.map((cost, ci) => {
+                  console.log(cost);
+
                   if (cost) {
-                    const _amount = cost?.amount
+                    const _amount = cost?.total_unit_cost
                     amount = (amount + (_amount * 1))
                   }
                 })
@@ -210,6 +327,44 @@ const ProductionScheduling = () => {
       setProductionCost(amount)
     }
   }, [statusValues])
+  useEffect(() => {
+    // Watch for changes in total_of_ha
+    const watchTotalHa = scheduleForm.getFieldValue('total_of_ha');
+
+    // Iterate through all status (categories)
+    scheduleForm.getFieldValue('status')?.forEach((category, categoryIndex) => {
+      // Iterate through all steps in the category
+      category._steps?.forEach((step, stepIndex) => {
+        // Iterate through all cost items in the step
+        step._costing?.forEach((costItem, itemIndex) => {
+          // Recalculate total unit cost for each item
+          const unitCost = costItem.amount || 0;
+          const quantityUsedPerHa = costItem.used_per_hactor || 0;
+          const applicationInterval = costItem.interval || 0;
+
+          const totalUnitCost = unitCost * quantityUsedPerHa * applicationInterval * watchTotalHa;
+
+          // Update the total_unit_cost for this specific item
+          scheduleForm.setFieldsValue({
+            status: {
+              [categoryIndex]: {
+                _steps: {
+                  [stepIndex]: {
+                    _costing: {
+                      [itemIndex]: {
+                        total_unit_cost: Number(totalUnitCost.toFixed(2)),
+                        overal_cost: Number(totalUnitCost.toFixed(2))
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        });
+      });
+    });
+  }, [scheduleForm.getFieldValue('total_of_ha')]);
   useEffect(() => {
     setPageLoading(true)
     // Get offtake
@@ -231,6 +386,12 @@ const ProductionScheduling = () => {
           const endDate = await dayjs(o.offtake_start_and_end_date[1])
           scheduleForm.setFieldValue("offtake_start_and_end_date", [startDate, endDate]);
         }
+        scheduleForm.setFieldValue("total_of_ha", o.total_of_ha || 1);
+        scheduleForm.setFieldValue("total_of_ha_unit", o.total_of_ha_unit || 1);
+        scheduleForm.setFieldValue("production_capacity", o.production_capacity || null);
+        scheduleForm.setFieldValue("production_capacity_unit", o.production_capacity_unit || 1);
+        scheduleForm.setFieldValue("yield_output", o.yield_output || 1);
+        scheduleForm.setFieldValue("yield_output_unit", o.yield_output_unit || null);
         setTimeout(() => {
           dispatch(setActiveOfftake(o))
           setPageLoading(false)
@@ -336,12 +497,57 @@ const ProductionScheduling = () => {
               <Form disabled={disableForm} form={scheduleForm} layout='vertical' onFinish={(schedule) => {
                 submitSchedule(schedule)
               }}>
-                <Form.Item rules={[{ required: true }]} label="Offtake Submission ads closing date" name="submission_closing_date">
-                  <DatePicker picker="date" />
-                </Form.Item>
-                <Form.Item rules={[{ required: true }]} label="Offtake start and end date" name="offtake_start_and_end_date">
-                  <DatePicker.RangePicker picker="date" />
-                </Form.Item>
+                <Stack direction={'row'} justifyContent={'space-between'} >
+                  <Form.Item rules={[{ required: true }]} label="Offtake Submission ads closing date" name="submission_closing_date">
+                    <DatePicker picker="date" />
+                  </Form.Item>
+                  <Form.Item rules={[{ required: true }]} label="Offtake start and end date" name="offtake_start_and_end_date">
+                    <DatePicker.RangePicker picker="date" />
+                  </Form.Item>
+                </Stack>
+                <Stack direction={'row'} justifyContent={'space-between'} >
+                  <Form.Item label="Yield/Output" name="yield_output" initialValue={0} rules={[{ required: true }]}>
+                    <InputNumber addonAfter={
+                      <Form.Item
+                        name="yield_output_unit"
+                        noStyle
+                        initialValue={'ha'}
+                      >
+                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={yield_options} />
+                      </Form.Item>
+                    } />
+                  </Form.Item>
+                  <Form.Item label="Total Production Capacity" name="total_of_ha" initialValue={0} rules={[{ required: true }]}>
+                    <InputNumber onChange={(e) => {
+                      // Trigger recalculation of all total unit costs
+                      const newTotalHa = e?.target?.value;
+
+                      // Similar logic to the useEffect above can be placed here
+                      // Iterate and recalculate all total unit costs
+                    }} addonAfter={
+                      <Form.Item
+                        name="total_of_ha_unit"
+                        noStyle
+                        initialValue={'ha'}
+
+                      >
+                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} options={[{ label: 'Ha', value: 'ha' }]} />
+                      </Form.Item>
+                    }></InputNumber>
+                  </Form.Item>
+                  <Form.Item label="Required Production Capacity" name="production_capacity" initialValue={0} rules={[{ required: true }]}>
+                    <InputNumber addonAfter={
+                      <Form.Item
+                        name="production_capacity_unit"
+                        noStyle
+                        initialValue={'ha'}
+                      >
+
+                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} options={[{ label: 'Ha', value: 'ha' }]} />
+                      </Form.Item>
+                    } />
+                  </Form.Item>
+                </Stack>
                 <Form.List name="status" >
                   {(fields, { add, remove }) => (
                     <div style={{ display: 'flex', rowGap: 0, flexDirection: 'column' }}>
@@ -381,10 +587,17 @@ const ProductionScheduling = () => {
                                   name={[field.name, 'key']}>
                                   <Input onClick={(e) => { e.preventDefault() }} onFocus={(e) => { e.preventDefault() }} disabled />
                                 </Form.Item>
-                                <Form.Item rules={[{ required: true, message: 'Please enter Step name' }]}
-                                  label="Name" name={[field.name, 'name']}>
-                                  <Input />
-                                </Form.Item>
+                                <Stack direction={'row'} spacing={2} >
+                                  <Form.Item rules={[{ required: true, message: 'Please enter Step name' }]}
+                                    label="Name" name={[field.name, 'name']}>
+                                    <Input />
+                                  </Form.Item>
+                                  <Form.Item initialValue={"season_preparation"} rules={[{ required: true, message: 'Please enter Step name' }]}
+                                    label="Phase" name={[field.name, 'phase']}>
+                                    <Select style={{minWidth: 240}} defaultActiveFirstOption={true} options={production_stages} />
+                                  </Form.Item>
+                                </Stack>
+
                                 <Form.Item rules={[{ required: true, message: 'Please enter the description of this step' }]}
                                   name={[field.name, 'description']}
                                   label={`Description`}>
@@ -401,26 +614,7 @@ const ProductionScheduling = () => {
                                     <Timeline>
                                       {
                                         steps.map((step) => {
-                                          // Calculate overall cost per production step
-                                          const lamdba = () => {
-                                            var ov_cost = 0
-                                            const costing = statusValues[field.name]?._steps[step.name]?._costing
-                                            costing?.map((cost_item) => {
-                                              ov_cost = ov_cost + cost_item.amount
-                                            })
-                                            if (productionPlan) {
-                                              scheduleForm.setFieldValue("status", productionPlan.map((stat: any) => {
-                                                const { _steps } = stat
-                                                return {
-                                                  _steps: _steps ? _steps?.map(step => {
-                                                    return {
-                                                      overal_cost: ov_cost
-                                                    }
-                                                  }) : []
-                                                }
-                                              }))
-                                            }
-                                          }
+                                  
                                           return (
                                             <Timeline.Item key={step.name} dot={<Spin />}>
                                               <Card title={`Production Step ${step.name + 1} - R${getCostingPerStep(field.name, step.name)}`
@@ -450,15 +644,7 @@ const ProductionScheduling = () => {
                                                       >
                                                         <DatePicker.RangePicker picker="date" />
                                                       </Form.Item></Stack>
-                                                    {/* <Stack flex={1}>
-                                                      <Form.Item
-                                                        initialValue={0}
-                                                        name={[step.name, 'overal_cost']}
-                                                        label={`Overall Cost`}
-                                                      >
-                                                        <InputNumber disabled addonBefore="R" />
-                                                      </Form.Item>
-                                                    </Stack> */}
+
                                                   </Stack>
                                                 </Stack>
                                                 <Stack py={1}>
@@ -477,16 +663,49 @@ const ProductionScheduling = () => {
                                                             <Stack key={item.key} direction={'row'} spacing={1} >
 
                                                               <Form.Item label="Cost per unit" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
-                                                                <InputNumber addonBefore="R" />
+                                                                <InputNumber addonBefore="R" onChange={() => {
+                                                                  calculateTotalUnitCost(
+                                                                    scheduleForm,
+                                                                    field.name,  // categoryIndex
+                                                                    step.name,   // stepIndex
+                                                                    item.name    // itemIndex
+                                                                  );
+                                                                }} />
                                                               </Form.Item>
                                                               <Form.Item label="Application&nbsp;intervals" initialValue={(0).toFixed(2)} name={[item.name, 'interval']} rules={[{ required: true }]} >
-                                                                <InputNumber />
+                                                                <InputNumber onChange={() => {
+                                                                  calculateTotalUnitCost(
+                                                                    scheduleForm,
+                                                                    field.name,  // categoryIndex
+                                                                    step.name,   // stepIndex
+                                                                    item.name    // itemIndex
+                                                                  );
+                                                                }} />
                                                               </Form.Item>
                                                               <Form.Item label="QTY used per Ha/Tune" initialValue={0} name={[item.name, 'used_per_hactor']} rules={[{ required: true }]} >
-                                                                <InputNumber addonAfter={<Select defaultActiveFirstOption={true} defaultValue={'kg'} options={[{ label: 'kg', value: 'kg' }]} />} />
+                                                                <InputNumber value={0} addonAfter={
+                                                                  <Form.Item
+                                                                    name={[item.name, 'used_per_hactor_unit']}
+                                                                    noStyle
+                                                                    initialValue={'kg'}
+                                                                  >
+                                                                    <Select defaultActiveFirstOption={true} options={[{ label: 'kg', value: 'kg' }]} />
+                                                                  </Form.Item>
+                                                                } onChange={() => {
+                                                                  calculateTotalUnitCost(
+                                                                    scheduleForm,
+                                                                    field.name,  // categoryIndex
+                                                                    step.name,   // stepIndex
+                                                                    item.name    // itemIndex
+                                                                  );
+                                                                }} />
                                                               </Form.Item>
+                                                              <Form.Item hidden label="Total unit cost" initialValue={0} name={[item.name, 'overal_cost']} rules={[{ required: true }]} >
+                                                                <InputNumber style={{ flex: 1, width: '100%' }} value={0} />
+                                                              </Form.Item>
+                                                              {/* <Statistic title="Total unit cost" value={getTotalUnitCost(field.name, step.name, item.name)}></Statistic> */}
                                                               <Form.Item label="Total unit cost" initialValue={0} name={[item.name, 'total_unit_cost']} rules={[{ required: true }]} >
-                                                                <InputNumber addonBefore={"R"} />
+                                                                <InputNumber disabled style={{ flex: 1, width: '100%' }} value={0} />
                                                               </Form.Item>
                                                               <Stack pt={3.5}>
                                                                 {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}

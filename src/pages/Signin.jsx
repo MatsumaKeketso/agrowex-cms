@@ -15,11 +15,22 @@ const Signin = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [signinForm] = Form.useForm()
+  const getProfile = (user) => {
+    ProfileService.getProfile(user.uid).then((profile) => {
+      dispatch(updateProfile(profile))
+      dispatch(toggleOnline(true))
+      navigate('/offtakes')
+    }).catch((err) => {
+      AuthService.signout().then(() => { messageApi.error('Failed to get profile. Signing out!') })
+    })
+  }
   useEffect(() => {
     setLoading(true)
     AuthService.getUser().then(user => {
       if (user) {
+        dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }));
         setLoading(false)
+        getProfile(user)
         navigate('/offtakes')
       } else {
         setLoading(false)
@@ -27,12 +38,12 @@ const Signin = () => {
     }).catch(err => {
       setLoading(false)
       console.log(err);
-      
+
     })
   }, [])
   return (
     <Container>
-      
+
       {contextHolder}
       <Stack px={{ xs: 0, sm: 2, md: 20, lg: 30 }} alignItems={'center'} py={{ xs: 0, sm: 1, md: 3, lg: 5 }}>
         <Form form={signinForm} layout='vertical' onFinish={(v) => {
@@ -41,20 +52,8 @@ const Signin = () => {
 
             messageApi.success("Signin success. Welcome Back ☺️");
             dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }));
-            ProfileService.getProfile(user.uid).then((profile) => {
-              console.log('====================================');
-              console.log(profile);
-              console.log('====================================');
-              dispatch(updateProfile(profile))
-              dispatch(toggleOnline(true))
-              navigate('/offtakes')
-            }).catch((err) => {
-              AuthService.signout().then(() => { messageApi.error('Failed to get profile. Signing out!') })
-            })
+            getProfile(user)
           }).catch(err => {
-            console.log('====================================');
-            console.log(err);
-            console.log('====================================');
             AuthService.signout().then(() => { messageApi.error('Failed to get profile. Signing out!') })
           })
         }}>
