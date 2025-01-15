@@ -21,6 +21,7 @@
     "currency.js": "^2.0.4",
     "dayjs": "^1.11.12",
     "firebase": "^9.23.0",
+    "firebase-admin": "^13.0.2",
     "firebase-tools": "^12.4.0",
     "framer-motion": "^10.12.16",
     "global": "^4.4.0",

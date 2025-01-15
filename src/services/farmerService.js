@@ -7,6 +7,29 @@ export const FarmerService = {
   uploadDocument: (farm_id, document) => {
 
   },
+  getFarmAddress: async (farm_id) => {
+    // const addressesRef = collection(firestoreDB, "users", farm_id, "addresses");
+    // const q = query(addressesRef, where("is_use", "==", true));
+    // const q = query();
+    const querySnapshot = await getDocs(collection(firestoreDB, "users", farm_id, "addresses"));
+
+    // const querySnapshot = await getDocs(collection(db, "cities", "SF", "landmarks"));
+
+    if (querySnapshot.size !== 0) {
+      let address = {};
+      querySnapshot.forEach((doc) => {
+        if (doc.data().is_use) {
+          // doc.data() is never undefined for query doc snapshots
+          address = { ...doc.data(), address_id: doc.id };
+          console.log(doc.id, " => ", doc.data());
+        }
+      });
+      return address
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such Address!");
+    }
+  },
   getSingleFarm: async (farm_id) => {
     const docRef = doc(firestoreDB, "users", farm_id);
     const docSnap = await getDoc(docRef);

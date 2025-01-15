@@ -1,14 +1,28 @@
 import { ref } from "firebase/database";
 import { ref as sRef } from 'firebase/storage';
 import { getDownloadURL, getStorage, uploadBytesResumable } from "firebase/storage";
+import { Permissions } from "./system/permissions";
+import { firestoreDB } from "./authService";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 export const storage = getStorage();
 export const SystemService = {
   getVariables: () => {
 
   },
-  getContractModel: () => {
-
+  // // todo update function to pull from db
+  getPermissions: async () => {
+    const docRef = doc(firestoreDB, "system", "permissions");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { ...docSnap.data(), key: docSnap.id }
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+  },
+  updatePermissions: async (permissions) => {
+    await updateDoc(doc(firestoreDB, 'system', 'permissions'), { ...permissions, updated_at: SystemService.generateTimestamp() });
   },
   uploadFile: (path, fileObject) => {
 
@@ -76,8 +90,8 @@ export const SystemService = {
 
     // Array of month names
     const months = [
-      "January", "February", "March", "April", "May", "June", "July", "August",
-      "September", "October", "November", "December"
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
+      "Sep", "Oct", "Nov", "Dec"
     ];
 
     // Extract the day, month, and year from the Date object
@@ -91,12 +105,20 @@ export const SystemService = {
   generateTimestamp: () => {
     return Date.now();
   },
-  // todo need to add time string for this formating
+  // // todo need to add time string for this formating
   formatTimestamp: (timestamp) => {
-
     const date = new Date(timestamp);
-    const options = { day: 'numeric', month: 'short', year: 'numeric' };
-    return date.toLocaleDateString('en-GB', options);
+    const options = {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    return date.toLocaleDateString('en-GB', options).replace(',', '')
+    //  ' at ' + 
+    //  date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
   },
   converStringToSentenceCase: (str) => {
     return str.replace(/\b\w/g, c => c.toUpperCase());

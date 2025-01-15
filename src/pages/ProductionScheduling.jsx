@@ -15,20 +15,28 @@ import StatusTag from '../components/StatusTag'
 import weekday from 'dayjs/plugin/weekday';
 import localeData from 'dayjs/plugin/localeData'
 import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
-import { AuthService } from '../services/authService'
+import { AuthService, firestoreDB } from '../services/authService'
 import { SystemService } from '../services/systemService'
+import { Helpers } from '../services/helpers'
+import { doc, runTransaction, writeBatch } from 'firebase/firestore'
 dayjs.extend(weekday);
 dayjs.extend(localeData)
 const yield_options = [
+  { label: 'Litre', value: 'ha' },
+  { label: 'Kg', value: 'tunnel' },
+  { label: 'Ton', value: 'hives' },
+  { label: 'Gallons', value: 'gallons' },
+];
+const prod_res_cap_options = [
   { label: 'Ha', value: 'ha' },
   { label: 'Tunnel', value: 'tunnel' },
   { label: 'Hives', value: 'hives' },
   { label: 'Tank', value: 'tank' },
-  { label: 'Gallons', value: 'gallons' },
-  { label: 'Other', value: 'other' }
+  { label: 'Gallons', value: 'gallons' }
 ];
 const production_stages = [
   { label: 'Season Preparation', value: 'season_preparation' },
+  { label: 'Post Havest Evaluation', value: 'post_eval' },
   { label: 'In Production', value: 'in_production' },
   { label: 'Harvesting', value: 'harvesting' },
   { label: 'Delivery', value: 'delivery' }
@@ -63,50 +71,52 @@ const ProductionScheduling = () => {
   const [unitCostTotal, setUnitCostTotal] = useState([])
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const statusValues = Form.useWatch("status", scheduleForm)
-  const total_of_ha = Form.useWatch("total_of_ha", scheduleForm)
+  const categoryValues = Form.useWatch("categories", scheduleForm)
+  const yield_output_per_unit = Form.useWatch("yield_output_per_unit", scheduleForm)
+  const prod_res_cap = Form.useWatch("prod_res_cap", scheduleForm)
+  // const required_yield_output = Form.useWatch("required_yield_output", scheduleForm)
   const redux_offtake = useSelector((state) => state.offtake?.active);
   const submitSchedule = (schedule) => {
-    console.log(schedule);
+    const batch = writeBatch(firestoreDB)
     // will be edited
     // setLoading(true)
     var missing_steps = false
     var new_schedule: any = {
       submission_closing_date: 0,
       offtake_start_and_end_date: [0, 0],
-      status: []
+      categories: []
     }
     // format steps duration
     // add updated at timestamp
 
     // TODO
-    // Each status needs to be in its own document
+    // // Each categories needs to be in its own document
     // the uid should always be accessible
-    // deleting status should be synced with db
-    // update fetch to reflect location
-    if (schedule?.status !== undefined) {
-      schedule.status.forEach((stat, a) => {
-
-        const formatted_status: any = {
+    // deleting categories should be synced with db
+    // // update fetch to reflect location
+    if (schedule?.categories !== undefined) {
+      schedule.categories.forEach((stat, a) => {
+        let formatted_category: any = {
           name: stat.name,
           description: stat.description,
           phase: stat.phase,
           _steps: []
         }
+        if (stat.key) { formatted_category.key = stat.key }
         if (stat?._steps !== undefined) {
           missing_steps = false
           stat._steps.forEach((step, b) => {
             const start = step.duration[0]
             const end = step.duration[1]
             const formatted_step = {
+              ...step,
               duration: [formatDate(start), formatDate(end)],
               updated_at: SystemService.generateTimestamp(),
-              name: step.name,
               _costing: step._costing ? step._costing : []
             }
-            formatted_status._steps.push(formatted_step)
+            formatted_category._steps.push(formatted_step)
           });
-          new_schedule.status.push(formatted_status)
+          new_schedule.categories.push(formatted_category)
         } else {
           messageApi.error("Missing steps")
           missing_steps = true
@@ -117,36 +127,65 @@ const ProductionScheduling = () => {
       const offtakeStart = formatDate(schedule.offtake_start_and_end_date[0])
       const offtakeEnd = formatDate(schedule.offtake_start_and_end_date[1])
       new_schedule.offtake_start_and_end_date = [offtakeStart, offtakeEnd]
-      // check ids for status
+      // check ids for categories
       const offtake_with_dates = {
         ...offtake,
-        offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
-        submission_closing_date: new_schedule.submission_closing_date,
-        total_of_ha: schedule.total_of_ha,
-        production_cost: productionCost,
-        total_of_ha_unit: schedule.total_of_ha_unit,
-        production_capacity: schedule.production_capacity,
-        production_capacity_unit: schedule.production_capacity_unit,
-        yield_output: schedule.yield_output,
-        yield_output_unit: schedule.yield_output_unit,
-
+        _production_plan: {
+          offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
+          submission_closing_date: new_schedule.submission_closing_date,
+          prod_res_cap: schedule.prod_res_cap,
+          production_cost: productionCost,
+          prod_res_cap_unit: schedule.prod_res_cap_unit,
+          required_yield_output: schedule.required_yield_output,
+          required_yield_output_unit: schedule.required_yield_output_unit,
+          yield_output_per_unit: schedule.yield_output_per_unit,
+          yield_output_unit: schedule.yield_output_unit,
+        }
       }
       if (!missing_steps) {
-        new_schedule.status.forEach((stat, i) => {
-          const status_doc_id = schedule.status[i].key
-          console.log(status_doc_id);
-          if (status_doc_id) {
-            OfftakeService.updateProductionPlan(offtake_id, status_doc_id, stat).then(() => {
-              console.log('Status updated successfully');
-            })
-          } else {
-            OfftakeService.addProductionStatus(offtake_id, stat).then((ref) => {
-              console.log('New status pushed successfully');
-              // todo fetch the data after pushing to update the hidden form field values
-              getProductionStatuses()
-            })
-          }
-        });
+        // todo: add helper function to modify the data sent to the server
+        // target : new_schedule => modifty using Helpers.updateAllProductionData(offtake_id, new_schedule)
+        Helpers.flatNestedData(new_schedule.categories).then(async (_flat_docs) => {
+          const flat_docs = _flat_docs.toAdd
+          // set new documents (toAdd)
+          flat_docs.forEach(_doc => {
+            // create
+            // return
+            OfftakeService.addProductionStatus(offtake_id, _doc.data).then((ref) => { console.log('New category pushed'); })
+            //  update
+          })
+          const toUpdate = _flat_docs.toUpdate;
+          // set updated documents (processedIds)
+          // check for removed categories
+          // remove categories that are not in the new schedule
+          toUpdate.forEach(_doc => {
+            // return
+            OfftakeService.updateProductionPlan(offtake_id, _doc.data.key, _doc.data).then((ref) => { console.log('Category updated with key: ', _doc.data.key); })
+            // OfftakeService.removeProductionStatus(offtake_id, doc.key).then(() => {
+            //   console.log('Status removed successfully');
+            // })
+          });
+
+        })
+
+        // <<<< : old code : >>>>
+        // new_schedule.categories.forEach((stat, i) => {
+        //   const status_doc_id = schedule.categories[i].key
+        //   console.log(status_doc_id);
+        //   if (status_doc_id) {
+        //     OfftakeService.updateProductionPlan(offtake_id, status_doc_id, stat).then(() => {
+        //       console.log('Status updated successfully');
+        //     })
+        //   } else {
+        //     OfftakeService.addProductionStatus(offtake_id, stat).then((ref) => {
+        //       console.log('New categories pushed successfully');
+        //       // // todo fetch the data after pushing to update the hidden form field values
+        //       getProductionStatuses()
+        //     })
+        //   }
+        // });
+
+        // update prod plan
         OfftakeService.updateOfftake(offtake_id, offtake_with_dates).then(def => {
           messageApi.success("Offtake Updated successfully")
           setLoading(false)
@@ -154,24 +193,27 @@ const ProductionScheduling = () => {
         }).catch(err => {
           console.log(err);
           // feedback
-          messageApi.error("Error. Offtake not saved.")
+          messageApi.error("Error. Production not saved.")
           setLoading(false)
         })
+      } else {
+        messageApi.error("Missing Steps")
+
       }
     } else {
-      messageApi.error("Missing status")
+      messageApi.error("Missing Categories")
     }
   }
   const getTotalUnitCost = (cateogry, step, cost_item) => {
 
-    if (statusValues[cateogry]) {
-      if (statusValues[cateogry]?._steps[step]) {
-        if (statusValues[cateogry]?._steps[step]._costing) {
+    if (categoryValues[cateogry]) {
+      if (categoryValues[cateogry]?._steps[step]) {
+        if (categoryValues[cateogry]?._steps[step]._costing) {
           var step_costing = 0
-          const a = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.amount || 0)
-          const i = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.interval || 0)
-          const uph = step_costing + (statusValues[cateogry]?._steps[step]._costing[cost_item]?.used_per_hactor || 0)
-          step_costing = step_costing + (a * i * uph * total_of_ha)
+          const a = step_costing + (categoryValues[cateogry]?._steps[step]._costing[cost_item]?.amount || 0)
+          const i = step_costing + (categoryValues[cateogry]?._steps[step]._costing[cost_item]?.interval || 0)
+          const uph = step_costing + (categoryValues[cateogry]?._steps[step]._costing[cost_item]?.used_per_hactor || 0)
+          step_costing = step_costing + (a * i * uph * prod_res_cap)
           // .forEach(step_cost => {
           //   if (step_cost) {
           //     step_costing +=
@@ -195,7 +237,7 @@ const ProductionScheduling = () => {
 
     // Extract relevant values
     const unitCost = form.getFieldValue([
-      'status',
+      'categories',
       categoryIndex,
       '_steps',
       stepIndex,
@@ -205,7 +247,7 @@ const ProductionScheduling = () => {
     ]) || 0;
 
     const quantityUsedPerHa = form.getFieldValue([
-      'status',
+      'categories',
       categoryIndex,
       '_steps',
       stepIndex,
@@ -215,7 +257,7 @@ const ProductionScheduling = () => {
     ]) || 0;
 
     const applicationInterval = form.getFieldValue([
-      'status',
+      'categories',
       categoryIndex,
       '_steps',
       stepIndex,
@@ -225,14 +267,14 @@ const ProductionScheduling = () => {
     ]) || 0;
 
     // Get total hectares from the form
-    const totalHectares = form.getFieldValue('total_of_ha') || 0;
+    const totalHectares = form.getFieldValue('prod_res_cap') || 0;
 
     // Calculate total unit cost
     const totalUnitCost = unitCost * quantityUsedPerHa * applicationInterval * totalHectares;
 
     // Set the calculated value in the form
     form.setFieldsValue({
-      status: {
+      categories: {
         [categoryIndex]: {
           _steps: {
             [stepIndex]: {
@@ -250,11 +292,11 @@ const ProductionScheduling = () => {
     return totalUnitCost.toFixed(2);
   };
   const getCostingPerStep = (cateogry, step) => {
-    if (statusValues[cateogry]) {
-      if (statusValues[cateogry]?._steps[step]) {
-        if (statusValues[cateogry]?._steps[step]._costing) {
+    if (categoryValues[cateogry]) {
+      if (categoryValues[cateogry]?._steps[step]) {
+        if (categoryValues[cateogry]?._steps[step]._costing) {
           var step_total_costing = 0
-          statusValues[cateogry]?._steps[step]._costing.forEach(step_cost => {
+          categoryValues[cateogry]?._steps[step]._costing.forEach(step_cost => {
             if (step_cost) {
               step_total_costing = step_total_costing + (step_cost?.total_unit_cost * 1 || 0)
             }
@@ -269,50 +311,61 @@ const ProductionScheduling = () => {
     } else { return 0 }
   }
   const getProductionStatuses = () => {
-    OfftakeService.getProductionPlan(offtake_id).then(status => {
-      if (status) {
-        setProductionPlan(status)
-        scheduleForm.setFieldValue("status", status.map((stat: any) => {
-          const { name, phase ,description, _steps, key } = stat
-          return {
-            key: key,
-            name: name,
-            description: description,
-            phase: phase,
-            _steps: _steps ? _steps?.map(step => {
-              const { name, duration } = step
-              const start = dayjs(duration[0])
-              const end = dayjs(duration[1])
-              return {
-                name: name,
-                duration: [start, end],
-                _costing: step?._costing ? step?._costing?.map((cost) => {
-                  return {
-                    name: cost.name,
-                    amount: cost.amount,
-                    interval: cost.interval,
-                    used_per_hactor: cost.used_per_hactor,
-                    total_unit_cost: cost.total_unit_cost
-                  }
-                }) : []
-              }
-            }) : []
-          }
-        }))
+    OfftakeService.getProductionPlan(offtake_id).then(categories => {
+      if (categories) {
+        // setProductionPlan(categories)
+        console.log(categories);
+        Helpers.nestProductionData(categories).then((data) => {
+          console.log(data);
+
+          // setProductionPlan(data)
+          scheduleForm.setFieldValue("categories", data.map((stat: any) => {
+            const { name, phase, description, _steps, key } = stat
+            return { // categories
+              key: key,
+              name: name,
+              description: description,
+              phase: phase,
+              _steps: _steps ? _steps?.map(step => {
+                const { name, duration } = step
+                const start = dayjs(duration[0])
+                const end = dayjs(duration[1])
+                return { // steps
+                  step_name: name,
+                  duration: [start, end],
+                  _costing: step?._costing ? step?._costing?.map((cost) => {
+                    return { // costs
+                      key: cost.key,
+                      cost_name: cost.cost_name,
+                      amount: cost.amount,
+                      interval: cost.interval,
+                      used_per_hactor: cost.used_per_hactor,
+                      total_unit_cost: cost.total_unit_cost
+                    }
+                  }) : []
+                }
+              }) : []
+            }
+          }))
+        })
+        return
+
       }
     })
   }
+  // prod_res_cap
+  useEffect(() => {
+    scheduleForm.setFieldValue("required_yield_output", (yield_output_per_unit * prod_res_cap))
+  }, [yield_output_per_unit, prod_res_cap])
   useEffect(() => {
     var amount = 0
-    if (statusValues) {
-      statusValues.map((_status, si) => {
+    if (categoryValues) {
+      categoryValues.map((_status, si) => {
         if (_status) {
           if (_status?._steps) {
             _status?._steps.map((step, si) => {
               if (step?._costing) {
                 step?._costing.map((cost, ci) => {
-                  console.log(cost);
-
                   if (cost) {
                     const _amount = cost?.total_unit_cost
                     amount = (amount + (_amount * 1))
@@ -326,13 +379,13 @@ const ProductionScheduling = () => {
       })
       setProductionCost(amount)
     }
-  }, [statusValues])
+  }, [categoryValues, prod_res_cap])
   useEffect(() => {
-    // Watch for changes in total_of_ha
-    const watchTotalHa = scheduleForm.getFieldValue('total_of_ha');
+    // Watch for changes in prod_res_cap
+    const watchTotalHa = scheduleForm.getFieldValue('prod_res_cap');
 
-    // Iterate through all status (categories)
-    scheduleForm.getFieldValue('status')?.forEach((category, categoryIndex) => {
+    // Iterate through all category (categories)
+    scheduleForm.getFieldValue('categories')?.forEach((category, categoryIndex) => {
       // Iterate through all steps in the category
       category._steps?.forEach((step, stepIndex) => {
         // Iterate through all cost items in the step
@@ -346,7 +399,7 @@ const ProductionScheduling = () => {
 
           // Update the total_unit_cost for this specific item
           scheduleForm.setFieldsValue({
-            status: {
+            categories: {
               [categoryIndex]: {
                 _steps: {
                   [stepIndex]: {
@@ -364,7 +417,7 @@ const ProductionScheduling = () => {
         });
       });
     });
-  }, [scheduleForm.getFieldValue('total_of_ha')]);
+  }, [scheduleForm.getFieldValue('prod_res_cap')]);
   useEffect(() => {
     setPageLoading(true)
     // Get offtake
@@ -377,21 +430,28 @@ const ProductionScheduling = () => {
     }
     OfftakeService.getOfftake(offtake_id).then(async (o: any) => {
       if (o) {
-        if (o.submission_closing_date) {
-          const closingDate = await dayjs(o.submission_closing_date);
-          scheduleForm.setFieldValue("submission_closing_date", closingDate);
+        // set new production plan data
+        // now located in the offtake object property "_production_plan"
+        const prod_plan = o._production_plan
+        if (prod_plan) {
+          if (prod_plan?.submission_closing_date) {
+            const closingDate = await dayjs(prod_plan.submission_closing_date);
+            scheduleForm.setFieldValue("submission_closing_date", closingDate);
+          }
+          if (prod_plan?.offtake_start_and_end_date) {
+            const startDate = await dayjs(prod_plan.offtake_start_and_end_date[0])
+            const endDate = await dayjs(prod_plan.offtake_start_and_end_date[1])
+            scheduleForm.setFieldValue("offtake_start_and_end_date", [startDate, endDate]);
+          }
+          scheduleForm.setFieldValue("prod_res_cap", prod_plan?.prod_res_cap);
+          scheduleForm.setFieldValue("prod_res_cap_unit", prod_plan?.prod_res_cap_unit);
+          scheduleForm.setFieldValue("required_yield_output", prod_plan?.required_yield_output);
+          scheduleForm.setFieldValue("required_yield_output_unit", prod_plan?.required_yield_output_unit);
+          scheduleForm.setFieldValue("yield_output_per_unit", prod_plan?.yield_output_per_unit);
+          scheduleForm.setFieldValue("yield_output_unit", prod_plan?.yield_output_unit);
         }
-        if (o.offtake_start_and_end_date) {
-          const startDate = await dayjs(o.offtake_start_and_end_date[0])
-          const endDate = await dayjs(o.offtake_start_and_end_date[1])
-          scheduleForm.setFieldValue("offtake_start_and_end_date", [startDate, endDate]);
-        }
-        scheduleForm.setFieldValue("total_of_ha", o.total_of_ha || 1);
-        scheduleForm.setFieldValue("total_of_ha_unit", o.total_of_ha_unit || 1);
-        scheduleForm.setFieldValue("production_capacity", o.production_capacity || null);
-        scheduleForm.setFieldValue("production_capacity_unit", o.production_capacity_unit || 1);
-        scheduleForm.setFieldValue("yield_output", o.yield_output || 1);
-        scheduleForm.setFieldValue("yield_output_unit", o.yield_output_unit || null);
+
+
         setTimeout(() => {
           dispatch(setActiveOfftake(o))
           setPageLoading(false)
@@ -486,7 +546,6 @@ const ProductionScheduling = () => {
                   console.log(res);
                 }).catch(err => {
                   console.log(err);
-
                 })
               }} >Download PDF</Button>
             </Toolbar>
@@ -506,7 +565,7 @@ const ProductionScheduling = () => {
                   </Form.Item>
                 </Stack>
                 <Stack direction={'row'} justifyContent={'space-between'} >
-                  <Form.Item label="Yield/Output" name="yield_output" initialValue={0} rules={[{ required: true }]}>
+                  <Form.Item label="Yield/Output Per Unit " name="yield_output_per_unit" initialValue={0} rules={[{ required: true }]}>
                     <InputNumber addonAfter={
                       <Form.Item
                         name="yield_output_unit"
@@ -517,56 +576,45 @@ const ProductionScheduling = () => {
                       </Form.Item>
                     } />
                   </Form.Item>
-                  <Form.Item label="Total Production Capacity" name="total_of_ha" initialValue={0} rules={[{ required: true }]}>
-                    <InputNumber onChange={(e) => {
-                      // Trigger recalculation of all total unit costs
-                      const newTotalHa = e?.target?.value;
-
-                      // Similar logic to the useEffect above can be placed here
-                      // Iterate and recalculate all total unit costs
-                    }} addonAfter={
+                  <Form.Item label="Production Resources Capacity " name="prod_res_cap" initialValue={0} rules={[{ required: true }]}>
+                    <InputNumber addonAfter={
                       <Form.Item
-                        name="total_of_ha_unit"
+                        name="prod_res_cap_unit"
                         noStyle
                         initialValue={'ha'}
-
                       >
-                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} options={[{ label: 'Ha', value: 'ha' }]} />
+                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={prod_res_cap_options} />
                       </Form.Item>
                     }></InputNumber>
                   </Form.Item>
-                  <Form.Item label="Required Production Capacity" name="production_capacity" initialValue={0} rules={[{ required: true }]}>
-                    <InputNumber addonAfter={
+                  <Form.Item label="Required Total Yield/Output" name="required_yield_output" initialValue={0} rules={[{ required: true }]}>
+                    <InputNumber disabled addonAfter={
                       <Form.Item
-                        name="production_capacity_unit"
+
+                        name="required_yield_output_unit"
                         noStyle
                         initialValue={'ha'}
                       >
 
-                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} options={[{ label: 'Ha', value: 'ha' }]} />
+                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={yield_options} />
                       </Form.Item>
                     } />
                   </Form.Item>
                 </Stack>
-                <Form.List name="status" >
-                  {(fields, { add, remove }) => (
+                <Form.List name="categories" >
+                  {(categories, { add, remove }) => (
                     <div style={{ display: 'flex', rowGap: 0, flexDirection: 'column' }}>
-                      {fields.map((field) => (
-                        <Stack key={field.name}>
+                      {categories.map((category) => (
+                        <Stack key={category.name}>
                           <Stack py={2}>
                             <Divider>
-                              <Stack direction={'row'} gap={1}>Production Category {field.name + 1} {field.name !== 0 ? (
+                              <Stack alignItems={'center'} direction={'row'} gap={1}>Production Category {category.name + 1} {category.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
-                                  const key = statusValues[field.name]?.key ? statusValues[field.name].key : field.name
+                                  const key = categoryValues[category.name]?.key ? categoryValues[category.name].key : category.name
                                   if (key) {
-                                    OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
-                                      remove(field.name);
-                                    }).catch(err => {
-                                      console.log(err);
-                                      remove(field.name)
-                                    })
+                                    // todo delete all docs with category index of {category.name}
                                   } else {
-                                    remove(field.name)
+                                    remove(category.name)
                                   }
                                 }}>
                                   <CloseRounded />
@@ -577,29 +625,29 @@ const ProductionScheduling = () => {
                           <Accordion
                             elevation={0}
                             variant='elevation'
-                            key={field.key}
+                            key={category.key}
                             defaultExpanded={true}
 
                           >
                             <AccordionSummary>
                               <Stack flex={1}>
                                 <Form.Item hidden
-                                  name={[field.name, 'key']}>
-                                  <Input onClick={(e) => { e.preventDefault() }} onFocus={(e) => { e.preventDefault() }} disabled />
+                                  name={[category.name, 'key']}>
+                                  <Input disabled />
                                 </Form.Item>
                                 <Stack direction={'row'} spacing={2} >
                                   <Form.Item rules={[{ required: true, message: 'Please enter Step name' }]}
-                                    label="Name" name={[field.name, 'name']}>
+                                    label="Name" name={[category.name, 'name']}>
                                     <Input />
                                   </Form.Item>
                                   <Form.Item initialValue={"season_preparation"} rules={[{ required: true, message: 'Please enter Step name' }]}
-                                    label="Phase" name={[field.name, 'phase']}>
-                                    <Select style={{minWidth: 240}} defaultActiveFirstOption={true} options={production_stages} />
+                                    label="Phase" name={[category.name, 'phase']}>
+                                    <Select style={{ minWidth: 240 }} defaultActiveFirstOption={true} options={production_stages} />
                                   </Form.Item>
                                 </Stack>
 
                                 <Form.Item rules={[{ required: true, message: 'Please enter the description of this step' }]}
-                                  name={[field.name, 'description']}
+                                  name={[category.name, 'description']}
                                   label={`Description`}>
                                   <Input.TextArea />
                                 </Form.Item>
@@ -609,27 +657,31 @@ const ProductionScheduling = () => {
                             <AccordionDetails>
                               <Stack flex={1} gap={1}>
 
-                                <Form.List name={[field.name, '_steps']}>
+                                <Form.List name={[category.name, '_steps']}>
                                   {(steps, { add, remove }) => (
                                     <Timeline>
                                       {
                                         steps.map((step) => {
-                                  
+
                                           return (
                                             <Timeline.Item key={step.name} dot={<Spin />}>
-                                              <Card title={`Production Step ${step.name + 1} - R${getCostingPerStep(field.name, step.name)}`
+                                              <Card title={`Production Step ${step.name + 1} - R${getCostingPerStep(category.name, step.name)}`
                                               }
                                                 extra={
                                                   <>
-                                                    {step.name !== 0 ? (<IconButton onClick={() => { remove(step.name) }}><CloseRounded /></IconButton>) : null}
+                                                    {step.name !== 0 ? (<IconButton disabled={disableForm} onClick={() => {
+                                                      // todo : delete all entries with {category.name} and {step.name}
+                                                      remove(step.name)
+                                                    }}><CloseRounded /></IconButton>) : null}
                                                   </>
+
                                                 }
                                               >
                                                 <Stack direction={'row'} gap={1}>
                                                   <Stack flex={1}>
                                                     <Form.Item
                                                       rules={[{ required: true, message: 'Please enter the name of this step' }]}
-                                                      name={[step.name, 'name']}
+                                                      name={[step.name, 'step_name']}
                                                       label={`Name`}
                                                       style={{ width: '100%' }}
                                                     >
@@ -657,8 +709,11 @@ const ProductionScheduling = () => {
                                                         return (
                                                           <Stack gap={1} p={1} borderRadius={1} bgcolor={i % 2 ? colors.grey[100] : colors.common.white}>
 
-                                                            <Form.Item label="Cost item" name={[item.name, 'name']} rules={[{ required: true }]} >
+                                                            <Form.Item label="Cost item" name={[item.name, 'cost_name']} rules={[{ required: true }]} >
                                                               <Input />
+                                                            </Form.Item>
+                                                            <Form.Item hidden initialValue={'null'} name={[item.name, 'key']} >
+                                                              <Input disabled />
                                                             </Form.Item>
                                                             <Stack key={item.key} direction={'row'} spacing={1} >
 
@@ -666,7 +721,7 @@ const ProductionScheduling = () => {
                                                                 <InputNumber addonBefore="R" onChange={() => {
                                                                   calculateTotalUnitCost(
                                                                     scheduleForm,
-                                                                    field.name,  // categoryIndex
+                                                                    category.name,  // categoryIndex
                                                                     step.name,   // stepIndex
                                                                     item.name    // itemIndex
                                                                   );
@@ -676,7 +731,7 @@ const ProductionScheduling = () => {
                                                                 <InputNumber onChange={() => {
                                                                   calculateTotalUnitCost(
                                                                     scheduleForm,
-                                                                    field.name,  // categoryIndex
+                                                                    category.name,  // categoryIndex
                                                                     step.name,   // stepIndex
                                                                     item.name    // itemIndex
                                                                   );
@@ -694,7 +749,7 @@ const ProductionScheduling = () => {
                                                                 } onChange={() => {
                                                                   calculateTotalUnitCost(
                                                                     scheduleForm,
-                                                                    field.name,  // categoryIndex
+                                                                    category.name,  // categoryIndex
                                                                     step.name,   // stepIndex
                                                                     item.name    // itemIndex
                                                                   );
@@ -703,12 +758,26 @@ const ProductionScheduling = () => {
                                                               <Form.Item hidden label="Total unit cost" initialValue={0} name={[item.name, 'overal_cost']} rules={[{ required: true }]} >
                                                                 <InputNumber style={{ flex: 1, width: '100%' }} value={0} />
                                                               </Form.Item>
-                                                              {/* <Statistic title="Total unit cost" value={getTotalUnitCost(field.name, step.name, item.name)}></Statistic> */}
+                                                              {/* <Statistic title="Total unit cost" value={getTotalUnitCost(category.name, step.name, item.name)}></Statistic> */}
                                                               <Form.Item label="Total unit cost" initialValue={0} name={[item.name, 'total_unit_cost']} rules={[{ required: true }]} >
                                                                 <InputNumber disabled style={{ flex: 1, width: '100%' }} value={0} />
                                                               </Form.Item>
                                                               <Stack pt={3.5}>
-                                                                {i !== 0 ? (<Button onClick={() => { remove(item.name) }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
+                                                                {i !== 0 ? (<Button onClick={() => {
+                                                                  const key = categoryValues[category.name]?._steps[step.name]?._costing[item.name]?.key
+                                                                  if (key === "null") {
+                                                                    remove(item.name)
+                                                                  } else {
+                                                                    OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
+                                                                      // remove(category.name);
+                                                                      remove(item.name)
+                                                                    }).catch(err => {
+                                                                      console.log(err);
+                                                                      // 
+                                                                    })
+                                                                  }
+
+                                                                }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
                                                               </Stack>
                                                             </Stack>
                                                             <Divider />
@@ -782,7 +851,7 @@ const ProductionScheduling = () => {
           <OfftakeDetails setOfftakeId={() => { }} />
         </Stack>
       </Stack>
-    </Layout >
+    </Layout>
   )
 }
 

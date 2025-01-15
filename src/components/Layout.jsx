@@ -306,7 +306,7 @@ const Layout = (props) => {
 
       <Stack
         m={{ xs: 0, sm: 1 }}
-        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)" }}
+        sx={{ overflowY: scroll ? "auto" : "hidden", borderRadius: 3, bgcolor: "rgb(255, 255, 255)", backdropFilter: "blur(0px)" }}
         flex={1}
         height={"100%"}
         borderRadius={{ xs: 0, sm: 10, md: 20, lg: 30 }}

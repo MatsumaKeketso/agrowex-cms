@@ -8,7 +8,7 @@ export const Permissions = {
           planning: false,
           published: false,
           submitted: true,
-          finalstage: true,
+          contracting: true,
           active: true
         }
       }
@@ -18,15 +18,14 @@ export const Permissions = {
   pm: {
     read: {
       offtake: {
-
         status: {
           inprogress: true,
           negotiation: true,
           planning: true,
           published: true,
           submitted: false,
-          finalstage: false,
-          active: false
+          contracting: false,
+          active: true
         }
       }
     },

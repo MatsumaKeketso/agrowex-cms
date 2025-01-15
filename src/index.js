@@ -77,7 +77,7 @@ export const theme = createTheme({
     }
   },
   typography: {
-    fontFamily: ["Inter"],
+    fontFamily: ["Inter", "Inter Variable", "Plus Jakarta Sans", "Plus Jakarta Sans Variable"].join(","),
     h1: {
       fontWeight: "bold",
     },

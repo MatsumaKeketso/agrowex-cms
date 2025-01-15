@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
-import { ref } from 'firebase/database';
+import { ref, set } from 'firebase/database';
 import { firestoreDB, realtimeDB } from '../services/authService';
-import { Box, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Tooltip, Upload } from 'antd';
+import { Box, CardContent, CardHeader, colors, IconButton, Stack, Typography } from '@mui/material';
+import { Avatar, Button, Card, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -17,6 +17,7 @@ import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined
 import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
+import { Helpers } from '../services/helpers';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -32,6 +33,9 @@ export const FarmSubmissionColumns = [
     title: 'Offer Quantity',
     dataIndex: ['offer_quantity'], // Accessing nested property
     key: 'offer_quantity',
+    render: (v, r) => {
+      return <>{v}{r.unit}</>
+    }
   },
   {
     title: 'Submitted',
@@ -210,11 +214,16 @@ const TrackerData = [
 const FarmerView = ({ record }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
-  const [documents, setDocuments] = useState([])
-  const [tableSegment, setTableSegment] = useState('Production')
-  const offtake = useSelector((state) => state.offtake.active)
-  const [tableModal, setTableModal] = useState(false)
-  const navigate = useNavigate()
+  const [documents, setDocuments] = useState([]);
+  const [viewDoc, setViewDoc] = useState({});
+  const [tableSegment, setTableSegment] = useState('Production');
+  const [productionComments, setProductionComments] = useState([]);
+  const [limitedProductionComments, setLimitedProductionComments] = useState([]);
+  const [deliveryComments, setDeliveryComments] = useState([]);
+  const [address, setAddress] = useState({});
+  const [tableModal, setTableModal] = useState(false);
+  const offtake = useSelector((state) => state.offtake.active);
+  const navigate = useNavigate();
   const { farm_profile } = record
   const deliveryUpdates = [
     {
@@ -249,207 +258,292 @@ const FarmerView = ({ record }) => {
         setLoading(false);
       });
   };
+  const getProductionPlan = () => {
+    OfftakeService.getProductionPlan(offtake.offtake_id).then((plan) => {
+      Helpers.nestProductionData(plan).then((nestedData) => {
+        console.log({ nestedData });
 
+        setProductionComments([])
+        nestedData.forEach(category => {
+          category._steps.forEach(step => {
+            const { name } = step
+            step._costing.forEach(cost => {
+              if (cost?.comment) {
+                const { subject, comment, actual_amount, file_url, updated_at } = cost
+                const _comment = {
+                  children:
+                    <Stack gap={1}>
+
+                      <Typography variant='body2' fontWeight={'bold'} color={'GrayText'}>{subject}</Typography>
+                      <Typography variant='body2' >{comment}</Typography>
+                      <Typography variant='caption' color={'GrayText'}>{name}</Typography>
+                      <Divider>{SystemService.formatTimestamp(updated_at)}</Divider>
+                    </Stack>,
+                }
+                setProductionComments([...productionComments, _comment])
+              }
+
+            });
+          });
+        });
+        // subject
+        // comment
+        // actual_amount
+        // file_url
+        console.log({ nestedData });
+
+      })
+    })
+  }
+  const getAddress = () => {
+    FarmerService.getFarmAddress(farm_profile.farm_id).then((a) => {
+      setAddress(a);
+    })
+
+  }
   useEffect(() => {
+    console.log(farm_profile);
+
+    getAddress()
+    getProductionPlan()
     OfftakeService.getOfftakeDocuments(offtake.offtake_id).then((_documents) => {
       setDocuments(_documents)
     })
     // loadMoreData();
   }, []);
   return (
-    <Stack direction={'row'} >
-
-      <Modal style={{
-        top: 20,
-      }} width={1000} footer={
-        <Segmented
-          value={tableSegment}
-          options={['Production', 'Delivery']}
-          onChange={(value) => {
-            setTableSegment(value)
-            console.log(value); // string
-          }}
-        />} onCancel={() => {
-          setTableModal(false)
-        }} title={`${tableSegment} Tracker Details`} open={tableModal} bodyStyle={{ height: '80vh', }}>
-        {tableSegment === 'Production' ? (
-          <Stack>
-            <Table style={{ flex: 1, width: '100%' }} columns={productionColumnsFS} dataSource={TrackerData} />
-
-          </Stack>
-        ) : (
-          <Stack>
-            <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
-
-          </Stack>
-        )}
-      </Modal>
-
-      <Stack flex={1} gap={2} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[200]}>
-        {/* Profile */}
-        <Stack p={2}>
-          <Stack direction={'row'} gap={2}>
-            <Avatar size={'large'} src={farm_profile.logo_url}></Avatar>
-            <Stack gap={1}>
-              <Typography variant='h5'>{farm_profile.farm_name}</Typography>
-              <Typography variant='subtitle1'>{farm_profile.farm_type}</Typography>
-              <Stack>
-                <Button onClick={() => {
-                  navigate(`/offtakes/${offtake.offtake_id}/chat`)
-                }} style={{ alignSelf: 'start' }}>Chat</Button>
-              </Stack>
+    <Stack gap={2}>
+      <Stack direction={'row'} >
+        <Modal style={{
+          top: 20,
+        }} width={1000} footer={
+          <Segmented
+            value={tableSegment}
+            options={['Production', 'Delivery']}
+            onChange={(value) => {
+              setTableSegment(value)
+              console.log(value); // string
+            }}
+          />} onCancel={() => {
+            setTableModal(false)
+          }} title={`${tableSegment} Tracker Details`} open={tableModal} bodyStyle={{ height: '80vh', }}>
+          {tableSegment === 'Production' ? (
+            <Stack py={3} px={1}>
+              <Timeline
+                mode='left'
+                items={productionComments}
+              />
             </Stack>
+          ) : (
+            <Stack>
+              <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
+            </Stack>
+          )}
+        </Modal>
+
+        <Stack flex={1} gap={2} p={1} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[200]}>
+          {/* Profile */}
+          <Stack p={2} gap={2}>
+            <Stack gap={2}>
+              <Stack direction={'row'} gap={2}>
+                <Avatar size={'large'} src={farm_profile.logo_url}></Avatar>
+                <Stack gap={1}>
+                  <Typography variant='h5'>{farm_profile?.farm_name}</Typography>
+                  <Typography variant='subtitle1'>{farm_profile?.farm_type}</Typography>
+                  <Stack>
+                    <Button onClick={() => {
+                      navigate(`/offtakes/${offtake.offtake_id}/chat`)
+                    }} style={{ alignSelf: 'start' }}>Chat</Button>
+                  </Stack>
+                </Stack>
+              </Stack>
+              <Typography variant='body2'>{farm_profile?.bio}</Typography>
+            </Stack>
+            <Divider />
+            <Stack direction={'row'} flexWrap={'wrap'} gap={5}>
+              <Statistic title="Farm Hecters" value={50} />
+              <Statistic title="Email" value={farm_profile.email} />
+              <Statistic title="Phone Number" value={`+(${farm_profile.phone.country_calling_code}) ${farm_profile.phone.phone_number}`} />
+
+              {/* Might use later code */}
+              {/* <Statistic title="Phone Number" formatter={(value) => {
+                const { country_calling_code, phone_number } = value
+                return 
+              }} value={`${farm_profile.phone}`} /> */}
+
+              <Statistic title="Category" value={farm_profile?.category} />
+              <Statistic title="Commodity" value={farm_profile?.commodity} />
+
+            </Stack>
+            <Statistic title="Address" value={address?.place_name || "..."} />
+            <Divider />
           </Stack>
-          <Stack direction={'row'} flexWrap={'wrap'} gap={5}>
-            <Statistic title="Farm Hecters" value={50} />
-            <Statistic title="Email" value={farm_profile.email} />
-            <Statistic title="Phone Number" formatter={(value) => {
-              return value
-            }} value={`(${farm_profile.phone.country_calling_code}) ${farm_profile.phone.phone_number}`} />
-            <Statistic title="Address" value={record.address} />
-          </Stack>
-        </Stack>
-        <Stack>
-          <Stack p={2} direction={'row'}>
-            <Typography flex={1} variant='subtitle1'>Attachments</Typography>
+          <Card title="Attachments" extra={
             <Upload showUploadList={false}>
               <Button>Attach Document</Button>
-            </Upload>
-          </Stack>
-          <Stack direction={'row'}  >
-            <Stack flex={1} >
-              <InfiniteScroll
-                dataLength={data.length}
-                height={300}
-                endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
-                scrollableTarget="scrollableDiv"
-              >
-                <List
-                  dataSource={farm_profile.certificates}
-                  renderItem={(document) => (
-                    <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
-                      <List.Item.Meta
-                        avatar={<IconButton size='small'>
-                          <AttachFileRounded />
-                        </IconButton>}
-                        title={document.name}
-                      />
-                      <Stack direction={'row'} gap={1}>
-                        <Button>
-                          Preview
-                        </Button>
-                      </Stack>
-                    </List.Item>
-                  )}
-                />
-              </InfiniteScroll>
+            </Upload>}>
+            <Stack>
+              <Stack direction={'row'} gap={1}  >
+                <Stack flex={1} >
+                  <InfiniteScroll
+                    dataLength={farm_profile?.certificates?.length || 0}
+                    height={400}
+
+                    endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
+                    scrollableTarget="scrollableDiv"
+                  >
+                    <List
+                      dataSource={farm_profile.certificates}
+
+                      renderItem={(document) => (
+                        <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
+                          <List.Item.Meta
+                            avatar={<IconButton size='small'>
+                              <AttachFileRounded />
+                            </IconButton>}
+                            title={document.name}
+                          />
+                          <Stack direction={'row'} gap={1}>
+                            <Button disabled={viewDoc.url === document.url} onClick={() => {
+                              setViewDoc(document);
+                            }} >
+                              Preview
+                            </Button>
+                          </Stack>
+                        </List.Item>
+                      )}
+                    />
+                  </InfiniteScroll>
+                </Stack>
+                {viewDoc?.name && (<Stack height={'100%'}>
+                  <Documents url={viewDoc.url} name={viewDoc.name} />
+                </Stack>)}
+
+              </Stack>
             </Stack>
-            <Stack height={'100%'}>
-              <Documents url={'https://firebasestorage.googleapis.com/v0/b/agrowex.appspot.com/o/documents%2FYour%20Curriculum%20Vitae%20.pdf?alt=media&token=0fa86281-4f59-4027-9627-cd8ca7266954'} name="Example File" />
-            </Stack>
-          </Stack>
+          </Card>
         </Stack>
-      </Stack>
-      <Stack flex={1} gap={2}>
+
         {OfftakeService.getStatus.Name(offtake.status) === 'active' && (
-          <Stack py={3} alignItems={'center'}>
-            {/* <Progress type="dashboard" percent={75} gapDegree={30} />
+          <Stack flex={1} gap={2}>
+            <Stack py={3} alignItems={'center'}>
+              {/* <Progress type="dashboard" percent={75} gapDegree={30} />
             <Typography variant='caption'>Delivered</Typography>
             <Typography variant='subtitle1'>Cherry Tomato</Typography>
             <Typography variant='h6'>10tons</Typography>
             <Stack>
               <Table columns={deliveryColumns} dataSource={[deliveryUpdates[0]]} />
             </Stack> */}
-            <Stack spacing={2} direction={'row'} alignItems={'center'}>
-              <Stack flex={1} alignItems={'center'}>
-                <Progress type="dashboard" percent={75} />
-                <Stack p={1} >
-                  <Typography>Production</Typography>
-                </Stack>
+              <Stack spacing={2} direction={'row'} alignItems={'center'}>
+                <Stack flex={1} alignItems={'center'}>
+                  <Progress type="dashboard" percent={75} />
+                  <Stack p={1} >
+                    <Typography>Production</Typography>
+                  </Stack>
 
-              </Stack>
-              <SwapRightOutlined />
-              <Stack flex={1} alignItems={'center'}>
-                <Progress type="dashboard" percent={0} />
-                <Stack p={1}>
-                  <Typography>Delivery</Typography>
+                </Stack>
+                <SwapRightOutlined />
+                <Stack flex={1} alignItems={'center'}>
+                  <Progress type="dashboard" percent={0} />
+                  <Stack p={1}>
+                    <Typography>Delivery</Typography>
+                  </Stack>
                 </Stack>
               </Stack>
+              <Stack alignItems={'center'}>
+                <Segmented
+                  value={tableSegment}
+                  options={['Production', 'Delivery']}
+                  onChange={(value) => {
+                    setTableSegment(value)
+                    console.log(value); // string
+                  }}
+                />
+              </Stack>
+              {tableSegment === 'Production' ? (
+                <Stack width={'100%'} py={3}>
+                  {productionComments.length === 0 && (<Empty />)}
+                  {productionComments.length > 0 && (
+                    <>
+                      <Timeline
+                        mode='left'
+                        items={productionComments}
+                      />
+                      <Stack p={1}>
+                        <Button onClick={() => {
+                          setTableModal(true)
+                        }}>View All</Button>
+                      </Stack>
+                    </>
+                  )}
+
+                </Stack>
+              ) : (
+                <Stack width={'100%'} py={3}>
+                  <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
+                  <Stack p={1}>
+                    <Button onClick={() => {
+                      setTableModal(true)
+                    }}>View All</Button>
+                  </Stack>
+                </Stack>
+              )}
             </Stack>
-            <Stack alignItems={'center'}>
-              <Segmented
-                value={tableSegment}
-                options={['Production', 'Delivery']}
-                onChange={(value) => {
-                  setTableSegment(value)
-                  console.log(value); // string
-                }}
-              />
-            </Stack>
-            {tableSegment === 'Production' ? (
-              <Stack>
-                <Table style={{ flex: 1, width: '100%' }} columns={productionColumns} dataSource={TrackerData} />
-                <Stack p={1}>
-                  <Button onClick={() => {
-                    setTableModal(true)
-                  }}>View All</Button>
-                </Stack>
-              </Stack>
-            ) : (
-              <Stack>
-                <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={TrackerData} />
-                <Stack p={1}>
-                  <Button onClick={() => {
-                    setTableModal(true)
-                  }}>View All</Button>
-                </Stack>
-              </Stack>
-            )}
           </Stack>
         )}
-        {OfftakeService.getStatus.Name(offtake.status) === 'published' || OfftakeService.getStatus.Name(offtake.status) === 'finalstage' ? (
-          <Stack p={2} spacing={1}>
-            <Stack>
-              <Typography variant='h5'>Farm Produce</Typography>
+
+        {/* Currently showing this data in the profile */}
+        {/* 
+          {OfftakeService.getStatus.Name(offtake.status) === 'published' || OfftakeService.getStatus.Name(offtake.status) === 'contracting' ? (
+            <Stack p={2} spacing={1}>
+              <Stack>
+                <Typography variant='subtitle1'>Farm Produce</Typography>
+              </Stack>
+              <Stack gap={1}>
+                <Divider>Comodity</Divider>
+                <List dataSource={farm_profile.commodity}
+                  renderItem={(item) => {
+                    return <Typography variant='body2'>{item}</Typography>
+                  }}
+                />
+                <Divider>Category</Divider>
+                <List dataSource={farm_profile.category}
+                  renderItem={(item) => {
+                    return <Typography variant='body2'>{item}</Typography>
+                  }}
+                />
+              </Stack>
             </Stack>
-            <Stack>
-              <Table columns={[
-                {
-                  title: 'Name',
-                  dataIndex: 'name',
-                  key: 'name',
-                },
-                {
-                  title: 'Age',
-                  dataIndex: 'age',
-                  key: 'age',
-                },
-                {
-                  title: 'Address',
-                  dataIndex: 'address',
-                  key: 'address',
-                },
-              ]} dataSource={[
-                {
-                  key: '1',
-                  name: 'Mike',
-                  age: 32,
-                  address: '10 Downing Street',
-                },
-                {
-                  key: '2',
-                  name: 'John',
-                  age: 42,
-                  address: '10 Downing Street',
-                },
-              ]} />
-            </Stack>
-          </Stack>
-        ) : null}
+          ) : null} 
+           */}
 
 
       </Stack>
-    </Stack>)
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography>TOTAL INCOME</Typography>
+              <Typography>= R 3 360 000.00 [(@R7000/ton) x 8 tons production/ha]</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography>PRODUCTION COST</Typography>
+              <Typography>= R 2 392 490.01 [(@R39 874,83/ha) x 60 has]</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography>AGROWEX SOFTWARE LICENSING</Typography>
+              <Typography>= R 111 000.00 [@R1850/ha x60]</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="h6" fontWeight="bold">TOTAL PROFIT</Typography>
+              <Typography variant="h6" fontWeight="bold">= R 856 510,20 [@R14 275,17/ha x60 ha]</Typography>
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
+
+  )
 }
 const FarmSubmissions = () => {
   const [finalstage, setFinalStage] = useState(false)
@@ -558,6 +652,10 @@ const FarmSubmissions = () => {
     const querySnapshot = await getDocs(q);
     setSubmissions([])
     var subs = []
+    if (querySnapshot.empty) {
+      console.log('No matching documents.');
+      return;
+    }
     await querySnapshot.forEach(async (sub) => { // submission info
       if (sub.exists()) {
         const docRef = doc(firestoreDB, "users", sub.id);
@@ -602,7 +700,7 @@ const FarmSubmissions = () => {
       <Modal title="Status Update" open={finalstage} onOk={() => {
         setLoading(true)
         const _status = {
-          status_name: 'finalstage',
+          status_name: 'contracting',
           updated_at: SystemService.generateTimestamp()
         }
         const updated_offtake = { ...offtake, status: [...offtake.status, _status] }
@@ -644,7 +742,7 @@ const FarmSubmissions = () => {
           <ArrowDownwardRounded />
           <Stack direction={'row'} alignSelf={'center'} gap={1}>
             <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
-            <StatusTag status={'finalstage'} />
+            <StatusTag status={'contracting'} />
           </Stack>
           <Typography variant="subtitle2">
             This list of selected farms for the offtake will be submitted to OP
@@ -677,7 +775,7 @@ const FarmSubmissions = () => {
           <Typography variant="h4">Activate Offtake</Typography>
           <Stack direction={'row'} alignSelf={'center'} gap={1}>
             <Typography variant="subtitle2">AGRO-{offtake_id}</Typography>
-            <StatusTag status={'finalstage'} />
+            <StatusTag status={'contracting'} />
           </Stack>
           <ArrowDownwardRounded />
           <Stack direction={'row'} alignSelf={'center'} gap={1}>
@@ -699,8 +797,8 @@ const FarmSubmissions = () => {
             <Stack gap={0} p={2} flex={1}>
               <Typography variant='h6' flex={1}>Farmers who are interested</Typography>
             </Stack>
-            <Typography variant='h6' p={2} flex={1}>{tonsSelected} / {tonsSelected < required ? required : tonsSelected}</Typography>
-            {currentStatus !== 'finalstage' && currentStatus !== 'active' && (<Button onClick={() => {
+            <Typography variant='h6' p={2} flex={1}>{tonsSelected}{offtake?.unit} / {tonsSelected < required ? `${required}${offtake?.unit}` : `${tonsSelected}${offtake?.unit}`}</Typography>
+            {currentStatus !== 'contracting' && currentStatus !== 'active' && (<Button onClick={() => {
               if (offtake.master_contract) {
                 setFinalStage(true)
               } else {
@@ -708,12 +806,12 @@ const FarmSubmissions = () => {
               }
 
             }} disabled={tonsSelected < required} size='large' type='primary'>Final Stage</Button>)}
-            {currentStatus === 'finalstage' && (<Button onClick={() => {
+            {currentStatus === 'contracting' && (<Button onClick={() => {
               setActive(true)
             }} disabled={tonsSelected < required} size='large' type='primary'>Activate Offtake</Button>)}
           </Stack>
           <Table
-            rowSelection={currentStatus === 'finalstage' || currentStatus === 'active' ? null : rowSelection}
+            rowSelection={currentStatus === 'contracting' || currentStatus === 'active' ? null : rowSelection}
             dataSource={submissions}
             columns={[...FarmSubmissionColumns, {
               title: "Actions",

@@ -15,7 +15,10 @@ export const OfftakeService = {
   getOfftakes: async () => {
     // check for form completion first before fetch
     const q = query(offtakesCollection, where("form_completion_status", "==", "complete"))
-
+    const firestore_id = {
+      costing: 123,
+      costing: 456,
+    }
     const querySnapshot = await getDocs(q);
     const offtakes = [];
     querySnapshot.forEach((doc) => {
@@ -181,15 +184,15 @@ export const OfftakeService = {
     const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
     await setDoc(offtakeRef, { ...offtake_data, });
   },
-  addProductionStatus: async (offtake_id, status) => {
+  addProductionStatus: async (offtake_id, category) => {
     try {
       // Create a reference to the 'production-plan' collection
       const productionPlanCollectionRef = collection(firestoreDB, 'offtakes', offtake_id, '_production-plan');
 
-      // Add a new document to the collection with the provided status data
-      const docRef = await addDoc(productionPlanCollectionRef, status);
+      // Add a new document to the collection with the provided category data
+      const docRef = await addDoc(productionPlanCollectionRef, category);
 
-      console.log('Production status added successfully with ID:', docRef.id);
+      console.log('Production category added successfully with ID:', docRef.id);
       return docRef.id; // Return the ID of the newly created document
     } catch (error) {
       console.error('Error adding production status:', error);
@@ -199,6 +202,8 @@ export const OfftakeService = {
   removeProductionStatus: async (offtake_id, status_id) => {
     try {
       // Create a reference to the specific document in the 'production-plan' subcollection
+
+      // todo : update to delete all documents with category_index
       const statusDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_production-plan', status_id);
 
       // Delete the document

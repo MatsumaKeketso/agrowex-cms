@@ -10,7 +10,7 @@ const colors = {
   published: '#54B054',
   notViable: '#3F1011',
   submitted: '#EAA300',
-  finalstage: 'red'
+  contracting: 'red'
 }
 const TagRender = ({ status }) => {
   return (<Stack direction={'row'} alignItems={'center'} position={'relative'}>

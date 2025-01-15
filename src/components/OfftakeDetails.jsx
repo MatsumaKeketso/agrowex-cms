@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Card, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload } from 'antd';
+import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardContent, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
+import { Button, Card, Descriptions, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
@@ -20,7 +20,8 @@ import { AuthService, firestoreDB } from '../services/authService';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { getDownloadURL, ref as sRef, uploadBytesResumable } from 'firebase/storage';
 import moment from 'moment';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, UserOutlined } from '@ant-design/icons';
+import { Helpers } from '../services/helpers';
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
     const offtake = useSelector((state) => state.offtake)
@@ -308,49 +309,43 @@ const OfftakeDetails = (props) => {
     const [userProfile, setUserProfile] = useState({})
     const [masterContract, setMasterContract] = useState(null)
     const [showBack, setShowBack] = useState(false)
+    const [profitability, setProfitability] = useState({})
     const [prodPlan, setProdPlan] = useState(null)
-    const description = 'This is a description.';
     const {
-        order_date,
-        delivery_date,
         contract,
         country,
-        phone_number,
-        email,
-        commodity_name,
         status,
         production_method,
         quantity,
+        unit,
         delivery_frequency,
         supply_duration,
         quality_grade,
-        production_cost,
         permissions,
-        // offtake_id,
-        price,
-        comment
     } = useSelector((state) => state.offtake?.active);
     const ot = useSelector((state) => state.offtake?.active);
-    const profitabilityCalucation = () => {
+    const profitabilityCalucation = (plan) => {
+        console.log('Calculating profitability');
+        
         var tot_cost = 0
-        if (prodPlan) {
-            prodPlan.forEach(category => {
+        if (plan) {
+            plan.forEach(category => {
                 category._steps.map((step) => {
                     step._costing.map((cost) => {
                         tot_cost = tot_cost + cost.amount
+                        console.log(tot_cost);
+
                     })
                 })
             });
-            const total_offtake_offer = ot.quantity * ot.offer_price_per_unit
+            const total_offtake_offer = ot?._commodity_details?.quantity * ot?._price_details?.offer_price_per_unit
             const total_cost_of_production = tot_cost
             const offtake_gross_profit = total_offtake_offer - total_cost_of_production
-            return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
+            setProfitability({ total_offtake_offer, total_cost_of_production, offtake_gross_profit })
+            // return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
         }
     }
-    const unassign = () => {
-        const unassigned = { ...offtake.active, assigned: null }
-        dispatch(setActiveOfftake(unassigned))
-    }
+
     const closeMasterContractDialogue = () => {
         setMasterContractDialog(false)
     }
@@ -404,19 +399,17 @@ const OfftakeDetails = (props) => {
 
     useEffect(() => {
         if (ot) {
+            const cs = OfftakeService.getStatus.Name(ot.status)
+            setCurrentStatus(cs)
             getMasterContract()
             if (ot.status) {
-                const latest = ot?.status?.length - 1 || null
-                const cS = OfftakeService.getStatus.Name(ot.status)
-                const uA = OfftakeService.getStatus.UpdatedAt(ot.status)
-                setCurrentStatus(cS)
                 contractModelForm.setFieldValue("contract_model", ot?.contract_model)
             }
             if (
                 OfftakeService.getStatus.Name(ot.status) === 'submitted' ||
                 OfftakeService.getStatus.Name(ot.status) === 'planning' ||
                 OfftakeService.getStatus.Name(ot.status) === 'published' ||
-                OfftakeService.getStatus.Name(ot.status) === 'finalstage' ||
+                OfftakeService.getStatus.Name(ot.status) === 'contracting' ||
                 OfftakeService.getStatus.Name(ot.status) === 'active'
             ) {
                 setProduction(true)
@@ -425,14 +418,13 @@ const OfftakeDetails = (props) => {
                 OfftakeService.getStatus.Name(ot.status) === 'published' ||
                 OfftakeService.getStatus.Name(ot.status) === 'planning' ||
                 OfftakeService.getStatus.Name(ot.status) === 'submitted' ||
-                OfftakeService.getStatus.Name(ot.status) === 'finalstage' ||
+                OfftakeService.getStatus.Name(ot.status) === 'contracting' ||
                 OfftakeService.getStatus.Name(ot.status) === 'active'
             ) {
                 setDisableForm(true)
             }
         }
         const locations = location.pathname.split('/')
-        console.log(locations);
         setPage(locations[3])
         if (!offtake_id) {
             navigate('/offtakes')
@@ -440,17 +432,22 @@ const OfftakeDetails = (props) => {
         setOfftakeId(offtake_id)
         if (permissions) {
             Object.keys(permissions).map(key => {
-                console.log(key);
-
+                offtakeForm.setFieldValue(key, permissions[key])
             })
         } else {
-            console.log('permissions not available');
+            // console.log('permissions not available');
         }
 
     }, [offtake])
     useEffect(() => {
         OfftakeService.getProductionPlan(ot.offtake_id).then((plan) => {
-            setProdPlan(plan)
+            if (data) {
+                Helpers.nestProductionData(data).then((data) => {
+                    setProdPlan(plan)
+                    profitabilityCalucation(plan)
+                })
+            }
+
         })
         if (location) {
             const pathLength = location.pathname.split("/")
@@ -463,13 +460,14 @@ const OfftakeDetails = (props) => {
 
         }
         getAndWatchDocuments()
-        setContractModel([
+        const model_options = [
             { value: 'f-h-m', label: 'Fresh Hub Model' },
             { value: 'i-m', label: 'Intermediary Model' },
             { value: 'm-m', label: 'Multipartite Model' },
             { value: 'm-m', label: 'Centralised Model' },
             { value: 'n-e-m', label: 'Necleus Estate Model' }
-        ])
+        ]
+        setContractModel(model_options)
         OfftakeService.getFarmSubmissions().then(f => {
             if (f) {
                 setFarms(f)
@@ -484,10 +482,11 @@ const OfftakeDetails = (props) => {
             })
         }
         if (offtake.offtake_id) {
-            OfftakeService.getProductionPlan(offtake.offtake_id).then(status => {
+            OfftakeService.getProductionPlan(offtake.offtake_id).then(categories => {
                 console.log(status);
                 if (status) {
-                    setProductionProgress(status)
+                    Helpers.nestProductionData(categories).then((data) => { setProductionProgress(data) })
+                    // setProductionProgress(status)
                 }
             })
         }
@@ -505,18 +504,21 @@ const OfftakeDetails = (props) => {
             <MasterContractDialog open={masterContractDialog} onClose={() => closeMasterContractDialogue()} />
             <PublishOfftake />
             {contextHolder}
+
+            {/* Header and Status */}
             <Stack gap={4}>
                 {/* Offtake header */}
                 <Stack direction={'row'}>
-                    <Stack flex={1} direction={'row'} gap={2} alignItems={'center'}>
+                    <Stack flex={1} direction={'row'} flexWrap={'wrap'} gap={2} alignItems={'center'}>
                         {showBack && (<Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>)}
-                        <Stack>
-                            <Typography variant='h5'>Offtake Details</Typography>
+                        <Stack flex={1}>
+                            <Typography variant='h5'>{ot?.title}</Typography>
                             <Typography variant='caption'>{ot?.offtake_id}</Typography>
                         </Stack>
                         {ot.status ? (<StatusTag status={ot?.status} />) : (<StatusTag status="inprogress" />)}
                     </Stack>
-                    <Typography>{SystemService.converStringToSentenceCase(ot?.offtake_type ? ot?.offtake_type : 'Unknown')} Offtake</Typography>
+                    <Chip label={`${SystemService.converStringToSentenceCase(ot?.offtake_type ? ot?.offtake_type : 'Unknown')} Offtake`} color="primary" variant='outlined' />
+
                     {/* {offtake?.assigned && (<Persona user={offtake?.assigned} onUnsasign={unassign} />)} */}
                     {/* {!offtake?.assigned && (<Assign />)} */}
                 </Stack>
@@ -525,31 +527,51 @@ const OfftakeDetails = (props) => {
                     <OfftakeProgress status={ot?.status} />
                 </Stack>
             </Stack>
-            {production && (<Stack gap={2}>
-                <Divider ></Divider>
-                <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-                    <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
-                        navigate(`/offtakes/${ot.offtake_id}/schedule`);
-                    }}>Production Plan</Button>
-                    {/* Removed to because processes are merged */}
-                    {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
+
+            {/* Buttons */}
+            {production && (
+                <Stack gap={2}>
+                    <Divider ></Divider>
+                    <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
+                        <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
+                            navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                        }}>Production Plan</Button>
+                        {/* Removed to because processes are merged */}
+                        {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
                             navigate(`/offtakes/${ot.offtake_id}/costing`);
                         }}>Production Cost</Button> */}
 
-                    <Button color={colors.green[400]} type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
-                        if (currentStatus === 'planning' ||
-                            currentStatus === 'finalstage' ||
-                            currentStatus === 'active' ||
-                            currentStatus === 'submitted') {
-                            navigate(`/offtakes/${ot.offtake_id}/chat`);
-                        }
-                        // else if (currentStatus === 'submitted') {
-                        //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
-                        // }
-                    }}>Chat </Button>
-                </Stack>
-                <Divider />
-            </Stack>)}
+                        <Button color={colors.green[400]} type={page === 'chat' ? 'primary' : 'default'} onClick={() => {
+                            if (currentStatus === 'planning' ||
+                                currentStatus === 'contracting' ||
+                                currentStatus === 'active' ||
+                                currentStatus === 'submitted') {
+                                navigate(`/offtakes/${ot.offtake_id}/chat`);
+                            }
+                            // else if (currentStatus === 'submitted') {
+                            //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
+                            // }
+                        }}>Chat </Button>
+                    </Stack>
+
+                    <Card
+                    >
+                        <Stack gap={2} direction={'row'}>
+                            <img
+                                style={{ width: 100, height: 100, objectFit: 'fill' }}
+                                alt={ot?._commodity_meta?.name}
+                                src={ot?._commodity_meta?.img || "https://api.dicebear.com/7.x/miniavs/svg?seed=8"}
+                            />
+                            <Card.Meta
+                                title={ot?._commodity_meta?.name}
+                                description={ot?._commodity_meta?.description}
+                            />
+                        </Stack>
+                    </Card>
+                    <Divider />
+                </Stack>)}
+
+            {/* Offtake Details */}
             <Grid container spacing={1}>
                 <Grid item md={4} flex={1} p={1} >
                     <Statistics title="Order date" value={SystemService.convertTimestampToDateString(ot?.created_at)} />
@@ -580,8 +602,10 @@ const OfftakeDetails = (props) => {
                 </Grid>
 
             </Grid>
+
+            {/* Profitability  */}
             {currentStatus === 'published' ||
-                currentStatus === 'finalstage' ||
+                currentStatus === 'contracting' ||
                 currentStatus === "active"
                 && (
                     <Grid container spacing={1} >
@@ -589,34 +613,112 @@ const OfftakeDetails = (props) => {
                         <Grid item flex={1}>
                             <Card title="Profitability">
                                 <Stack spacing={1}>
-                                    <Typography>Offtake total offer : R{profitabilityCalucation()?.total_offtake_offer | 0}</Typography>
-                                    <Typography>Total production cost : R{profitabilityCalucation()?.total_cost_of_production | 0}</Typography>
-                                    <Typography>Gross Profit : R{profitabilityCalucation()?.offtake_gross_profit | 0}</Typography>
+                                    <Typography>Offtake total offer : R{profitability?.total_offtake_offer | 0}</Typography>
+                                    <Typography>Total production cost : R{profitability?.total_cost_of_production | 0}</Typography>
+                                    <Typography>Gross Profit : R{profitability?.offtake_gross_profit | 0}</Typography>
                                 </Stack>
                             </Card>
 
                         </Grid>
                     </Grid>
                 )}
+            <Divider>Price Details</Divider>
+            <Descriptions>
+                <Descriptions.Item label="Final Price">{ot?._price_details?.final_price || 0}</Descriptions.Item>
+                <Descriptions.Item label="Offer Price Per Unit">{ot?._price_details?.offer_price_per_unit || 0}</Descriptions.Item>
+                <Descriptions.Item label="Origin Price">{ot?._price_details?.origin_price || 0}</Descriptions.Item>
+                <Descriptions.Item label="Service Fee">{ot?._price_details?.service_fee || 0}</Descriptions.Item>
+            </Descriptions>
+
             {/* Contact Details */}
             <Stack>
-                <Accordion defaultExpanded={true} variant='elevation' elevation={0}>
-                    <AccordionSummary sx={{ px: 0 }}>
-                        <Chip icon={<FaceOutlined />} label={`Contact Details - ${userProfile?.name} ${userProfile?.surname}`} />
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Stack p={0} direction={'row'} gap={3}>
-                            <Statistics title={'Phone Number'} value={userProfile?.phone?.phone_number} />
-                            <Statistics title={'Email'} value={userProfile?.email} />
-                            <Statistics title={'Location'} value={userProfile?.place_name} />
+                {/* Profile Not Available */}
+                {!userProfile?.name && (<Card
+                    sx={{
+                        position: "relative",
+                        width: "100%",
+                        maxWidth: 400,
+                        margin: "auto",
+                        padding: 3,
+                        borderRadius: 4,
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                        background: "rgba(255, 255, 255, 0.8)",
+                        backdropFilter: "blur(10px)",
+                    }}
+                >
+                    <CardContent>
+                        <Stack spacing={2} alignItems="center">
+                            {/* Icon */}
+                            <Stack
+                                style={{
+                                    width: 80,
+                                    height: 80,
+                                    background: "rgba(200, 200, 200, 0.2)",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    fontSize: 32,
+                                    color: "#9E9E9E",
+                                    boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.2)",
+                                }}
+                            >
+                                <UserOutlined />
+                            </Stack>
+
+                            {/* Title */}
+                            <Typography
+                                variant="h6"
+                                align="center"
+                                color="text.primary"
+                                sx={{
+                                    fontWeight: "600",
+                                    color: "#333",
+                                }}
+                            >
+                                Profile Not Available
+                            </Typography>
+
+                            {/* Subtitle */}
+                            <Typography
+                                variant="body2"
+                                align="center"
+                                color="text.secondary"
+                                sx={{
+                                    lineHeight: 1.6,
+                                    maxWidth: 300,
+                                }}
+                            >
+                                The profile you're trying to view isn't accessible at the moment.
+                                This could be due to privacy settings or it may not exist.
+                            </Typography>
                         </Stack>
-                    </AccordionDetails>
-                </Accordion>
+                    </CardContent>
+                </Card>)}
+
+                {userProfile?.name && (
+                    <Stack gap={2} >
+                        <Divider>Contact Details</Divider>
+                        <Stack gap={2} direction={'row'} alignItems={'center'}>
+                            <UserOutlined />
+                            <Typography variant='h6'>{userProfile?.name} {userProfile?.surname}</Typography>
+                        </Stack>
+                        <Stack p={0} direction={'row'} gap={3}>
+                            <Statistics title={'Phone Number'} value={`(${userProfile?.phone?.country_calling_code}) ${userProfile?.phone?.phone_number}`} />
+                            <Statistics title={'Email'} value={userProfile?.email} />
+                            {/* <Statistics title={'Company/Name'} value={} /> */}
+                        </Stack>
+                        <Statistics title={'Location'} value={ot?._address?.place_name || "..."} />
+                    </Stack>
+                )}
+
             </Stack>
+
+
             <Stack spacing={2}>
                 {/* Offtake is in planning */}
 
-                {currentStatus === 'finalstage' && showSubmissions && (<Stack>
+                {currentStatus === 'contracting' && showSubmissions && (<Stack>
                     <Stack p={2} direction={'row'}>
                         <Stack flex={1}>
                             <Typography>Farmers who are Interested</Typography>
@@ -649,16 +751,19 @@ const OfftakeDetails = (props) => {
 
                 {currentStatus === 'active' && showSubmissions && (
                     <Stack>
-                        <Stack p={2} direction={'row'}>
-                            <Stack flex={1}>
-                                <Typography>Respondents</Typography>
+                        <Card hoverable>
+                            <Stack direction={'row'}>
+                                <Stack flex={1}>
+                                    <Typography variant='h6'>Respondents</Typography>
+                                    <Typography color={colors.grey[600]} variant='body2'>View respondent profile, track production & delivery</Typography>
+                                </Stack>
+                                <Button type='primary' onClick={() => {
+                                    "/offtakes/:offtake_id/submissions"
+                                    navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                                }}>View More</Button>
                             </Stack>
-                            <Button type='primary' onClick={() => {
-                                "/offtakes/:offtake_id/submissions"
-                                navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
-                            }}>View More</Button>
-                        </Stack>
-                        <Stack direction={'row'}>
+                        </Card>
+                        {/* <Stack direction={'row'}>
                             <Stack flex={1}>
                                 <Table dataSource={activeSuppliers} columns={[
                                     {
@@ -679,7 +784,7 @@ const OfftakeDetails = (props) => {
 
                                 ]} />
                             </Stack>
-                        </Stack>
+                        </Stack> */}
 
                     </Stack>
                 )}
@@ -692,72 +797,90 @@ const OfftakeDetails = (props) => {
                             <Typography>Production Progress</Typography>
                             <Progress percent={80} status="active" />
                         </Stack>
-                        <Stack px={2}>
-                            <Typography>Delivery Progress</Typography>
-                            <Progress percent={10} status="active" />
-                        </Stack>
+
                         <Stack p={2}>
-                            {productionProgress.map((stat) => {
-
-
+                            {productionProgress.map((cat) => {
                                 return (
-                                    <Stack spacing={1}>
+                                    <Stack spacing={1} pb={1} >
                                         <Stack spacing={1} direction={'row'}>
                                             <Stack pt={1} spacing={1}>
                                                 <Spin />
                                             </Stack>
                                             <Stack>
-                                                <Typography variant='h6'>{stat.name}</Typography>
-                                                <Typography variant='body2'>{stat.description}</Typography>
+                                                <Typography variant='h6'>{cat.name}</Typography>
+                                                <Typography variant='body2'>{cat.description}</Typography>
                                             </Stack>
                                         </Stack>
-                                        <Stack spacing={2} direction={'row'}>
+                                        <Stack pl={1} spacing={2} direction={'row'}>
                                             <Divider orientation="vertical" flexItem />
-                                            {stat._steps.map((step) => {
-                                                return (
-                                                    <Stack flex={1} spacing={1}>
-                                                        <Stack flex={1} spacing={1} direction={'row'}>
-                                                            <Typography flex={1} variant='subtitle1'>{step.name}</Typography> <Typography color={colors.grey[800]} variant='caption'>{moment(step.duration[0]).format("LL")} to {moment(step.duration[1]).format("LL")}</Typography>
+                                            <Stack flex={1}>
+                                                {cat?._steps.map((step) => {
+                                                    return (
+                                                        <Stack flex={1} spacing={1}>
+                                                            <Stack flex={1} spacing={1} direction={'row'}>
+                                                                <Typography
+                                                                    component={'li'}
+                                                                    flex={1}
+                                                                    variant='subtitle1'
+                                                                >
+                                                                    {step.name}
+                                                                </Typography>
+                                                                <Typography
+                                                                    color={colors.grey[800]}
+                                                                    variant='caption'
+                                                                >
+                                                                    From: {moment(step.duration[0]).format("LL")} - {getDaysBetween(step.duration)}
+                                                                </Typography>
+                                                            </Stack>
+                                                            <Typography>{step.description}</Typography>
                                                         </Stack>
-                                                        <Typography>{step.description}</Typography>
-                                                    </Stack>
-                                                )
-                                            })}
+                                                    )
+                                                })}
+                                            </Stack>
                                         </Stack>
                                     </Stack>
                                 )
                             })}
                         </Stack>
+                        <Stack px={2}>
+                            <Typography>Delivery Progress</Typography>
+                            <Progress percent={10} status="active" />
+                        </Stack>
                     </Stack>
                 )}
                 {currentStatus === 'published' ||
                     currentStatus === 'active' ||
-                    currentStatus === 'finalstage'
+                    currentStatus === 'contracting'
                     ? (
-                        <Stack>
-                            {!masterContract && (<Stack flex={1} >
-                                <Button type='primary' onClick={() => {
-                                    setMasterContractDialog(true)
-                                }}>Upload Master Contract</Button>
+                        <Stack gap={2}>
 
-                            </Stack>)}
-                            {masterContract && (
-                                <Stack flex={1} direction={'row'} spacing={1} >
-                                    <Documents url={masterContract.file_url} name={masterContract.name} />
-                                    <Stack px={1} spacing={2} >
-                                        <Stack>
-                                            <Typography variant='subtitle1'>{masterContract.name}</Typography>
-                                            <Typography color='GrayText' variant='body1'>Uploaded at - {SystemService.formatTimestamp(masterContract.created_at)}</Typography>
+                            <Divider >Master Contract</Divider>
+                            <Stack>
+                                {!masterContract && (<Stack flex={1} >
+                                    <Button type='primary' onClick={() => {
+                                        setMasterContractDialog(true)
+                                    }}>Upload Master Contract</Button>
+
+                                </Stack>)}
+                                {masterContract && (
+                                    <Stack flex={1} direction={'row'} spacing={1} >
+                                        <Documents url={masterContract.file_url} name={masterContract.name} />
+                                        <Stack px={1} spacing={2} >
+                                            <Stack>
+                                                <Typography variant='subtitle1'>{masterContract.name}</Typography>
+                                                <Typography color='GrayText' variant='body1'>Uploaded at - {SystemService.formatTimestamp(masterContract.created_at)}</Typography>
+                                            </Stack>
+                                            <Stack alignItems={'flex-start'}>
+                                                <Button type='default' onClick={() => {
+                                                    setMasterContractDialog(true)
+                                                }}>Update</Button>
+                                            </Stack>
                                         </Stack>
-                                        <Stack alignItems={'flex-start'}>
-                                            <Button type='default' onClick={() => {
-                                                setMasterContractDialog(true)
-                                            }}>Update</Button>
-                                        </Stack>
+
                                     </Stack>
-
-                                </Stack>
-                            )}
+                                )}
+                            </Stack>
+                            <Divider />
                         </Stack >
                     ) : null}
                 {currentStatus === 'published' && (<Stack>
@@ -792,13 +915,12 @@ const OfftakeDetails = (props) => {
                 </Stack>)}
 
 
-                <Form form={contractModelForm} layout='vertical' onFinish={(v) => {
+                <Form disabled={offtake.contract_model} form={contractModelForm} layout='vertical' onFinish={(v) => {
                     OfftakeService.updateContractModel(offtake.offtake_id, v.contract_model).then(() => {
                         messageApi.success("Contract Model Updated")
                     }).catch((err) => {
                         messageApi.error("Something went wrong")
                         console.log(err);
-
                     })
                 }}>
                     {
@@ -811,9 +933,6 @@ const OfftakeDetails = (props) => {
                                         style={{ width: 400 }}
                                         placeholder="Please select a model..."
                                         options={contractModel}
-                                        onChange={(v) => {
-                                            console.log(v);
-                                        }}
                                     />
                                 </Form.Item>
                                 <Button type='default' htmlType='submit'>Update</Button>
@@ -858,7 +977,7 @@ const OfftakeDetails = (props) => {
                     <Stack bgcolor={colors.grey[100]} p={3} borderRadius={4} gap={3}>
                         <Grid flex={1} container gap={0}>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1} >
-                                <PermissionControl label={"Cateogry/Type"} name={"commodity_name"} value={commodity_name} form={offtakeForm} />
+                                <PermissionControl label={"Cateogry/Type"} name={"category_type"} value={ot?.category_type} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Product Name"} name="produce_name" form={offtakeForm} value={ot?.commodity_name} />
@@ -867,7 +986,7 @@ const OfftakeDetails = (props) => {
                                 <PermissionControl label={"Production Method"} name="production_method" value={production_method} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
-                                <PermissionControl label={"Total Order Quanitity"} name="quantity" value={quantity} form={offtakeForm} />
+                                <PermissionControl label={"Total Order Quanitity"} name="quantity" value={`${quantity}${unit}`} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Delivery Frequency"} name="delivery_frequency" form={offtakeForm} value={delivery_frequency} />

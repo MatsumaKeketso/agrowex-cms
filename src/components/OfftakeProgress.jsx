@@ -12,7 +12,7 @@ const stepData = [
   { title: 'planning', status: 'success' },
   { title: 'submitted', status: 'wait' },
   { title: 'published', status: 'wait' },
-  { title: 'finalstage', status: 'wait' },
+  { title: 'contracting', status: 'wait' },
   { title: 'active', status: 'wait' },
 ];
 const OfftakeProgress = ({ status }) => {

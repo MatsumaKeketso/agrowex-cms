@@ -53,7 +53,7 @@ const ProductionCost = () => {
         if (
           OfftakeService.getStatus.Name(o.status) === 'submitted' ||
           OfftakeService.getStatus.Name(o.status) === 'published' ||
-          OfftakeService.getStatus.Name(o.status) === 'finalstage' ||
+          OfftakeService.getStatus.Name(o.status) === 'contracting' ||
           OfftakeService.getStatus.Name(o.status) === 'active'
         ) {
           setDisableForm(true)
