@@ -37,7 +37,14 @@ const OfftakeChat = () => {
   const offtake = useSelector((state) => state?.offtake.active || {})
   const sendMessage = (data) => {
     AuthService.getUser().then(user => {
-      const oM = { ...data, timestamp: SystemService.generateTimestamp(), status: 'sent', sender: user.uid }
+      const oM = {
+        ...data,
+        timestamp: SystemService.generateTimestamp(),
+        status: 'sent',
+        sender: user.uid,
+        internal: true
+      }
+
       setLoading(false)
       ChatService.sendMessage(oM, offtake_id).then(res => {
 
@@ -210,10 +217,9 @@ const OfftakeChat = () => {
         </Stack>
       </Modal>
       <Stack gap={2} sx={{ overflow: 'auto' }} flex={1} direction={'row'} position={'relative'} >
-        <Stack flex={2} p={3} sx={{ overflow: 'auto' }} position={'relative'} >
+        <Stack flex={2} px={3} sx={{ overflow: 'auto' }} position={'relative'} >
           <OfftakeDetails setOfftakeId={() => { }} />
         </Stack>
-        {/* <Stack flex={1.5}></Stack> */}
         <Stack flex={1} overflow={'hidden'}  >
           <AppBar sx={{ zIndex: 22 }} color='transparent' elevation={1} position='sticky' variant='elevation'>
             <Toolbar >

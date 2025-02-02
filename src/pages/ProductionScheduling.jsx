@@ -7,7 +7,7 @@ import { OfftakeService } from '../services/offtakeService'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic, Checkbox } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -23,7 +23,7 @@ dayjs.extend(weekday);
 dayjs.extend(localeData)
 const yield_options = [
   { label: 'Litre', value: 'ha' },
-  { label: 'Kg', value: 'tunnel' },
+  { label: 'Kg', value: 'kg' },
   { label: 'Ton', value: 'hives' },
   { label: 'Gallons', value: 'gallons' },
 ];
@@ -34,6 +34,30 @@ const prod_res_cap_options = [
   { label: 'Tank', value: 'tank' },
   { label: 'Gallons', value: 'gallons' }
 ];
+const quantity_used_per_ha = [
+  { label: 'Kg', value: 'kg' },
+  { label: 'Litre', value: 'litre' },
+  { label: 'Ton', value: 'ton' },
+  { label: 'Gallons', value: 'gallons' },
+  { label: 'Pack', value: 'pack' },
+  { label: 'Bag', value: 'bag' },
+  { label: 'Box', value: 'box' },
+  { label: 'Tray', value: 'tray' },
+  { label: 'Crate', value: 'crate' },
+  { label: 'Ha', value: 'ha' }
+];
+const currency = [
+  { label: 'R', value: 'ZAR' },
+  { label: '$', value: 'USD' },
+  { label: '€', value: 'EUR' },
+  { label: '₦', value: 'NGN' },
+  { label: '£', value: 'GBP' },
+  { label: '¥', value: 'JPY' },
+  { label: '₹', value: 'INR' },
+  { label: '₽', value: 'RUB' }
+
+
+]
 const production_stages = [
   { label: 'Season Preparation', value: 'season_preparation' },
   { label: 'Post Havest Evaluation', value: 'post_eval' },
@@ -76,6 +100,16 @@ const ProductionScheduling = () => {
   const prod_res_cap = Form.useWatch("prod_res_cap", scheduleForm)
   // const required_yield_output = Form.useWatch("required_yield_output", scheduleForm)
   const redux_offtake = useSelector((state) => state.offtake?.active);
+  const formatter = (value) => {
+    if (isNaN(value)) return 0;
+    return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const parser = (value) => {
+    if (typeof value !== 'string') return 0;
+    return value.replace(/\R\s?|(,*)/g, '');
+  };
+
   const submitSchedule = (schedule) => {
     const batch = writeBatch(firestoreDB)
     // will be edited
@@ -128,21 +162,25 @@ const ProductionScheduling = () => {
       const offtakeEnd = formatDate(schedule.offtake_start_and_end_date[1])
       new_schedule.offtake_start_and_end_date = [offtakeStart, offtakeEnd]
       // check ids for categories
+      const _production_plan = {
+        offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
+        submission_closing_date: new_schedule.submission_closing_date,
+        prod_res_cap: schedule.prod_res_cap,
+        production_cost: productionCost,
+        prod_res_cap_unit: schedule.prod_res_cap_unit,
+        required_yield_output: schedule.required_yield_output,
+        required_yield_output_unit: schedule.required_yield_output_unit,
+        yield_output_per_unit: schedule.yield_output_per_unit,
+        yield_output_unit: schedule.yield_output_unit,
+      }
+
       const offtake_with_dates = {
         ...offtake,
-        _production_plan: {
-          offtake_start_and_end_date: new_schedule.offtake_start_and_end_date,
-          submission_closing_date: new_schedule.submission_closing_date,
-          prod_res_cap: schedule.prod_res_cap,
-          production_cost: productionCost,
-          prod_res_cap_unit: schedule.prod_res_cap_unit,
-          required_yield_output: schedule.required_yield_output,
-          required_yield_output_unit: schedule.required_yield_output_unit,
-          yield_output_per_unit: schedule.yield_output_per_unit,
-          yield_output_unit: schedule.yield_output_unit,
-        }
+        _production_plan
       }
       if (!missing_steps) {
+        console.log(new_schedule.categories);
+
         // todo: add helper function to modify the data sent to the server
         // target : new_schedule => modifty using Helpers.updateAllProductionData(offtake_id, new_schedule)
         Helpers.flatNestedData(new_schedule.categories).then(async (_flat_docs) => {
@@ -186,6 +224,7 @@ const ProductionScheduling = () => {
         // });
 
         // update prod plan
+
         OfftakeService.updateOfftake(offtake_id, offtake_with_dates).then(def => {
           messageApi.success("Offtake Updated successfully")
           setLoading(false)
@@ -291,6 +330,25 @@ const ProductionScheduling = () => {
 
     return totalUnitCost.toFixed(2);
   };
+  const getCategoryPhase = (cateogry) => {
+    if (categoryValues[cateogry]) {
+      // return category phase
+      return categoryValues[cateogry]?.phase
+    } else { return '' }
+  }
+  const includeCosting = (cateogry, step, costing) => {
+    if (categoryValues[cateogry]) {
+      if (categoryValues[cateogry]?._steps[step]) {
+        if (categoryValues[cateogry]?._steps[step]._costing) {
+          const _include = categoryValues[cateogry]?._steps[step]._costing[costing]?.include_in_cost
+          return _include
+        } else {
+          return false
+        }
+
+      } else { return false }
+    } else { return false }
+  }
   const getCostingPerStep = (cateogry, step) => {
     if (categoryValues[cateogry]) {
       if (categoryValues[cateogry]?._steps[step]) {
@@ -301,7 +359,6 @@ const ProductionScheduling = () => {
               step_total_costing = step_total_costing + (step_cost?.total_unit_cost * 1 || 0)
             }
           });
-
           return step_total_costing
         } else {
           return 0
@@ -314,8 +371,8 @@ const ProductionScheduling = () => {
     OfftakeService.getProductionPlan(offtake_id).then(categories => {
       if (categories) {
         // setProductionPlan(categories)
-        console.log(categories);
-        Helpers.nestProductionData(categories).then((data) => {
+        Helpers.nestProductionData(categories).then((_data) => {
+          const data = _data.groupedCategories
           console.log(data);
 
           // setProductionPlan(data)
@@ -339,8 +396,10 @@ const ProductionScheduling = () => {
                       cost_name: cost.cost_name,
                       amount: cost.amount,
                       interval: cost.interval,
-                      used_per_hactor: cost.used_per_hactor,
-                      total_unit_cost: cost.total_unit_cost
+                      used_per_hactor: cost?.used_per_hactor,
+                      used_per_hactor_unit: cost?.used_per_hactor_unit,
+                      total_unit_cost: cost?.total_unit_cost,
+                      include_in_cost: cost?.include_in_cost ? cost.include_in_cost : false
                     }
                   }) : []
                 }
@@ -353,6 +412,7 @@ const ProductionScheduling = () => {
       }
     })
   }
+
   // prod_res_cap
   useEffect(() => {
     scheduleForm.setFieldValue("required_yield_output", (yield_output_per_unit * prod_res_cap))
@@ -406,7 +466,7 @@ const ProductionScheduling = () => {
                     _costing: {
                       [itemIndex]: {
                         total_unit_cost: Number(totalUnitCost.toFixed(2)),
-                        overal_cost: Number(totalUnitCost.toFixed(2))
+                        // overal_cost: Number(totalUnitCost.toFixed(2))
                       }
                     }
                   }
@@ -420,6 +480,11 @@ const ProductionScheduling = () => {
   }, [scheduleForm.getFieldValue('prod_res_cap')]);
   useEffect(() => {
     setPageLoading(true)
+    SystemService.getCurrencyList().then((currency) => {
+      // set currency
+      console.log(currency);
+
+    })
     // Get offtake
     if (redux_offtake.offtake_id) {
       console.log("no need to get storage data");
@@ -539,7 +604,7 @@ const ProductionScheduling = () => {
               <Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>
               <Stack flex={1} direction={'row'} gap={1}>
                 <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
-                <Typography variant='subtitle1' p={2}>Production Cost : R {productionCost}</Typography>
+                <Typography variant='subtitle1' p={2}>Production Cost :  {SystemService.formatCurrency(productionCost)}</Typography>
               </Stack>
               <Button disabled={!disableForm} icon={<DownloadOutlined />} onClick={() => {
                 OfftakeService.generateProductionPDF(productionPlan, redux_offtake).then((res) => {
@@ -566,15 +631,17 @@ const ProductionScheduling = () => {
                 </Stack>
                 <Stack direction={'row'} justifyContent={'space-between'} >
                   <Form.Item label="Yield/Output Per Unit " name="yield_output_per_unit" initialValue={0} rules={[{ required: true }]}>
-                    <InputNumber addonAfter={
-                      <Form.Item
-                        name="yield_output_unit"
-                        noStyle
-                        initialValue={'ha'}
-                      >
-                        <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={yield_options} />
-                      </Form.Item>
-                    } />
+                    <InputNumber
+
+                      addonAfter={
+                        <Form.Item
+                          name="yield_output_unit"
+                          noStyle
+                          initialValue={'ha'}
+                        >
+                          <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={yield_options} />
+                        </Form.Item>
+                      } />
                   </Form.Item>
                   <Form.Item label="Production Resources Capacity " name="prod_res_cap" initialValue={0} rules={[{ required: true }]}>
                     <InputNumber addonAfter={
@@ -610,9 +677,13 @@ const ProductionScheduling = () => {
                             <Divider>
                               <Stack alignItems={'center'} direction={'row'} gap={1}>Production Category {category.name + 1} {category.name !== 0 ? (
                                 <IconButton disabled={disableForm} size='small' onClick={() => {
-                                  const key = categoryValues[category.name]?.key ? categoryValues[category.name].key : category.name
+                                  // const key = categoryValues[category.name]?.key ? categoryValues[category.name].key : category.name
+                                  // todo : monitor could break
+                                  const key = categoryValues[category.name]?._steps[0]?._costing[0]?.key
                                   if (key) {
-                                    // todo delete all docs with category index of {category.name}
+                                    OfftakeService.removeCategories(offtake_id, key).then(() => {
+                                      remove(category.name)
+                                    })
                                   } else {
                                     remove(category.name)
                                   }
@@ -665,13 +736,26 @@ const ProductionScheduling = () => {
 
                                           return (
                                             <Timeline.Item key={step.name} dot={<Spin />}>
-                                              <Card title={`Production Step ${step.name + 1} - R${getCostingPerStep(category.name, step.name)}`
+                                              <Card title={`Production Step ${step.name + 1} - ${SystemService.formatCurrency(getCostingPerStep(category.name, step.name))}`
                                               }
                                                 extra={
                                                   <>
                                                     {step.name !== 0 ? (<IconButton disabled={disableForm} onClick={() => {
                                                       // todo : delete all entries with {category.name} and {step.name}
-                                                      remove(step.name)
+                                                      const key = categoryValues[category.name]?._steps[step.name]?._costing[0]?.key
+                                                      if (key === "null") {
+                                                        remove(step.name)
+                                                      } else {
+                                                        OfftakeService.removeStep(offtake_id, category.name, step.name).then(() => {
+                                                          remove(step.name)
+                                                          messageApi.success("Step removed")
+                                                          getProductionStatuses()
+                                                        }).catch(err => {
+                                                          messageApi.error(err.message)
+                                                          console.log(err);
+                                                        })
+                                                      }
+
                                                     }}><CloseRounded /></IconButton>) : null}
                                                   </>
 
@@ -707,25 +791,35 @@ const ProductionScheduling = () => {
                                                     <Stack>
                                                       {items.map((item, i) => {
                                                         return (
-                                                          <Stack gap={1} p={1} borderRadius={1} bgcolor={i % 2 ? colors.grey[100] : colors.common.white}>
-
+                                                          <Stack gap={1} p={1} justifyContent={'space-evenly'} borderRadius={1} bgcolor={i % 2 ? colors.grey[100] : colors.common.white}>
                                                             <Form.Item label="Cost item" name={[item.name, 'cost_name']} rules={[{ required: true }]} >
                                                               <Input />
                                                             </Form.Item>
                                                             <Form.Item hidden initialValue={'null'} name={[item.name, 'key']} >
                                                               <Input disabled />
                                                             </Form.Item>
-                                                            <Stack key={item.key} direction={'row'} spacing={1} >
-
+                                                            <Stack key={item.key} justifyItems={'center'} alignItems={'center'} alignContent={'space-evenly'} justifyContent={'space-evenly'} direction={'row'} spacing={1} >
                                                               <Form.Item label="Cost per unit" initialValue={(0).toFixed(2)} name={[item.name, 'amount']} rules={[{ required: true }]} >
-                                                                <InputNumber addonBefore="R" onChange={() => {
-                                                                  calculateTotalUnitCost(
-                                                                    scheduleForm,
-                                                                    category.name,  // categoryIndex
-                                                                    step.name,   // stepIndex
-                                                                    item.name    // itemIndex
-                                                                  );
-                                                                }} />
+                                                                <InputNumber
+                                                                  formatter={formatter}
+                                                                  parser={parser}
+                                                                  addonBefore={
+                                                                    <Form.Item name={[item.name, 'amount_currency_unit']} noStyle initialValue={'ZAR'}>
+                                                                      <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 40 }} options={currency} />
+                                                                    </Form.Item>}
+                                                                  onChange={() => {
+                                                                    calculateTotalUnitCost(
+                                                                      scheduleForm,
+                                                                      category.name,  // categoryIndex
+                                                                      step.name,   // stepIndex
+                                                                      item.name    // itemIndex
+                                                                    );
+                                                                  }}
+                                                                  addonAfter={
+                                                                    <Form.Item name={[item.name, 'amount_unit']} noStyle initialValue={'ha'}>
+                                                                      <Select defaultActiveFirstOption={true} defaultValue={'ha'} style={{ minWidth: 90 }} options={quantity_used_per_ha} />
+                                                                    </Form.Item>}
+                                                                />
                                                               </Form.Item>
                                                               <Form.Item label="Application&nbsp;intervals" initialValue={(0).toFixed(2)} name={[item.name, 'interval']} rules={[{ required: true }]} >
                                                                 <InputNumber onChange={() => {
@@ -737,44 +831,73 @@ const ProductionScheduling = () => {
                                                                   );
                                                                 }} />
                                                               </Form.Item>
-                                                              <Form.Item label="QTY used per Ha/Tune" initialValue={0} name={[item.name, 'used_per_hactor']} rules={[{ required: true }]} >
-                                                                <InputNumber value={0} addonAfter={
+                                                              <Form.Item label="QTY used per Ha/Tunnel" initialValue={0} name={[item.name, 'used_per_hactor']} rules={[{ required: true }]} >
+                                                                <InputNumber style={{ minWidth: 130 }} value={0} addonAfter={
                                                                   <Form.Item
                                                                     name={[item.name, 'used_per_hactor_unit']}
                                                                     noStyle
                                                                     initialValue={'kg'}
                                                                   >
-                                                                    <Select defaultActiveFirstOption={true} options={[{ label: 'kg', value: 'kg' }]} />
+                                                                    <Select defaultActiveFirstOption={true} options={quantity_used_per_ha} />
                                                                   </Form.Item>
-                                                                } onChange={() => {
-                                                                  calculateTotalUnitCost(
-                                                                    scheduleForm,
-                                                                    category.name,  // categoryIndex
-                                                                    step.name,   // stepIndex
-                                                                    item.name    // itemIndex
-                                                                  );
-                                                                }} />
+                                                                }
+
+                                                                  onChange={() => {
+                                                                    calculateTotalUnitCost(
+                                                                      scheduleForm,
+                                                                      category.name,  // categoryIndex
+                                                                      step.name,   // stepIndex
+                                                                      item.name    // itemIndex
+                                                                    );
+                                                                  }} />
                                                               </Form.Item>
-                                                              <Form.Item hidden label="Total unit cost" initialValue={0} name={[item.name, 'overal_cost']} rules={[{ required: true }]} >
-                                                                <InputNumber style={{ flex: 1, width: '100%' }} value={0} />
-                                                              </Form.Item>
-                                                              {/* <Statistic title="Total unit cost" value={getTotalUnitCost(category.name, step.name, item.name)}></Statistic> */}
-                                                              <Form.Item label="Total unit cost" initialValue={0} name={[item.name, 'total_unit_cost']} rules={[{ required: true }]} >
-                                                                <InputNumber disabled style={{ flex: 1, width: '100%' }} value={0} />
-                                                              </Form.Item>
+                                                              {
+                                                                getCategoryPhase(category.name) === 'harvesting' && !includeCosting(category.name, step.name, item.name) ||
+                                                                  getCategoryPhase(category.name) === 'delivery' && !includeCosting(category.name, step.name, item.name)
+                                                                  ? (
+                                                                    null
+                                                                  )
+                                                                  : (
+                                                                    <Stack spacing={1} direction={'row'}>
+                                                                      {/* <Form.Item hidden initialValue={0} name={[item.name, 'overal_cost']} rules={[{ required: true }]} >
+                                                                        <InputNumber style={{ flex: 1, width: '100%' }} value={0} />
+                                                                      </Form.Item> */}
+                                                                      {/* <Statistic title="Total unit cost" value={getTotalUnitCost(category.name, step.name, item.name)}></Statistic> */}
+                                                                      <Form.Item label="Total unit cost" initialValue={0} name={[item.name, 'total_unit_cost']} rules={[{ required: true }]} >
+                                                                        <InputNumber
+                                                                          formatter={formatter}
+                                                                          parser={parser} disabled style={{ flex: 1, width: '100%' }} value={0} />
+                                                                      </Form.Item>
+                                                                    </Stack>
+                                                                  )
+                                                              }
+                                                              <Stack>
+                                                                <Form.Item name={[item.name, 'include_in_cost']} initialValue={false} valuePropName="checked">
+                                                                  <Checkbox >Include in cost</Checkbox>
+                                                                </Form.Item>
+                                                              </Stack>
+
+
                                                               <Stack pt={3.5}>
                                                                 {i !== 0 ? (<Button onClick={() => {
                                                                   const key = categoryValues[category.name]?._steps[step.name]?._costing[item.name]?.key
                                                                   if (key === "null") {
                                                                     remove(item.name)
                                                                   } else {
-                                                                    OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
-                                                                      // remove(category.name);
+                                                                    OfftakeService.removeCostingStep(offtake_id, category.name, step.name, item.name).then(() => {
                                                                       remove(item.name)
+                                                                      messageApi.success("Costing removed")
+                                                                      getProductionStatuses()
                                                                     }).catch(err => {
                                                                       console.log(err);
-                                                                      // 
                                                                     })
+                                                                    // OfftakeService.removeProductionStatus(offtake_id, key).then(() => {
+                                                                    //   // remove(category.name);
+                                                                    //   remove(item.name)
+                                                                    // }).catch(err => {
+                                                                    //   console.log(err);
+                                                                    //   // 
+                                                                    // })
                                                                   }
 
                                                                 }} icon={<DeleteOutlined />} shape='circle'></Button>) : null}
@@ -829,12 +952,11 @@ const ProductionScheduling = () => {
               <Button
                 loading={loading}
                 type='default'
-                color={colors.green[400]}
                 disabled={disableForm}
                 onClick={() => { scheduleForm.submit() }}>Save Draft</Button>
               {/* Update status to submitted */}
               {
-                OfftakeService.getStatus.Name(offtake.status) === "planning"
+                OfftakeService.getStatus.Name(offtake?.status) === "planning"
                 &&
                 (
                   <Button type='primary' onClick={() => {

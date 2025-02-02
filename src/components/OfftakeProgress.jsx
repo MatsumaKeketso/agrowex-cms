@@ -14,6 +14,7 @@ const stepData = [
   { title: 'published', status: 'wait' },
   { title: 'contracting', status: 'wait' },
   { title: 'active', status: 'wait' },
+  { title: 'done', status: 'wait' },
 ];
 const OfftakeProgress = ({ status }) => {
   const [currentStep, setCurrentStep] = useState(0)

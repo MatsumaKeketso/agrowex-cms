@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Check } from '@mui/icons-material';
 import { Box, colors, Stack, Typography } from '@mui/material'
 import { SystemService } from '../services/systemService';
@@ -10,6 +10,7 @@ import { Spin } from 'antd';
 const ChatMessage = ({ status, text, time, sender, type = "text", url }) => {
   const [attachment, setAttachment] = useState(null)
   const offtake = useSelector(state => state.offtake.active)
+  const profile = useSelector(state => state.user.profile)
   const style = {
     time: {
       color: colors.grey[400],
@@ -17,6 +18,9 @@ const ChatMessage = ({ status, text, time, sender, type = "text", url }) => {
       read: colors.blue[400]
     }
   }
+  useEffect(() => {
+
+  }, [])
   switch (type) {
     case 'update_log':
       return (<Stack p={1} borderRadius={2} bgcolor={colors.blue[50]} >
@@ -26,9 +30,7 @@ const ChatMessage = ({ status, text, time, sender, type = "text", url }) => {
       break;
     case 'file':
       OfftakeService.getSingleDocument(offtake.offtake_id, text).then(document => {
-        console.log(document);
         setAttachment(document)
-
       })
       return (
         <Stack position={'relative'} alignSelf={'flex-end'} pb={2} ml={sender ? '30%' : 0} mr={!sender ? '30%' : 0} bgcolor={sender ? colors.green[600] : colors.grey[100]} borderRadius={3} p={1}>

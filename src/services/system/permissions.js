@@ -32,6 +32,11 @@ export const Permissions = {
     write: {}
   },
   admin: {
-
+    read: {
+      "*": "*" // all permissions
+    },
+    write: {
+      "*": "*" // all permissions   
+    }
   }
 }

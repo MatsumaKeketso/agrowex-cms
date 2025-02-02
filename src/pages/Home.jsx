@@ -118,7 +118,6 @@ const Home = () => {
 
   const chartData = async () => {
     const data = await getAquisitionsByYear();
-    console.log(data);
     var dimensionsChart = new Chart(document.getElementById("dimensions"), {
       type: "bubble",
       options: {

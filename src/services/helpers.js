@@ -62,6 +62,7 @@ export const Helpers = {
     }
     return { createdDocs, processedIds };
   },
+  // used
   flatNestedData: async (data) => {
     // const batch = db.batch();
     const toAdd = [];
@@ -78,7 +79,30 @@ export const Helpers = {
           const cost = step._costing[costIndex];
 
           // Create document data combining category, step, and cost info
-          const docData = {
+          let docData = {};
+
+          // is there a way to globalise this funtionality?
+          // check if cost is for harvesting or delivery
+          if (phase === "harvesting" || phase === "delivery") {
+            // check if cost is included in cost
+            if (cost?.include_in_cost) {
+              docData = {
+                include_in_cost: cost.include_in_cost,
+                used_per_hactor: Number(cost.used_per_hactor),
+                used_per_hactor_unit: cost.used_per_hactor_unit,
+                total_unit_cost: Number(cost.total_unit_cost),
+              }
+            }
+          } else {
+            // include in cost does not matter here
+            docData = {
+              include_in_cost: cost?.include_in_cost,
+              used_per_hactor: Number(cost.used_per_hactor),
+              used_per_hactor_unit: cost.used_per_hactor_unit,
+              total_unit_cost: Number(cost.total_unit_cost),
+            }
+          }
+          const _final_data = {
             category_index: categoryIndex,
             key: cost.key,
             name,
@@ -87,27 +111,25 @@ export const Helpers = {
             // Step data
             step_index: stepIndex,
             step_name: step.step_name,
-            duration: [step.duration[0].valueOf(), step.duration[1].valueOf()],
-            created_at: SystemService.generateTimestamp(),
+            duration: [step.duration[0], step.duration[1]],
+            created_at: step?.created_at ? step.created_at : SystemService.generateTimestamp(),
             updated_at: SystemService.generateTimestamp(),
             // Cost data
             cost_index: costIndex,
             amount: Number(cost.amount),
             interval: Number(cost.interval),
             cost_name: cost.cost_name,
-            used_per_hactor: Number(cost.used_per_hactor),
-            used_per_hactor_unit: cost.used_per_hactor_unit,
             overal_cost: Number(cost.overal_cost),
-            total_unit_cost: Number(cost.total_unit_cost),
-          };
+            ...docData
+          }
           try {
             // Check if document already exists
-            if (docData.key !== "null") {
+            if (_final_data.key !== "null") {
               // Update existing main document
-              toUpdate.push({ data: docData });
+              toUpdate.push({ data: _final_data });
             } else {
               // Create new document
-              toAdd.push({ data: docData });
+              toAdd.push({ data: _final_data });
             }
 
           } catch (error) {
@@ -118,10 +140,12 @@ export const Helpers = {
     }
     return { toAdd, toUpdate };
   },
+  // used
   nestProductionData: async (categories) => {
     // Helper function to group data by phase, name, and description
+    // Cleans the data from the database and the form
     const groupedCategories = {};
-
+    let items_with_comments = categories.filter(item => item?.comment).length;
     categories.forEach(doc => {
       const { key, phase, name, description, step_name, duration, ...costData } = doc;
 
@@ -138,6 +162,15 @@ export const Helpers = {
           description,
           _steps: [],
         };
+        if (groupedCategories[categoryKey]?.comment) {
+
+          const { comment, file_url, subject } = doc
+          groupedCategories[categoryKey] = {
+            comment,
+            file_url,
+            subject
+          }
+        }
       }
 
       // Find or create the step
@@ -146,7 +179,36 @@ export const Helpers = {
         step = { name: step_name, duration: formattedDuration, _costing: [] };
         groupedCategories[categoryKey]._steps.push(step);
       }
-      const _costing = {
+      let _costing = {
+
+      }
+      // check if cost is for harvesting or delivery
+      if (phase === "harvesting" || phase === "delivery") {
+        // check if cost is included in cost
+        if (costData.include_in_cost) {
+
+          _costing.include_in_cost = costData.include_in_cost;
+          _costing.used_per_hactor = costData.used_per_hactor;
+          _costing.used_per_hactor_unit = costData.used_per_hactor_unit;
+          _costing.total_unit_cost = costData.total_unit_cost;
+        }
+
+      } else {
+        // include in cost does not matter here
+        _costing.include_in_cost = costData?.include_in_cost;
+        _costing.used_per_hactor = costData.used_per_hactor;
+        _costing.used_per_hactor_unit = costData.used_per_hactor_unit;
+        _costing.total_unit_cost = costData.total_unit_cost;
+      }
+      // comments
+      if (costData.comment) {
+        _costing.subject = costData.subject;
+        _costing.comment = costData.comment;
+        _costing.actual_amount = costData.actual_amount;
+        _costing.file_url = costData.file_url;
+        _costing.updated_at = costData.updated_at;
+      }
+      const _standard_costing = {
         key: key,
         amount: costData.amount,
         interval: costData.interval,
@@ -156,20 +218,16 @@ export const Helpers = {
         total_unit_cost: costData.total_unit_cost,
         cost_name: costData.cost_name,
       }
-      // comments
-      if (costData.comment) {
-        _costing.subject = costData.subject;
-        _costing.comment = costData.comment;
-        _costing.actual_amount = costData.actual_amount;
-        _costing.file_url = costData.file_url;
-        _costing.updated_at = costData.updated_at;  
-      }
+      const a = { ..._standard_costing, ..._costing }
       // Add costing to the step
-      step._costing.push(_costing);
+      step._costing.push(a);
     });
 
     // Convert grouped categories back to an array
-    return Object.values(groupedCategories);
+    const v = Object.values(groupedCategories);
+    console.log(v);
+
+    return { groupedCategories: v, items_with_comments, total_items: categories.length };
   },
   transformFormData: (values) => {
     const result = [];

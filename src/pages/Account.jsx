@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useSelector } from "react-redux";
-import { Card, Form, Image, Input, Menu, message, Progress, Select, Upload, Typography as ANTDTypo } from "antd";
+import { Card, Form, Image, Input, Menu, message, Progress, Select, Upload, Typography as ANTDTypo, Badge } from "antd";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from "../services/authService";
 import { UploadOutlined } from "@mui/icons-material";
@@ -33,7 +33,7 @@ const Account = () => {
       messageApi.info("Please wait for upload to finish.")
     } else {
       ProfileService.updateAccountProfile(values).then(data => {
-        console.log(data);
+
         messageApi.success("Profile Updated")
       })
     }
@@ -52,7 +52,7 @@ const Account = () => {
       (snapshot) => {
         // Progress function to track upload progress
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Upload is ' + progress + '% done');
+
         setUploadImage(progress.toFixed(0))
       },
       (error) => {
@@ -64,7 +64,7 @@ const Account = () => {
         // Handle successful uploads
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
           form.setFieldValue('img', downloadURL)
-          console.log('File available at', downloadURL);
+
           messageApi.success('Upload successful!');
           setDisableButton(false)
         });
@@ -72,7 +72,6 @@ const Account = () => {
     );
   };
   useEffect(() => {
-    console.log(profile);
     Object.keys(profile).map(key => {
       if (key !== 'uid') {
         form.setFieldValue(key, profile[key])
@@ -96,6 +95,7 @@ const Account = () => {
           <Stack gap={1}>
             <Card cover={<Image style={{ maxWidth: 200 }} src={profile.img} alt={profile.fullnames} />}>
               <Card.Meta title={profile.fullnames} description={profile.email} />
+              <Badge color="blue">{`${profile.role}`.toUpperCase()}</Badge>
             </Card>
             <Divider />
             <Menu items={[{ label: 'My Account', key: 'account' }, { label: 'Settings', key: 'settings' }]}></Menu>
@@ -136,7 +136,7 @@ const Account = () => {
                 >
                   <Button icon={<UploadOutlined />}>Click to Upload</Button>
                 </Upload>
-                <ANTDTypo.Text keyboard>{img }</ANTDTypo.Text>
+                <ANTDTypo.Text keyboard>{img}</ANTDTypo.Text>
               </Form.Item>
 
               <Form.Item
@@ -155,13 +155,7 @@ const Account = () => {
                 <Input />
               </Form.Item>
 
-              <Form.Item
-                label="Role"
-                name="role"
-                rules={[{ required: true, message: 'Please input your role!' }]}
-              >
-                <Select options={[{ label: 'Admin', value: 'admin' }, { label: 'Operations Manager', value: 'om' }, { label: 'Procurement Manager', value: 'pm' }]} />
-              </Form.Item>
+
               <Form.Item>
                 <Button disabled={disbleButton} type="primary" htmlType="submit">
                   Submit

@@ -3,9 +3,9 @@ import Layout from '../components/Layout'
 import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref, set } from 'firebase/database';
-import { firestoreDB, realtimeDB } from '../services/authService';
+import { firestoreDB, realtimeDB, storage } from '../services/authService';
 import { Box, CardContent, CardHeader, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Card, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
+import { Avatar, Button, Card, Descriptions, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -18,6 +18,7 @@ import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 import { Helpers } from '../services/helpers';
+import { getDownloadURL, uploadBytesResumable, ref as sRef } from 'firebase/storage';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -45,96 +46,14 @@ export const FarmSubmissionColumns = [
       return <Stack>{SystemService.formatTimestamp(v)}</Stack>
     }
   },
-  // {
-  //   title: 'Phone Number',
-  //   dataIndex: ['contact', 'phoneNumber'], // Accessing nested property
-  //   key: 'phoneNumber',
-  // },
-  // {
-  //   title: 'Email',
-  //   dataIndex: ['contact', 'email'], // Accessing nested property
-  //   key: 'email',
-  // },
-
-  // {
-  //   title: 'Requested Offer',
-  //   dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
-  //   key: 'requestedOffer',
-  // },
-  // {
-  //   title: 'Delivered',
-  //   dataIndex: ['offers', 'delivered'], // Accessing nested property
-  //   key: 'delivered',
-  // },
-  // {
-  //   title: 'Address',
-  //   dataIndex: 'address',
-  //   key: 'address',
-  // },
-
 ];
-const productionColumns = [
-  {
-    title: 'Date',
-    dataIndex: 'stepAndDate',
-    key: 'stepAndDate',
-  },
 
-  {
-    title: 'Comment',
-    dataIndex: 'comments',
-    key: 'comments',
-    render: (text) => {
-      const truncatedText = text.substring(0, 48).trim();
-      return (
-        <Tooltip title={text}>
-          <div style={{ maxHeight: '48px', overflow: 'hidden' }}>
-            {truncatedText}
-            {text.length > 48 && '...'}</div>
-        </Tooltip>
-      )
-    }
-  },
-
-];
-const productionColumnsFS = [
-  {
-    title: 'End Date',
-    dataIndex: 'stepAndDate',
-    key: 'stepAndDate',
-    width: 150
-  },
-  {
-    title: 'Farmer',
-    dataIndex: 'farmer',
-    key: 'farmer',
-  },
-  {
-    title: 'Produce',
-    dataIndex: 'produce',
-    key: 'produce',
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-  },
-
-  {
-    title: 'Comment',
-    dataIndex: 'comments',
-    key: 'comments',
-
-  },
-
-];
 const deliveryColumns = [
   {
     title: 'Date',
     dataIndex: 'stepAndDate',
     key: 'stepAndDate',
   },
-
   {
     title: 'Comment',
     dataIndex: 'comments',
@@ -151,65 +70,8 @@ const deliveryColumns = [
       )
     }
   },
+];
 
-];
-const TrackerData = [
-  {
-    offTakeId: "AGRID-1673451062583",
-    farmer: "Mantshwa farm",
-    produce: "Cherry Tomato",
-    status: "Land Preparation",
-    stepAndDate: "02 Sep 2024",
-    step: "Site selection and soil test",
-    comments:
-      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
-    image: "View image",
-  },
-  {
-    offTakeId: "AGRID-1673451062583",
-    farmer: "Mantshwa farm",
-    produce: "Cherry Tomato",
-    status: "Land Preparation",
-    stepAndDate: "02 Sep 2024",
-    step: "Tilling and Leveling",
-    comments:
-      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
-    image: "View image",
-  },
-  {
-    offTakeId: "AGRID-1673451062583",
-    farmer: "Mantshwa farm",
-    produce: "Cherry Tomato",
-    status: "Land Preparation",
-    stepAndDate: "02 Sep 2024",
-    step: "Irrigation, planting & amendments",
-    comments:
-      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
-    image: "View image",
-  },
-  {
-    offTakeId: "AGRID-1673451062583",
-    farmer: "Mantshwa farm",
-    produce: "Cherry Tomato",
-    status: "Seeding",
-    stepAndDate: "02 Sep 2024",
-    step: "Choose Seeds, prep soil & soil moisture",
-    comments:
-      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
-    image: "View image",
-  },
-  {
-    offTakeId: "AGRID-1673451062583",
-    farmer: "Mantshwa farm",
-    produce: "Cherry Tomato",
-    status: "Seeding",
-    stepAndDate: "02 Sep 2024",
-    step: "Planting depth, spacing, seed placement & covering seed",
-    comments:
-      "We are currently preparing a land of 15 hectares at Mantshwa Farm, located in Greater Giyani at the longitude of 28.674 and latitude of -23.098 by May 2024.",
-    image: "View image",
-  },
-];
 
 const FarmerView = ({ record }) => {
   const [loading, setLoading] = useState(false);
@@ -220,11 +82,17 @@ const FarmerView = ({ record }) => {
   const [productionComments, setProductionComments] = useState([]);
   const [limitedProductionComments, setLimitedProductionComments] = useState([]);
   const [deliveryComments, setDeliveryComments] = useState([]);
+  const [productionPlan, setProductionPlan] = useState([]);
   const [address, setAddress] = useState({});
+  const [profitability, setProfitability] = useState({});
   const [tableModal, setTableModal] = useState(false);
+  const [productionProgress, setProductionProgress] = useState(0);
+  const [attachmentProgress, setAttachmentProgress] = useState(0);
   const offtake = useSelector((state) => state.offtake.active);
+  const user = useSelector((state) => state.user.profile);
   const navigate = useNavigate();
   const { farm_profile } = record
+  // todo: get the rest of attachments on the offer
   const deliveryUpdates = [
     {
       key: '1',
@@ -243,55 +111,59 @@ const FarmerView = ({ record }) => {
       Image: 'View',
     },
   ];
-  const loadMoreData = () => {
-    if (loading) {
-      return;
-    }
-    setLoading(true);
-    fetch('https://randomuser.me/api/?results=10&inc=name,gender,email,nat,picture&noinfo')
-      .then((res) => res.json())
-      .then((body) => {
-        setData([...data, ...body.results]);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  };
+
+  const limit = (count, array) => {
+    return array.slice(0, count);
+  }
   const getProductionPlan = () => {
     OfftakeService.getProductionPlan(offtake.offtake_id).then((plan) => {
-      Helpers.nestProductionData(plan).then((nestedData) => {
-        console.log({ nestedData });
+      Helpers.nestProductionData(plan).then((nD) => {
 
+        const nestedData = nD?.groupedCategories || []
+        setProductionPlan(nestedData)
+
+        const progress = (nD?.items_with_comments / plan.length) * 100
+        setProductionProgress(progress)
+
+        SystemService.profitabilityCalucation(offtake, nestedData).then((profit) => {
+          setProfitability(profit)
+        })
         setProductionComments([])
         nestedData.forEach(category => {
+          const c_name = category.name
           category._steps.forEach(step => {
             const { name } = step
             step._costing.forEach(cost => {
               if (cost?.comment) {
-                const { subject, comment, actual_amount, file_url, updated_at } = cost
+                const { subject, comment, actual_amount, file_url, updated_at, cost_name, amount } = cost
                 const _comment = {
                   children:
-                    <Stack gap={1}>
+                    <Stack flex={1}><Stack flex={1} gap={1}>
+                      <Stack direction={'row'} gap={1} alignItems={'center'}>
+                        <Typography flex={1} variant='body2' fontWeight={'bold'}>{subject}</Typography>
+                        <Typography variant='caption'>{SystemService.formatTimestamp(updated_at)}</Typography>
+                      </Stack>
+                      <Typography variant='body2' color={'GrayText'}>{comment}</Typography>
+                      <Typography variant='caption' color={'GrayText'}>{c_name} • {name} • {cost_name}</Typography>
+                      <Descriptions layout='horizontal' column={1} size={'small'}>
+                        <Descriptions.Item label="Estimated Amount">R{Number(amount).toFixed(2)}</Descriptions.Item>
+                        <Descriptions.Item label="Actual Amount">R{Number(actual_amount).toFixed(2)}</Descriptions.Item>
+                      </Descriptions>
+                      <Stack pt={1}>
+                        <Documents type={"button"} url={file_url} name={subject} />
+                      </Stack>
+                    </Stack>
 
-                      <Typography variant='body2' fontWeight={'bold'} color={'GrayText'}>{subject}</Typography>
-                      <Typography variant='body2' >{comment}</Typography>
-                      <Typography variant='caption' color={'GrayText'}>{name}</Typography>
-                      <Divider>{SystemService.formatTimestamp(updated_at)}</Divider>
-                    </Stack>,
+                      <Divider></Divider>
+                    </Stack>
+                  ,
                 }
-                setProductionComments([...productionComments, _comment])
+                setProductionComments(prev => [...prev, _comment])
               }
 
             });
           });
         });
-        // subject
-        // comment
-        // actual_amount
-        // file_url
-        console.log({ nestedData });
-
       })
     })
   }
@@ -301,14 +173,58 @@ const FarmerView = ({ record }) => {
     })
 
   }
-  useEffect(() => {
-    console.log(farm_profile);
+  const uploadAttachment = (file) => {
 
+    return new Promise((resolve, reject) => {
+      setLoading(true)
+      try {
+        // upload attachment to firestore then put the document object in the farmer profile's document subcollection
+        const metadata = {
+          contentType: file.type
+        };
+        const storageRef = sRef(storage, 'cms-documents/farmer_attachments/' + file.name);
+        const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+        // Listen for state changes, errors, and completion of the upload.
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setAttachmentProgress(progress.toFixed(0))
+          },
+          (error) => {
+            reject(error)
+          },
+          () => {
+            // Upload completed successfully, now we can get the download URL
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+              resolve(downloadURL)
+            });
+          }
+        );
+
+      } catch (error) {
+        setLoading(false)
+        console.log(error);
+        reject(error)
+      }
+    });
+
+  }
+  const getDocuments = () => {
+    setDocuments([])
+    FarmerService.getFarmDocuments(farm_profile.farm_id).then((docs) => {
+      setDocuments(docs)
+      if (farm_profile?.certificates) {
+        setDocuments([...documents, ...farm_profile.certificates])
+      }
+    })
+  }
+
+  useEffect(() => {
     getAddress()
     getProductionPlan()
-    OfftakeService.getOfftakeDocuments(offtake.offtake_id).then((_documents) => {
-      setDocuments(_documents)
-    })
+    getDocuments()
     // loadMoreData();
   }, []);
   return (
@@ -316,17 +232,19 @@ const FarmerView = ({ record }) => {
       <Stack direction={'row'} >
         <Modal style={{
           top: 20,
-        }} width={1000} footer={
-          <Segmented
-            value={tableSegment}
-            options={['Production', 'Delivery']}
-            onChange={(value) => {
-              setTableSegment(value)
-              console.log(value); // string
-            }}
-          />} onCancel={() => {
-            setTableModal(false)
-          }} title={`${tableSegment} Tracker Details`} open={tableModal} bodyStyle={{ height: '80vh', }}>
+        }}
+          bodyProps={{ style: { height: '80vh' } }}
+          width={1000}
+          footer={
+            <Segmented
+              value={tableSegment}
+              options={['Production', 'Delivery']}
+              onChange={(value) => {
+                setTableSegment(value)
+              }}
+            />} onCancel={() => {
+              setTableModal(false)
+            }} title={`${tableSegment} Tracker Details`} open={tableModal} styles={{ height: '80vh', }}>
           {tableSegment === 'Production' ? (
             <Stack py={3} px={1}>
               <Timeline
@@ -378,10 +296,38 @@ const FarmerView = ({ record }) => {
             <Statistic title="Address" value={address?.place_name || "..."} />
             <Divider />
           </Stack>
+
+          {/* Attachments */}
           <Card title="Attachments" extra={
-            <Upload showUploadList={false}>
-              <Button>Attach Document</Button>
-            </Upload>}>
+            <Stack >
+              <Upload showUploadList={false} onChange={(info) => {
+                const file = info.file.originFileObj;
+                uploadAttachment(file).then((url) => {
+                  const _doc = {
+                    uploaded_by: user.uid,
+                    name: file.name,
+                    url: url,
+                    type: file.type,
+                    size: file.size,
+                    uploaded_at: SystemService.generateTimestamp()
+                  }
+                  if (!loading) {
+                    FarmerService.addDocument(farm_profile.farm_id, _doc).then(() => {
+                      setLoading(false)
+                      setAttachmentProgress(0)
+                      getDocuments()
+                      message.success(`Document uploaded successfully to : ${farm_profile.farm_name}`)
+                    })
+                  }
+
+                })
+              }}>
+                <Button loading={loading}>Attach Document</Button>
+              </Upload>
+              {loading && <Progress percent={attachmentProgress} />}
+            </Stack>
+
+          }>
             <Stack>
               <Stack direction={'row'} gap={1}  >
                 <Stack flex={1} >
@@ -393,7 +339,7 @@ const FarmerView = ({ record }) => {
                     scrollableTarget="scrollableDiv"
                   >
                     <List
-                      dataSource={farm_profile.certificates}
+                      dataSource={documents}
 
                       renderItem={(document) => (
                         <List.Item style={{ display: 'flex', alignItems: 'center' }} key={document.id}>
@@ -436,7 +382,7 @@ const FarmerView = ({ record }) => {
             </Stack> */}
               <Stack spacing={2} direction={'row'} alignItems={'center'}>
                 <Stack flex={1} alignItems={'center'}>
-                  <Progress type="dashboard" percent={75} />
+                  <Progress type="dashboard" percent={productionProgress} />
                   <Stack p={1} >
                     <Typography>Production</Typography>
                   </Stack>
@@ -456,7 +402,6 @@ const FarmerView = ({ record }) => {
                   options={['Production', 'Delivery']}
                   onChange={(value) => {
                     setTableSegment(value)
-                    console.log(value); // string
                   }}
                 />
               </Stack>
@@ -467,7 +412,7 @@ const FarmerView = ({ record }) => {
                     <>
                       <Timeline
                         mode='left'
-                        items={productionComments}
+                        items={limit(2, productionComments)}
                       />
                       <Stack p={1}>
                         <Button onClick={() => {
@@ -524,19 +469,24 @@ const FarmerView = ({ record }) => {
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between">
               <Typography>TOTAL INCOME</Typography>
-              <Typography>= R 3 360 000.00 [(@R7000/ton) x 8 tons production/ha]</Typography>
+              {/* profitability = { 
+                total_offtake_offer, 
+                total_cost_of_production,
+                offtake_gross_profit 
+               } */}
+              <Typography>{SystemService.calculations(profitability, productionPlan, offtake).revenue}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
               <Typography>PRODUCTION COST</Typography>
-              <Typography>= R 2 392 490.01 [(@R39 874,83/ha) x 60 has]</Typography>
+              <Typography>= R{profitability?.total_cost_of_production}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
               <Typography>AGROWEX SOFTWARE LICENSING</Typography>
-              <Typography>= R 111 000.00 [@R1850/ha x60]</Typography>
+              <Typography>= R{(profitability?.offtake_gross_profit * 0.1).toFixed(2)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="h6" fontWeight="bold">TOTAL PROFIT</Typography>
-              <Typography variant="h6" fontWeight="bold">= R 856 510,20 [@R14 275,17/ha x60 ha]</Typography>
+              <Typography variant="h6" fontWeight="bold">= R{SystemService.calculations(profitability, productionPlan, offtake).o_p}</Typography>
             </Stack>
           </Stack>
         </CardContent>
@@ -557,6 +507,7 @@ const FarmSubmissions = () => {
   const [tonsSelected, setTons] = useState(0)
   const { offtake_id } = useParams()
   const offtake = useSelector((state) => state.offtake?.active);
+  const profile = useSelector((state) => state.user?.profile);
   const [messageAPI, useContext] = message.useMessage()
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -607,9 +558,11 @@ const FarmSubmissions = () => {
   const currentStatus = OfftakeService.getStatus.Name(offtake.status);
 
   const calculateTotalRequestedOffer = (keysArray) => {
+    console.log({ keysArray, submissions });
     const a = submissions
-      .filter(sub => keysArray.includes(sub.uid)) // Filter the farms by the keys in the array
-      .reduce((total, sub) => total + (sub.offer_quantity * 1), 0); // Sum the requestedOffer values
+      .filter(sub => keysArray.includes(sub.key)) // Filter the farms by the keys in the array
+      .reduce((total, sub) => total + (sub.offer_quantity * offtake.weight), 0); // Sum the requestedOffer values
+    console.log(a);
     return a
   };
   const getSelectedFarms = (keysArray) => {
@@ -619,7 +572,6 @@ const FarmSubmissions = () => {
   const listenForFarmSubmissions = () => {
     OfftakeService.getFarmSubmissions(offtake_id).then(f => {
       setFarms(f)
-      console.log(f);
     })
     return
     if (offtake.suppliers) {
@@ -632,7 +584,6 @@ const FarmSubmissions = () => {
     } else {
       OfftakeService.getFarmSubmissions(offtake_id).then(f => {
         setFarms(f)
-        console.log(f);
       })
     }
 
@@ -643,7 +594,6 @@ const FarmSubmissions = () => {
     onValue(chatRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        console.log(data);
       }
     });
   };
@@ -707,7 +657,6 @@ const FarmSubmissions = () => {
         // UPDATE SELECTED SUBMISSIONS to true
         const updatedSubmissions = updateSubmissionSelections(submissions, selectedFarms);
         // update unselected submission to false
-        console.log(updatedSubmissions);
         updatedSubmissions.forEach(sub => {
           const _sub = {
             "unit": sub.unit,
@@ -752,7 +701,6 @@ const FarmSubmissions = () => {
         </Stack>
       </Modal>
 
-
       <Modal title="Status Update" open={active} onOk={() => {
         setLoading(true)
         OfftakeService.getOfftake(offtake_id).then(ot => {
@@ -795,7 +743,7 @@ const FarmSubmissions = () => {
               navigate(`/offtakes`)
             }} icon={<ArrowLeftOutlined />}></Button>
             <Stack gap={0} p={2} flex={1}>
-              <Typography variant='h6' flex={1}>Farmers who are interested</Typography>
+              <Typography variant='h6' flex={1}>Respondents</Typography>
             </Stack>
             <Typography variant='h6' p={2} flex={1}>{tonsSelected}{offtake?.unit} / {tonsSelected < required ? `${required}${offtake?.unit}` : `${tonsSelected}${offtake?.unit}`}</Typography>
             {currentStatus !== 'contracting' && currentStatus !== 'active' && (<Button onClick={() => {
@@ -806,9 +754,12 @@ const FarmSubmissions = () => {
               }
 
             }} disabled={tonsSelected < required} size='large' type='primary'>Final Stage</Button>)}
-            {currentStatus === 'contracting' && (<Button onClick={() => {
-              setActive(true)
-            }} disabled={tonsSelected < required} size='large' type='primary'>Activate Offtake</Button>)}
+            {/*  */}
+            {currentStatus === 'contracting' && profile?.role !== "pm" && (
+              <Button onClick={() => {
+                setActive(true)
+              }}
+                disabled={tonsSelected < required} size='large' type='primary'>Activate Offtake</Button>)}
           </Stack>
           <Table
             rowSelection={currentStatus === 'contracting' || currentStatus === 'active' ? null : rowSelection}

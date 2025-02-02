@@ -32,6 +32,34 @@ export const OfftakeService = {
     });
     return offtakes
   },
+  removeStep: async (offtake_id, categoryIndex, stepId) => {
+    try {
+      const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+      // delete all documents in path offtakes/{offtake_id}/_production-plan where category_index == categoryIndex
+      const q = query(collection(offtakeRef, '_production-plan'), where("category_index", "==", categoryIndex), where("step_index", "==", stepId))
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref)
+      });
+      return 'success'
+    } catch (error) {
+      return error
+    }
+  },
+  removeCategories: async (offtake_id, categoryIndex) => {
+    try {
+      const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+      // delete all documents in path offtakes/{offtake_id}/_production-plan where category_index == categoryIndex
+      const q = query(collection(offtakeRef, '_production-plan'), where("category_index", "==", categoryIndex))
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref)
+      })
+      return 'success'
+    } catch (error) {
+      return error
+    }
+  },
   getOfftake: async (offtake_id) => {
     const docRef = doc(firestoreDB, "offtakes", offtake_id);
     const docSnap = await getDoc(docRef);
@@ -217,6 +245,7 @@ export const OfftakeService = {
     }
   },
   updateProductionPlan: async (offtake_id, status_id, status) => {
+
     // Create a reference to the 'tracker' document in the 'production-plan' collection
     const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_production-plan', status_id);
 
@@ -248,7 +277,7 @@ export const OfftakeService = {
         }));
         return documents;
       } else {
-        console.log("No documents found in the production-plan subcollection!");
+        console.log("No production-plan!");
         return [];
       }
     } catch (error) {
@@ -286,33 +315,46 @@ export const OfftakeService = {
       throw error;
     }
   },
-  removeCostingStep: async (offtake_id, stepId) => {
-    const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
-    // Fetch the current document
-    const docSnap = await getDoc(offtakeRef);
-    if (docSnap.exists()) {
-      const currentSteps = docSnap.data().costing.steps;
-      const currentSchedule = docSnap.data().schedule.steps;
-
-      // Filter out the step with the matching id
-      const updatedSteps = currentSteps.filter(step => step.id !== stepId);
-      const updatedSchedule = currentSchedule.filter(step => step.id !== stepId);
-
-      // Update the document with the modified array
-      await updateDoc(offtakeRef, {
-        'costing.steps': updatedSteps,
-        'schedule.steps': updatedSchedule
+  removeCostingStep: async (offtake_id, categoryIndex, stepId, costId) => {
+    // new operation
+    // delete all documents with category_index === categoryIndex and step_id === stepId and cost_id === costId in the path offtakes/{offtake_id}/_production-plan
+    try {
+      const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+      const q = query(collection(offtakeRef, '_production-plan'), where("category_index", "==", categoryIndex), where("step_index", "==", stepId), where("cost_index", "==", costId))
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref)
       });
-      const success = {
-        message: 'Document updated'
-      }
-      return success
-    } else {
-      const error = {
-        message: 'Document not found'
-      }
-      return error
-    }
+      return 'success'
+    } catch (error) { return error }
+
+    return
+    // const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+    // // Fetch the current document
+    // const docSnap = await getDoc(offtakeRef);
+    // if (docSnap.exists()) {
+    //   const currentSteps = docSnap.data().costing.steps;
+    //   const currentSchedule = docSnap.data().schedule.steps;
+
+    //   // Filter out the step with the matching id
+    //   const updatedSteps = currentSteps.filter(step => step.id !== stepId);
+    //   const updatedSchedule = currentSchedule.filter(step => step.id !== stepId);
+
+    //   // Update the document with the modified array
+    //   await updateDoc(offtakeRef, {
+    //     'costing.steps': updatedSteps,
+    //     'schedule.steps': updatedSchedule
+    //   });
+    //   const success = {
+    //     message: 'Document updated'
+    //   }
+    //   return success
+    // } else {
+    //   const error = {
+    //     message: 'Document not found'
+    //   }
+    //   return error
+    // }
   },
   sendOMMessage: (offtake_id, message) => {
     const offtake = ref(realtimeDB, `submitted-chat/${offtake_id}`)
@@ -471,10 +513,7 @@ export const OfftakeService = {
     }
   },
   getAgentAssignedOfftakes: async (agent_uid) => {
-    console.log('Getting profiles');
     try {
-      console.log(`Getting PM ${agent_uid} offtakes`);
-
       // Reference to the agents collection
       const q = query(
         offtakesCollection,

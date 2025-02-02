@@ -65,16 +65,16 @@ export const theme = createTheme({
         },
       },
     },
-    MuiAccordion: {
-      defaultProps: {
+    // MuiAccordion: {
+    //   defaultProps: {
 
-      },
-      styleOverrides: {
-        root: {
-          borderRadius: 30
-        }
-      }
-    }
+    //   },
+    //   styleOverrides: {
+    //     root: {
+    //       borderRadius: 30
+    //     }
+    //   }
+    // }
   },
   typography: {
     fontFamily: ["Inter", "Inter Variable", "Plus Jakarta Sans", "Plus Jakarta Sans Variable"].join(","),
@@ -184,18 +184,18 @@ const router = createBrowserRouter([
     element: <FAQs />,
   },
 ]);
+// linearGradientButton
 root.render(
   <React.StrictMode>
     <Provider store={store}>
       <ConfigProvider
+
         theme={{
-          token: { colorPrimary: theme.palette.primary.main, "borderRadius": 30 },
+          token: {
+            colorPrimary: theme.palette.primary.main,
+            borderRadius: 30
+          },
           components: {
-            // Table: {
-            //   headerBg: theme.palette.,
-            //   headerColor: theme.palette.common.white,
-            //   headerSortActiveBg: theme.palette.primary.light,
-            // },
             Statistic: {
               contentFontSize: 18
             },
@@ -205,24 +205,23 @@ root.render(
               borderRadiusLG: 16,
               borderRadiusXS: 16,
               itemSelectedBg: theme.palette.primary.main,
-              itemSelectedColor: 'white',
+              itemSelectedColor: theme.palette.common.white,
               itemColor: theme.palette.primary.main
             },
             Input: {
-              colorTextDisabled: "rgb(0,0,0)",
-              colorTextPlaceholder: "rgb(84,82,82)"
+              colorTextDisabled: theme.palette.grey[900],
+              colorTextPlaceholder: theme.palette.grey[400]
             },
             Progress: {
               defaultColor: theme.palette.primary.main
             },
             Layout: {
-              "headerBg": "rgb(255,255,255)",
-              "siderBg": "rgb(255,255,255)",
-              "headerColor": "rgba(30,30,30,0.88)",
-              "triggerBg": "rgb(239,239,239)",
-              "triggerColor": "rgb(88,88,88)"
+              headerBg: theme.palette.common.white,
+              siderBg: theme.palette.common.white,
+              headerColor: theme.palette.grey[800],
+              triggerBg: theme.palette.grey[200],
+              triggerColor: theme.palette.grey[700]
             }
-
           },
         }}
       >
@@ -231,7 +230,7 @@ root.render(
         </ThemeProvider>
       </ConfigProvider>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode >
 );
 
 // If you want to start measuring performance in your app, pass a function

@@ -15,7 +15,7 @@ import BabyChangingStationIcon from "@mui/icons-material/BabyChangingStation";
 import { useDispatch, useSelector } from "react-redux";
 import { setActiveNav } from "../services/navigation/navigationSlice";
 import { getNavIcon } from "../services/navigation-icons";
-import { Drawer, Space, Menu as ANTMenu, Tag, Modal } from "antd";
+import { Drawer, Space, Menu as ANTMenu, Tag, Modal, message, Select } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDownwardRounded,
@@ -29,6 +29,7 @@ import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSl
 import { ProfileService } from "../services/profileService";
 import StatusTag from "./StatusTag";
 import DevTools from "../dev/DevTools";
+import { SystemService } from "../services/systemService";
 export const Logo = () => (
   <svg
     width="85"
@@ -96,11 +97,15 @@ const MenuAppBar = ({ links = [], active }) => {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("mail");
   const [sideNavLinks, setSideNavLinks] = useState([]);
-  const navigation = useSelector((state: any) => state.navigation);
+  const [locale, setLocale] = useState("en-US");
+  const [localeList, setLocaleList] = useState([]);
+  const [messageApi, contextHolder] = message.useMessage();
+  const navigation = useSelector((state) => state.navigation);
   const handleMenu = (event) => { };
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const handleClose = () => { };
+
   const showDrawer = () => {
     setOpen(true);
   };
@@ -116,22 +121,24 @@ const MenuAppBar = ({ links = [], active }) => {
       navigate(`/${e.key}`);
     }
   };
-
+  const setNewLocale = (locale) => {
+    SystemService.setLocale(locale).then(() => {
+      messageApi.success(`Locale set to ${locale.label}`);
+    }).catch(err => {
+      messageApi.error(`Error setting locale to ${locale.label}`);
+    });
+  };
   useEffect(() => {
+    SystemService.currentLocale().then((locale) => {
+      setLocale(locale.value);
+    });
+    SystemService.getLocales().then((locales) => {
+      setLocaleList(locales);
+    });
   }, []);
   return (
-    <AppBar
-      // variant="outlined"
-      elevation={0}
-      sx={{
-        background: "transparent",
-        color: "black",
-        borderWidth: 0,
-        zIndex: 10,
-        // borderRadius: 30,
-      }}
-      position="static"
-    >
+    <>
+      {contextHolder}
       <Drawer
         title="Agrowex"
         placement={"left"}
@@ -147,58 +154,74 @@ const MenuAppBar = ({ links = [], active }) => {
           items={navigation.links}
         />
       </Drawer>
-      <Toolbar variant="dense" sx={{ alignItems: "center" }}>
-        <Box
-          sx={{
-            display: { xs: "block", sm: "block", md: "block", lg: "none" },
-          }}
-        >
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={() => showDrawer()}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Box>
-        <Box py={2} px={2}>
-          <Logo />
-        </Box>
+      <AppBar
+        // variant="outlined"
+        elevation={0}
+        sx={{
+          background: "transparent",
+          color: "black",
+          borderWidth: 0,
+          zIndex: 10,
+          // borderRadius: 30,
+        }}
+        position="static"
+      >
 
-        <Stack flex={1}>
-          <Stack
-            py={1}
-            direction={"row"}
-            flex={1}
+        <Toolbar variant="dense" sx={{ alignItems: "center" }}>
+          <Box
             sx={{
-              display: { xs: "none", sm: "none", md: "none", lg: "block" },
+              display: { xs: "block", sm: "block", md: "block", lg: "none" },
             }}
           >
-            <ANTMenu
-              style={{ background: "transparent" }}
-              onClick={onClick}
-              selectedKeys={[navigation.active]}
-              mode="horizontal"
-              items={navigation.links}
-            />
-          </Stack>
-        </Stack>
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={() => showDrawer()}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Box>
+          <Box py={2} pr={2}>
+            <Logo />
+          </Box>
 
-        <Stack spacing={1} direction={"row"} alignItems={"center"}>
-          <Badge badgeContent={5} color="info">
+          <Stack flex={1}>
+            <Stack
+              py={1}
+              direction={"row"}
+              flex={1}
+              sx={{
+                display: { xs: "none", sm: "none", md: "none", lg: "block" },
+              }}
+            >
+              <ANTMenu
+                style={{ background: "transparent" }}
+                onClick={onClick}
+                selectedKeys={[navigation.active]}
+                mode="horizontal"
+                items={navigation.links}
+              />
+            </Stack>
+          </Stack>
+
+          <Stack spacing={1} direction={"row"} alignItems={"center"}>
+
             <IconButton
               onClick={() => navigate("/messages")}
               sx={{ alignSelf: "flex-start" }}
             >
-              <MessageRounded />
+              <Badge badgeContent={5} color="info">
+                <MessageRounded />
+              </Badge>
             </IconButton>
-          </Badge>
-          <ProfileMenu />
-        </Stack>
-      </Toolbar>
-    </AppBar>
+            <ProfileMenu />
+          </Stack>
+        </Toolbar>
+      </AppBar>
+
+    </>
   );
 };
 const ProfileMenu = () => {
@@ -214,7 +237,6 @@ const ProfileMenu = () => {
     setAnchorEl(null);
   };
   useEffect(() => {
-    console.log(profile.img);
 
   }, [])
   return (
@@ -278,7 +300,6 @@ const Layout = (props) => {
       }
     }).catch(err => {
       console.log(err);
-
     })
     const splitter = location.pathname.split("/");
 

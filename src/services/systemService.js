@@ -1,14 +1,172 @@
-import { ref } from "firebase/database";
 import { ref as sRef } from 'firebase/storage';
 import { getDownloadURL, getStorage, uploadBytesResumable } from "firebase/storage";
-import { Permissions } from "./system/permissions";
 import { firestoreDB } from "./authService";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+const _locales = [
+  { value: "af_ZA", label: "Afrikaans (South Africa)" },
+  { value: "ar_EG", label: "Arabic (Egypt)" },
+  { value: "az_AZ", label: "Azerbaijani (Azerbaijan)" },
+  { value: "bg_BG", label: "Bulgarian (Bulgaria)" },
+  { value: "bn_BD", label: "Bengali (Bangladesh)" },
+  { value: "by_BY", label: "Belarusian (Belarus)" },
+  { value: "ca_ES", label: "Catalan (Spain)" },
+  { value: "cs_CZ", label: "Czech (Czech Republic)" },
+  { value: "da_DK", label: "Danish (Denmark)" },
+  { value: "de_DE", label: "German (Germany)" },
+  { value: "el_GR", label: "Greek (Greece)" },
+  { value: "en_GB", label: "English (United Kingdom)" },
+  { value: "en_US", label: "English (United States)" },
+  { value: "es_ES", label: "Spanish (Spain)" },
+  { value: "et_EE", label: "Estonian (Estonia)" },
+  { value: "fa_IR", label: "Persian (Iran)" },
+  { value: "fi_FI", label: "Finnish (Finland)" },
+  { value: "fr_BE", label: "French (Belgium)" },
+  { value: "fr_FR", label: "French (France)" },
+  { value: "ga_IE", label: "Irish (Ireland)" },
+  { value: "gl_ES", label: "Galician (Spain)" },
+  { value: "he_IL", label: "Hebrew (Israel)" },
+  { value: "hi_IN", label: "Hindi (India)" },
+  { value: "hr_HR", label: "Croatian (Croatia)" },
+  { value: "hu_HU", label: "Hungarian (Hungary)" },
+  { value: "hy_AM", label: "Armenian (Armenia)" },
+  { value: "id_ID", label: "Indonesian (Indonesia)" },
+  { value: "is_IS", label: "Icelandic (Iceland)" },
+  { value: "it_IT", label: "Italian (Italy)" },
+  { value: "ja_JP", label: "Japanese (Japan)" },
+  { value: "ka_GE", label: "Georgian (Georgia)" },
+  { value: "kk_KZ", label: "Kazakh (Kazakhstan)" },
+  { value: "km_KH", label: "Khmer (Cambodia)" },
+  { value: "kn_IN", label: "Kannada (India)" },
+  { value: "ko_KR", label: "Korean (South Korea)" },
+  { value: "ku_IQ", label: "Kurdish (Iraq)" },
+  { value: "lt_LT", label: "Lithuanian (Lithuania)" },
+  { value: "lv_LV", label: "Latvian (Latvia)" },
+  { value: "mk_MK", label: "Macedonian (North Macedonia)" },
+  { value: "mn_MN", label: "Mongolian (Mongolia)" },
+  { value: "ms_MY", label: "Malay (Malaysia)" },
+  { value: "nb_NO", label: "Norwegian Bokmål (Norway)" },
+  { value: "ne_NP", label: "Nepali (Nepal)" },
+  { value: "nl_BE", label: "Dutch (Belgium)" },
+  { value: "nl_NL", label: "Dutch (Netherlands)" },
+  { value: "pl_PL", label: "Polish (Poland)" },
+  { value: "pt_BR", label: "Portuguese (Brazil)" },
+  { value: "pt_PT", label: "Portuguese (Portugal)" },
+  { value: "ro_RO", label: "Romanian (Romania)" },
+  { value: "ru_RU", label: "Russian (Russia)" },
+  { value: "sk_SK", label: "Slovak (Slovakia)" },
+  { value: "sl_SI", label: "Slovenian (Slovenia)" },
+  { value: "sr_RS", label: "Serbian (Serbia)" },
+  { value: "sv_SE", label: "Swedish (Sweden)" },
+  { value: "ta_IN", label: "Tamil (India)" },
+  { value: "th_TH", label: "Thai (Thailand)" },
+  { value: "tr_TR", label: "Turkish (Turkey)" },
+  { value: "uk_UA", label: "Ukrainian (Ukraine)" },
+  { value: "ur_PK", label: "Urdu (Pakistan)" },
+  { value: "uz_UZ", label: "Uzbek (Uzbekistan)" },
+  { value: "vi_VN", label: "Vietnamese (Vietnam)" },
+  { value: "zh_CN", label: "Chinese (Simplified)" },
+  { value: "zh_HK", label: "Chinese (Hong Kong)" },
+  { value: "zh_TW", label: "Chinese (Taiwan)" },
+];
 export const storage = getStorage();
 export const SystemService = {
+  getExchangeRates: async () => {
+    (await fetch("https://api.exchangerate-api.com/v4/latest/USD")).json().then(data => {
+      const rates = data.rates
+      return rates
+    }).catch(err => {
+      console.log(err);
+      
+    })
+  },
+  setCurrencyList: async () => {
+    (await fetch("'https://openexchangerates.org/api/currencies.json'")).json().then(data => {
+      const currency = data
+      // set to local storage
+      localStorage.setItem("currency", currency);
+    }).catch(error => {
+      console.log(error)
+    })
+  },
+  getCurrencyList: async () => {
+    const currency = await localStorage.getItem("currency")
+    return currency
+  },
+  getLocales: async () => {
+    return _locales
+  },
+  setLocale: async (locale) => {
+    try {
+      // set current locale to local storage
+      localStorage.setItem("locale", locale);
+      return locale
+    } catch (error) {
+      console.log(error)
+      return error
+    }
+
+  },
+  currentLocale: async () => {
+    const cl = await localStorage.getItem("locale")
+    return cl ? cl : "en_US"
+  },
   getVariables: () => {
 
+  },
+  calculations: (profitability, productionPlan, offtake) => {
+    // Total Production Cost = Sum of all Total Unit Cost per Category on the Production Plan
+    // profitability = { 
+    //   total_offtake_offer, 
+    //   total_cost_of_production,
+    //   offtake_gross_profit 
+    //  }
+    const t_p_c = profitability.total_cost_of_production
+
+
+    // Total Unit Cost = Unit cost x Quantity Used per Ha x Application Interval x Total # of Ha/Tunnel
+    let t_u_c = 0
+    let p_c = 0
+    productionPlan?.forEach(category => {
+      category._steps.forEach(step => {
+        step._costing.forEach(cost => {
+          t_u_c = t_u_c + cost.total_unit_cost
+        })
+      })
+    })
+
+    // Target/Required Yield Output = Planned Yield/Output per Production Unit X Production Resource Capacity
+    const t_r_y_o = offtake?._production_plan?.yield_output_per_unit * offtake?._production_plan?.prod_res_cap
+
+
+    // Unit Production Cost = Total Production Cost / Number of Units Required/Offered
+    const u_p_c = t_p_c / offtake.quantity
+
+    // REVENUE = Offer Price X Require/Offered Number of Units
+    const revenue = offtake.quantity * offtake?._price_details?.offer_price_per_unit
+
+    // OVERALL PROFITABILITY =   Revenue(# of Units X Offer Price) – Production Cost(Total Production Cost) - AGROWEX Licensing Fee(10 % of Gross profit = Revenue - Production Cost)
+    const o_p = revenue - t_p_c - (revenue * 0.1)
+
+    return { t_p_c, t_u_c, t_r_y_o, u_p_c, revenue, o_p }
+
+
+  },
+  profitabilityCalucation: async (ot, plan) => {
+    // Revenue (# of Units X Offer Price) – Production Cost (Total Production Cost) - AGROWEX Licensing Fee (10% of Gross profit = Revenue- Production Cost)
+    var tot_cost = 0
+    if (plan) {
+      plan.forEach(category => {
+        category._steps.map((step) => {
+          step._costing.map((cost) => {
+            tot_cost = tot_cost + cost.amount
+          })
+        })
+      });
+      const total_offtake_offer = ot?._commodity_details?.quantity * ot?._price_details?.offer_price_per_unit
+      const total_cost_of_production = tot_cost
+      const offtake_gross_profit = total_offtake_offer - total_cost_of_production
+      return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
+    }
   },
   // // todo update function to pull from db
   getPermissions: async () => {
@@ -53,9 +211,7 @@ export const SystemService = {
         }
       },
       (error) => {
-        console.log('====================================');
-        console.log(error);
-        console.log('====================================');
+
         // A full list of error codes is available at
         switch (error.code) {
 
@@ -120,8 +276,61 @@ export const SystemService = {
     //  ' at ' + 
     //  date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
   },
+  getDataType: (value) => {
+    /**
+     * Returns a string representation of the data type of the input value.
+     * 
+     * @param {any} value - Any JavaScript value
+     * @returns {string} String representation of the value's type
+     * 
+     * Examples:
+     * getTypeString(42) // returns "number"
+     * getTypeString("hello") // returns "string"
+     * getTypeString([1, 2, 3]) // returns "array"
+     * getTypeString({a: 1}) // returns "object"
+     * getTypeString(true) // returns "boolean"
+     * getTypeString(null) // returns "null"
+     * getTypeString(undefined) // returns "undefined"
+     */
+
+    if (value === null) {
+      return "null";
+    }
+
+    if (Array.isArray(value)) {
+      return "array";
+    }
+
+    if (value instanceof Date) {
+      return "date";
+    }
+
+    if (value instanceof RegExp) {
+      return "regexp";
+    }
+
+    if (typeof value === "object" && value instanceof Map) {
+      return "map";
+    }
+
+    if (typeof value === "object" && value instanceof Set) {
+      return "set";
+    }
+
+    if (typeof value === "function") {
+      return "function";
+    }
+
+    return typeof value;
+  }
+  ,
   converStringToSentenceCase: (str) => {
     return str.replace(/\b\w/g, c => c.toUpperCase());
+  },
+  formatCurrency: (value) => {
+    const numberised = Number(value).toFixed(2)
+    const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'ZAR' }).format(numberised)
+    return formatted
   }
 }
 

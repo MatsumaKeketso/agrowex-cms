@@ -1,22 +1,30 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, colors, Stack, Typography } from '@mui/material';
 import { Tag } from 'antd';
 import React from 'react'
 import { SystemService } from '../services/systemService';
-const colors = {
-  inprogress: 'yellow',
-  negotiation: '#061724',
-  planning: '#62ABF5',
+import { CheckCircle } from '@mui/icons-material';
+const _colors = {
+  inprogress: colors.yellow[600],
+  negotiation: colors.blueGrey[600],
+  planning: colors.blue[600],
   active: 'success',
-  published: '#54B054',
+  published: colors.green[600],
   notViable: '#3F1011',
   submitted: '#EAA300',
-  contracting: 'red'
+  contracting: 'red',
+  done: ''
 }
 const TagRender = ({ status }) => {
   return (<Stack direction={'row'} alignItems={'center'} position={'relative'}>
-    <Tag color={colors[status]}  >{status ? status?.toUpperCase() : 'no status'}</Tag>
+    <Tag color={_colors[status]}  >{status ? status?.toUpperCase() : 'no status'}</Tag>
     {status === 'published' && (<Box width={90} height={20}>
       <iframe style={{ width: '100%', height: '100%', border: 'solid 0px', background: 'rgba(0,0,0,0)' }} src="https://lottie.host/embed/d152d186-3db6-4d62-97cf-4cbdddf40f05/EaSvK3C8NM.json"></iframe>
+    </Box>)}
+    {status === 'active' && (<Box width={20} height={20}>
+      <iframe style={{ width: '100%', height: '100%', border: 'solid 0px', background: 'rgba(0,0,0,0)' }} src="https://lottie.host/embed/4e5aeabb-fa54-4e50-94c9-1259fcf20053/TtyR1VJRVP.json"></iframe>
+    </Box>)}
+    {status === 'done' && (<Box width={20} height={20}>
+      <CheckCircle sx={{ width: '100%', height: '100%', color: colors.green[600] }} />
     </Box>)}
   </Stack>)
 }

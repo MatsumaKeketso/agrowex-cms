@@ -1,11 +1,29 @@
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
-import { firestoreDB } from "./authService";
+import { addDoc, collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { firestoreDB, storage } from "./authService";
+import { push, ref } from "firebase/database";
 
 const farmerCollection = collection(firestoreDB, "users");
 
 export const FarmerService = {
-  uploadDocument: (farm_id, document) => {
-
+  addDocument: async (farm_id, document) => {
+    try {
+      const farmerDocumentsRef = collection(firestoreDB, 'users', farm_id, '_documents');
+      const docRef = await addDoc(farmerDocumentsRef, document);
+      return docRef.id
+    } catch (error) {
+      console.log(error)
+      return []
+    }
+  },
+  getFarmDocuments: async (farm_id) => {
+    const querySnapshot = await getDocs(collection(firestoreDB, "users", farm_id, "_documents"));
+    const documents = [];
+    querySnapshot.forEach((doc) => {
+      // doc.data() is never undefined for query doc snapshots
+      const document = { ...doc.data(), document_id: doc.id };
+      documents.push(document)
+    });
+    return documents
   },
   getFarmAddress: async (farm_id) => {
     // const addressesRef = collection(firestoreDB, "users", farm_id, "addresses");
@@ -21,7 +39,6 @@ export const FarmerService = {
         if (doc.data().is_use) {
           // doc.data() is never undefined for query doc snapshots
           address = { ...doc.data(), address_id: doc.id };
-          console.log(doc.id, " => ", doc.data());
         }
       });
       return address

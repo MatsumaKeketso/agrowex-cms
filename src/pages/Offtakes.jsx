@@ -16,7 +16,7 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Collapse as ANTDCollapse, Checkbox, Switch, Popconfirm, Segmented, DatePicker, Spin, Layout as ANTDLayout, List, Card, message, Avatar as ANTDAvatar, Select, Upload } from "antd";
+import { Table, Button, Badge, Tag, Drawer, Modal, Input, Form, Collapse as ANTDCollapse, Checkbox, Switch, Popconfirm, Segmented, DatePicker, Spin, Layout as ANTDLayout, List, Card, message, Avatar as ANTDAvatar, Typography as ATypo, Select, Upload, Rate } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import OfftakeDetails, { getDaysBetween } from "../components/OfftakeDetails";
 import { setActiveOfftake, setPublishState } from "../services/offtake/offtakeSlice";
@@ -51,7 +51,7 @@ const _columns = [
         key: 'offtake_id',
         responsive: ['lg'],
         render: (v, r) => {
-            return <Typography noWrap={true} variant="body2">{v}</Typography>
+            return <ATypo.Text copyable variant="body2">{v}</ATypo.Text>
         }
     },
     {
@@ -475,6 +475,7 @@ const AgentForm = ({ activeAgent, form }) => {
 const Offtake = () => {
     const [openOfftake, setOpenOfftake] = useState(false);
     const [openConfirm, setOpenConfirm] = useState(false);
+    const [doneConfirm, setDoneConfirm] = useState(false);
     const [offtakes, setOfftakes] = useState([])
     const [offtakesReset, setOfftakesReset] = useState([])
     const [offtakeBackup, setOfftakeBackup] = useState({})
@@ -496,6 +497,7 @@ const Offtake = () => {
     const offtake = useSelector((state) => state?.offtake?.active);
     const user = useSelector((state) => state?.user);
     const [confirmForm] = Form.useForm()
+    const [doneForm] = Form.useForm()
     const filterSegmentOptions = [
         { label: 'All', value: 'all' },
         { label: 'In Progress', value: 'inprogress' },
@@ -511,9 +513,11 @@ const Offtake = () => {
         dataIndex: 'status',
         key: 'status',
         render: (v, r) => {
-            return (<Stack sx={{ alignItems: 'flex-start' }}>
-                {r.status ? (<StatusTag status={r.status} />) : (<StatusTag status="inprogress" />)}
-            </Stack>);
+            return (
+                <Stack sx={{ alignItems: 'flex-start' }}>
+                    {r.status ? (<StatusTag status={r.status} />) : (<StatusTag status="inprogress" />)}
+                </Stack>
+            );
         }
     }, {
         title: 'Actions',
@@ -744,7 +748,7 @@ const Offtake = () => {
                 </Stack>
             </Backdrop>
 
-            {/* Confirm Assessment */}
+            {/* Confirm assessment */}
             <Modal open={openConfirm} onOk={() => {
                 confirmForm.submit()
             }} onCancel={() => {
@@ -816,9 +820,71 @@ const Offtake = () => {
 
                 </Stack>
             </Modal>
-            {/* End Confirm assessment */}
+            {/* End confirm assessment */}
 
+            {/* Complete offtake */}
+            {/* 
+            Offtake AGREF-OF-1737812853354 is marked as done with a rating and comment in the status object
+            */}
+            <Modal
+                open={doneConfirm}
+                onOk={() => {
+                    doneForm.submit()
+                }}
+                onCancel={() => {
+                    setDoneConfirm(false)
+                }}>
+                <Stack gap={3} pt={3} alignItems={'center'} justifyItems={'center'} justifyContent={'center'}>
+                    <Typography variant="h4">Completion Confirmation</Typography>
+                    <Stack sx={{ opacity: 0.3 }} direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">{offtakeBackup.offtake_id}</Typography>
+                        <StatusTag status={'active'} />
+                    </Stack>
+                    <ArrowDownwardRounded />
+                    <Stack direction={'row'} alignSelf={'center'} gap={1}>
+                        <Typography variant="subtitle2">{offtakeBackup.offtake_id}</Typography>
+                        <StatusTag status={'done'} />
+                    </Stack>
+                    <Typography variant="body1">
+                        Please confirm offtake completion
+                    </Typography>
+                    <Stack width={'100%'} flex={1} alignItems={'start'}>
+                        <Form
+                            style={{ width: '100%' }}
+                            layout="vertical"
+                            form={doneForm}
+                            onFinish={(v) => {
+                                // "/offtakes/:offtake_id/negotiation"
+                                const _status = {
+                                    status_name: "done",
+                                    updated_at: SystemService.generateTimestamp(),
+                                    comment: v.completion_comment,
+                                    rating: v.completion_rating
+                                }
+                                AuthService.getUser().then(user => {
+                                    OfftakeService.updateOfftake(offtakeBackup?.offtake_id, { ...offtakeBackup, confirmed: v, assigned_to: user.uid, pm: user.uid, status: [...offtakeBackup?.status, _status] }).then(res => {
+                                        doneForm.resetFields()
+                                        getStableOfftakes()
+                                        setDoneConfirm(false)
+                                    })
+                                })
 
+                            }}>
+                            <Stack flex={1} pt={3} alignItems={'center'}>
+                                <Form.Item rules={[{ required: true }]} initialValue={2.5} name="completion_rating">
+                                    <Rate allowHalf allowClear />
+                                </Form.Item>
+                                <Form.Item style={{ width: "100%" }} rules={[{ required: true }]} name="completion_comment" label="Comment">
+                                    <Input.TextArea style={{ width: '100%' }} cols={5} />
+                                </Form.Item>
+
+                            </Stack>
+                        </Form>
+                    </Stack>
+
+                </Stack>
+            </Modal>
+            {/* End complete offtake */}
 
             {/* Offtake Details */}
             <Drawer title="Offtake Details" size="large" onClose={() => {
@@ -843,7 +909,14 @@ const Offtake = () => {
                         navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
                     }} > Open Production Plan</Button>) : null}
                     {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'submitted' ? (<Button type="primary" onClick={() => {
-                        dispatch(setPublishState(true))
+                        if (offtake?.contract_model) { dispatch(setPublishState(true)) } else {
+                            message.error("Please select Contract Model")
+                            setOpenOfftake(false)
+                            localStorage.removeItem(offtakeBackup.offtake_id)
+                            setTimeout(() => {
+                                dispatch(setActiveOfftake({}));
+                            }, 1000);
+                        }
                     }} > Publish Offtake</Button>) : null}
                     {/* {OfftakeService.getStatus.Name(offtakeBackup?.status)  === 'contracting' ? (<Button type="primary" onClick={() => {
                       
@@ -853,6 +926,11 @@ const Offtake = () => {
                         setOpenConfirm(true)
                     }
                     } type="primary">Confirm Assessment</Button>
+                    )}
+                    {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'active' && (<Button onClick={() => {
+                        setDoneConfirm(true)
+                    }
+                    } type="primary">Done</Button>
                     )}
 
                 </Stack>}>

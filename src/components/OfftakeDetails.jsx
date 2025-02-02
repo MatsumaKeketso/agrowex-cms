@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardContent, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
-import { Button, Card, Descriptions, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload } from 'antd';
+import { Button, Card, Descriptions, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload, Typography as ATypo } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
 import currency from "currency.js"
@@ -20,7 +20,7 @@ import { AuthService, firestoreDB } from '../services/authService';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { getDownloadURL, ref as sRef, uploadBytesResumable } from 'firebase/storage';
 import moment from 'moment';
-import { ArrowLeftOutlined, UserOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckCircleFilled, UserOutlined } from '@ant-design/icons';
 import { Helpers } from '../services/helpers';
 const Assign = () => {
     const [profiles, setProfiles] = useState([]);
@@ -75,7 +75,6 @@ const PublishOfftake = () => {
                     ...offtake, status: updated_status
                 }))
             }).catch(err => {
-                console.log(err);
                 messageApi.error('Update Error')
                 setLoading(false)
             })
@@ -83,8 +82,6 @@ const PublishOfftake = () => {
 
     }
     useEffect(() => {
-        console.log(offtake);
-
         setOpenDrawer(publish)
     }, [publish])
 
@@ -145,7 +142,10 @@ const MasterContractDialog = ({ open, onClose }) => {
     const [loading, setLoading] = useState(false)
     const [progress, setProgress] = useState(0)
     const [result, setResult] = useState('')
+    const [docAdded, setDocAdded] = useState(false)
     const [messageApi, contextHolder] = message.useMessage();
+    const [attachment, setAttachment] = useState(null)
+    const [pop, setPop] = useState(0)
     const offtake = useSelector(state => state.offtake.active)
     const dispatch = useDispatch()
     const uploadFile = (path, fileObject) => {
@@ -153,11 +153,9 @@ const MasterContractDialog = ({ open, onClose }) => {
         const metadata = {
             contentType: fileObject.type
         };
-        console.log(`cms-documents/${path}/${fileObject.name}`);
-
         const storageRef = sRef(storage, `cms-documents/${path}${fileObject.name}`);
-
         const uploadTask = uploadBytesResumable(storageRef, fileObject, metadata);
+
 
         // Listen for state changes, errors, and completion of the upload.
         uploadTask.on('state_changed',
@@ -165,12 +163,13 @@ const MasterContractDialog = ({ open, onClose }) => {
                 // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 setProgress((progress).toFixed(2))
+
                 switch (snapshot.state) {
                     case 'paused':
-                        console.log('Upload is paused');
+                        // console.log('Upload is paused');
                         break;
                     case 'running':
-                        console.log('Upload is running');
+                        // console.log('Upload is running');
                         break;
                     default:
                         break;
@@ -195,6 +194,7 @@ const MasterContractDialog = ({ open, onClose }) => {
                 }
             },
             () => {
+
                 // Upload completed successfully, now we can get the download URL
                 getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
                     const document = {
@@ -202,14 +202,22 @@ const MasterContractDialog = ({ open, onClose }) => {
                         created_at: SystemService.generateTimestamp(),
                         file_url: downloadURL
                     }
+                    // if (!attachment) { return }
+                    setAttachment(true)
                     OfftakeService.addDocument(offtake.offtake_id, document).then(document_id => {
-                        const updated_offtake = { ...offtake, master_contract: document_id }
+                        const _master_contract = [{ file_url: downloadURL, name: fileObject.name, created_at: SystemService.generateTimestamp(), id: document_id }]
+                        const updated_offtake = { ...offtake, master_contract: _master_contract }
+                        setDocAdded(true)
                         OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(() => {
-                            messageApi.error("Upload complete")
+
+                            messageApi.success("Upload complete")
                             dispatch(setActiveOfftake(updated_offtake))
                             setLoading(false)
                             onClose()
                             setProgress(0)
+                            setAttachment(null)
+                        }).catch((err) => {
+                            messageApi.error(err.message)
                         })
                     }).catch(err => {
                         messageApi.error(err.message)
@@ -229,7 +237,10 @@ const MasterContractDialog = ({ open, onClose }) => {
         },
         onChange(info) {
             const { originFileObj } = info.file;
-            uploadFile(`master_contract/${offtake.offtake_id}`, originFileObj)
+            if (pop == 0) {
+                uploadFile(`master_contract/${offtake.offtake_id}`, originFileObj)
+                setPop(1)
+            }
         },
     };
 
@@ -246,7 +257,7 @@ const MasterContractDialog = ({ open, onClose }) => {
                 <Stack textAlign={'center'} gap={2}>
                     <Upload accept=".pdf" {...props}>
                         <Button loading={loading} type='primary' icon={<UploadOutlined />}>
-                            <Typography>{loading ? 'Uploading...' : 'Upload document'}</Typography></Button>
+                            <Typography variant='button'>{loading ? 'Uploading...' : 'Upload document'}</Typography></Button>
                     </Upload>
                 </Stack>
 
@@ -264,7 +275,7 @@ export function getDaysBetween(dateArray) {
 
     // Check if the input is an array with exactly two elements
     if (!Array.isArray(dateArray) || dateArray.length !== 2) {
-        return "Error: Input must be an array with exactly two date strings";
+        return "Invalid dates";
     }
 
     const [date1, date2] = dateArray;
@@ -297,6 +308,7 @@ const OfftakeDetails = (props) => {
     const dispatch = useDispatch();
     const location = useLocation();
     const [productionProgress, setProductionProgress] = useState([])
+    const [productionPercentage, setProductionPercentage] = useState(0)
     const { offtake_id } = useParams()
     const [offtakeForm] = Form.useForm();
     const [contractModelForm] = Form.useForm();
@@ -324,27 +336,6 @@ const OfftakeDetails = (props) => {
         permissions,
     } = useSelector((state) => state.offtake?.active);
     const ot = useSelector((state) => state.offtake?.active);
-    const profitabilityCalucation = (plan) => {
-        console.log('Calculating profitability');
-        
-        var tot_cost = 0
-        if (plan) {
-            plan.forEach(category => {
-                category._steps.map((step) => {
-                    step._costing.map((cost) => {
-                        tot_cost = tot_cost + cost.amount
-                        console.log(tot_cost);
-
-                    })
-                })
-            });
-            const total_offtake_offer = ot?._commodity_details?.quantity * ot?._price_details?.offer_price_per_unit
-            const total_cost_of_production = tot_cost
-            const offtake_gross_profit = total_offtake_offer - total_cost_of_production
-            setProfitability({ total_offtake_offer, total_cost_of_production, offtake_gross_profit })
-            // return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
-        }
-    }
 
     const closeMasterContractDialogue = () => {
         setMasterContractDialog(false)
@@ -366,7 +357,6 @@ const OfftakeDetails = (props) => {
                     const document = { ...data, doc_id: doc.id }
                     ds.push(document)
                 });
-                console.log(ds);
 
                 setDocuments(ds)
             } else {
@@ -384,7 +374,7 @@ const OfftakeDetails = (props) => {
         if (typeof property === "string") {
             // means its a doc key
             OfftakeService.getMasterContract(ot.offtake_id, ot.master_contract).then((contract) => {
-                console.log(contract);
+                // console.log(contract);
                 if (contract) {
                     setMasterContract(contract)
                 }
@@ -396,7 +386,6 @@ const OfftakeDetails = (props) => {
             return "Neither string nor object";
         }
     }
-
     useEffect(() => {
         if (ot) {
             const cs = OfftakeService.getStatus.Name(ot.status)
@@ -441,13 +430,17 @@ const OfftakeDetails = (props) => {
     }, [offtake])
     useEffect(() => {
         OfftakeService.getProductionPlan(ot.offtake_id).then((plan) => {
-            if (data) {
-                Helpers.nestProductionData(data).then((data) => {
-                    setProdPlan(plan)
-                    profitabilityCalucation(plan)
+            if (plan) {
+                Helpers.nestProductionData(plan).then((_d) => {
+                    const _data = _d.groupedCategories
+                    const progress = (_d?.items_with_comments / plan.length) * 100
+                    setProdPlan(_data)
+                    setProductionPercentage(progress)
+                    SystemService.profitabilityCalucation(ot, _data).then((data) => {
+                        setProfitability(data)
+                    })
                 })
             }
-
         })
         if (location) {
             const pathLength = location.pathname.split("/")
@@ -475,7 +468,7 @@ const OfftakeDetails = (props) => {
         })
         if (offtake.uid) {
             OfftakeService.getUserProfile(offtake.uid).then((user) => {
-                console.log(user);
+                // console.log(user);
                 if (user) {
                     setUserProfile(user)
                 }
@@ -483,9 +476,12 @@ const OfftakeDetails = (props) => {
         }
         if (offtake.offtake_id) {
             OfftakeService.getProductionPlan(offtake.offtake_id).then(categories => {
-                console.log(status);
+                // console.log(status);
                 if (status) {
-                    Helpers.nestProductionData(categories).then((data) => { setProductionProgress(data) })
+                    Helpers.nestProductionData(categories).then((d) => {
+                        const data = d.groupedCategories
+                        setProductionProgress(data)
+                    })
                     // setProductionProgress(status)
                 }
             })
@@ -513,7 +509,7 @@ const OfftakeDetails = (props) => {
                         {showBack && (<Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>)}
                         <Stack flex={1}>
                             <Typography variant='h5'>{ot?.title}</Typography>
-                            <Typography variant='caption'>{ot?.offtake_id}</Typography>
+                            <ATypo.Text copyable >{ot?.offtake_id}</ATypo.Text>
                         </Stack>
                         {ot.status ? (<StatusTag status={ot?.status} />) : (<StatusTag status="inprogress" />)}
                     </Stack>
@@ -552,6 +548,12 @@ const OfftakeDetails = (props) => {
                             //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
                             // }
                         }}>Chat </Button>
+                        {currentStatus === 'active' && showSubmissions && (
+                            <Button type={page === 'submissions' ? 'primary' : 'default'} onClick={() => {
+                                "/offtakes/:offtake_id/submissions"
+                                navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                            }}>View Respondents</Button>
+                        )}
                     </Stack>
 
                     <Card
@@ -613,9 +615,10 @@ const OfftakeDetails = (props) => {
                         <Grid item flex={1}>
                             <Card title="Profitability">
                                 <Stack spacing={1}>
-                                    <Typography>Offtake total offer : R{profitability?.total_offtake_offer | 0}</Typography>
-                                    <Typography>Total production cost : R{profitability?.total_cost_of_production | 0}</Typography>
-                                    <Typography>Gross Profit : R{profitability?.offtake_gross_profit | 0}</Typography>
+                                    <Typography>Offtake total offer : {SystemService?.formatCurrency(profitability?.total_offtake_offer) | 0}</Typography>
+                                    <Typography>Total production cost : {SystemService?.formatCurrency(profitability?.total_cost_of_production) | 0}</Typography>
+                                    <Typography>Licensing Fee : {SystemService?.formatCurrency(profitability?.offtake_gross_profit * 0.1)}</Typography>
+                                    <Typography>Gross Profit : {SystemService?.formatCurrency(SystemService.calculations(profitability, prodPlan, offtake).o_p)}</Typography>
                                 </Stack>
                             </Card>
 
@@ -623,11 +626,11 @@ const OfftakeDetails = (props) => {
                     </Grid>
                 )}
             <Divider>Price Details</Divider>
-            <Descriptions>
-                <Descriptions.Item label="Final Price">{ot?._price_details?.final_price || 0}</Descriptions.Item>
-                <Descriptions.Item label="Offer Price Per Unit">{ot?._price_details?.offer_price_per_unit || 0}</Descriptions.Item>
-                <Descriptions.Item label="Origin Price">{ot?._price_details?.origin_price || 0}</Descriptions.Item>
-                <Descriptions.Item label="Service Fee">{ot?._price_details?.service_fee || 0}</Descriptions.Item>
+            <Descriptions layout='horizontal' size='small' column={2} bordered>
+                <Descriptions.Item label="Final Price">{SystemService?.formatCurrency(ot?._price_details?.final_price) || 0}</Descriptions.Item>
+                <Descriptions.Item label="Offer Price Per Unit">{SystemService?.formatCurrency(ot?._price_details?.offer_price_per_unit) || 0}</Descriptions.Item>
+                <Descriptions.Item label="Origin Price">{SystemService?.formatCurrency(ot?._price_details?.origin_price) || 0}</Descriptions.Item>
+                <Descriptions.Item label="Service Fee">{SystemService?.formatCurrency(ot?._price_details?.service_fee) || 0}</Descriptions.Item>
             </Descriptions>
 
             {/* Contact Details */}
@@ -704,11 +707,13 @@ const OfftakeDetails = (props) => {
                             <Typography variant='h6'>{userProfile?.name} {userProfile?.surname}</Typography>
                         </Stack>
                         <Stack p={0} direction={'row'} gap={3}>
-                            <Statistics title={'Phone Number'} value={`(${userProfile?.phone?.country_calling_code}) ${userProfile?.phone?.phone_number}`} />
+                            {SystemService.getDataType(userProfile?.phone) === 'map' && (<Statistics title={'Phone Number'} value={`(${userProfile?.phone?.country_calling_code}) ${userProfile?.phone?.phone_number}`} />)}
+                            {SystemService.getDataType(userProfile?.phone) === 'string' && (<Statistics title={'Phone Number'} value={userProfile?.phone} formatter={(value) => (<>{value}</>)} />)}
+
                             <Statistics title={'Email'} value={userProfile?.email} />
                             {/* <Statistics title={'Company/Name'} value={} /> */}
                         </Stack>
-                        <Statistics title={'Location'} value={ot?._address?.place_name || "..."} />
+                        <Statistics title={'Location'} value={`${ot?._address?.street_address || "*To be disclosed"},${ot?._address?.region}, ${ot?._address?.city}, ${ot?._address?.province}, ${ot?._address?.country}`} />
                     </Stack>
                 )}
 
@@ -721,7 +726,7 @@ const OfftakeDetails = (props) => {
                 {currentStatus === 'contracting' && showSubmissions && (<Stack>
                     <Stack p={2} direction={'row'}>
                         <Stack flex={1}>
-                            <Typography>Farmers who are Interested</Typography>
+                            <Typography>Respondents</Typography>
                         </Stack>
                         <Button type='primary' onClick={() => {
                             "/offtakes/:offtake_id/submissions"
@@ -789,29 +794,30 @@ const OfftakeDetails = (props) => {
                     </Stack>
                 )}
                 {currentStatus === 'active' && (
-                    <Stack>
+                    <Stack gap={2}>
                         <Stack p={2}>
                             <Typography variant='subtitle1' fontWeight={'bold'}>Offtake Progress</Typography>
                         </Stack>
                         <Stack px={2}>
                             <Typography>Production Progress</Typography>
-                            <Progress percent={80} status="active" />
-                        </Stack>
-
-                        <Stack p={2}>
-                            {productionProgress.map((cat) => {
-                                return (
-                                    <Stack spacing={1} pb={1} >
-                                        <Stack spacing={1} direction={'row'}>
-                                            <Stack pt={1} spacing={1}>
-                                                <Spin />
-                                            </Stack>
-                                            <Stack>
-                                                <Typography variant='h6'>{cat.name}</Typography>
-                                                <Typography variant='body2'>{cat.description}</Typography>
-                                            </Stack>
-                                        </Stack>
-                                        <Stack pl={1} spacing={2} direction={'row'}>
+                            <Progress percent={productionPercentage} status="active" />
+                            <Accordion variant='outlined'>
+                                <AccordionSummary>Description</AccordionSummary>
+                                <AccordionDetails>
+                                    <Stack p={2}>
+                                        {productionProgress.map((cat) => {
+                                            return (
+                                                <Stack spacing={1} pb={1} >
+                                                    <Stack spacing={1} direction={'row'}>
+                                                        <Stack pt={1} spacing={1}>
+                                                            <CheckCircleFilled />
+                                                        </Stack>
+                                                        <Stack>
+                                                            <Typography variant='h6'>{cat.name}</Typography>
+                                                            <Typography variant='body2'>{cat.description}</Typography>
+                                                        </Stack>
+                                                    </Stack>
+                                                    {/* <Stack pl={1} spacing={2} direction={'row'}>
                                             <Divider orientation="vertical" flexItem />
                                             <Stack flex={1}>
                                                 {cat?._steps.map((step) => {
@@ -837,14 +843,19 @@ const OfftakeDetails = (props) => {
                                                     )
                                                 })}
                                             </Stack>
-                                        </Stack>
+                                        </Stack> */}
+                                                </Stack>
+                                            )
+                                        })}
                                     </Stack>
-                                )
-                            })}
+                                </AccordionDetails>
+                            </Accordion>
+
                         </Stack>
+
                         <Stack px={2}>
                             <Typography>Delivery Progress</Typography>
-                            <Progress percent={10} status="active" />
+                            <Progress percent={0} status="active" />
                         </Stack>
                     </Stack>
                 )}
@@ -887,40 +898,23 @@ const OfftakeDetails = (props) => {
                     <Stack p={2} direction={'row'}>
                         <Stack flex={1}>
 
-                            <Typography>Farmers who are Interested</Typography>
+                            <Typography>Respondents</Typography>
                         </Stack>
                         <Button type='default' onClick={() => {
                             "/offtakes/:offtake_id/submissions"
                             navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>
-                    <Table dataSource={farms} columns={[
-                        {
-                            title: 'Farm Name',
-                            dataIndex: 'name',
-                            key: 'name',
-                        },
-                        {
-                            title: 'Suggested Offer',
-                            dataIndex: ['offers', 'suggestedOffer'], // Accessing nested property
-                            key: 'suggestedOffer',
-                        },
-                        {
-                            title: 'Requested Offer',
-                            dataIndex: ['offers', 'requestedOffer'], // Accessing nested property
-                            key: 'requestedOffer',
-                        },
-
-                    ]} />
                 </Stack>)}
 
 
                 <Form disabled={offtake.contract_model} form={contractModelForm} layout='vertical' onFinish={(v) => {
                     OfftakeService.updateContractModel(offtake.offtake_id, v.contract_model).then(() => {
                         messageApi.success("Contract Model Updated")
+                        dispatch(setActiveOfftake({ ...offtake, contract_model: v.contract_model }));
                     }).catch((err) => {
                         messageApi.error("Something went wrong")
-                        console.log(err);
+                        // console.log(err);
                     })
                 }}>
                     {
@@ -930,7 +924,7 @@ const OfftakeDetails = (props) => {
                             <Stack direction={'row'} gap={1} alignItems={'center'}>
                                 <Form.Item name="contract_model" label="Contract Model" rules={[{ required: true }]}>
                                     <Select
-                                        style={{ width: 400 }}
+                                        style={{ width: '100%' }}
                                         placeholder="Please select a model..."
                                         options={contractModel}
                                     />
@@ -969,15 +963,15 @@ const OfftakeDetails = (props) => {
                             messageApi.success("Offtake Updated");
                         }).catch(err => {
                             messageApi.error("Something went wrong");
-                            console.log(err);
-                            console.log({ offtake_id, a });
+                            // console.log(err);
+                            // console.log({ offtake_id, a });
 
                         })
                     }} >
                     <Stack bgcolor={colors.grey[100]} p={3} borderRadius={4} gap={3}>
                         <Grid flex={1} container gap={0}>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1} >
-                                <PermissionControl label={"Cateogry/Type"} name={"category_type"} value={ot?.category_type} form={offtakeForm} />
+                                <PermissionControl label={"Cateogry/Type"} name={"request_type"} value={ot?.request_type} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Product Name"} name="produce_name" form={offtakeForm} value={ot?.commodity_name} />
@@ -1025,7 +1019,7 @@ const OfftakeDetails = (props) => {
                     <Collapse in={viewDocuments}>
                         <Stack sx={{ overflowX: 'auto' }} direction={'row'} alignItems={'center'} gap={1}>
                             {documents?.map((document) => {
-                                return (<Documents key={document.name} url={document.file_url} name={document.name} type="pdf" />)
+                                return (<Documents key={document.name} url={document.file_url} name={document.name} type="preview" />)
                             })}
                         </Stack>
                     </Collapse>

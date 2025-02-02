@@ -9,7 +9,7 @@ export const formatText = (input) => {
     return snakeCaseString;
 }
 
-const Statistics = ({ inputMode, title, value, disabled }) => {
+const Statistics = ({ inputMode, title, value, disabled, formatter }) => {
 
     return (
         <Stack flex={1}>
@@ -20,14 +20,12 @@ const Statistics = ({ inputMode, title, value, disabled }) => {
                         {/* <Input size='middle' disabled={disabled} /> */}
                         <Segmented
                             options={['Enable', 'Disable']}
-                            onChange={(value) => {
-                                console.log(value); // string
-                            }}
+                           
                         />
                     </Form.Item>
                 </Stack>
             )}
-            {!inputMode && (<Statistic title={title} value={value} />)}
+            {!inputMode && (<Statistic title={title} value={value} formatter={formatter} />)}
         </Stack>
     )
 }
