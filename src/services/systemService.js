@@ -76,7 +76,7 @@ export const SystemService = {
       return rates
     }).catch(err => {
       console.log(err);
-      
+
     })
   },
   setCurrencyList: async () => {
@@ -113,6 +113,22 @@ export const SystemService = {
   getVariables: () => {
 
   },
+  /**
+   * 
+   * @param {*} profitability 
+   * @param {*} productionPlan 
+   * @param {*} offtake 
+   * @returns {object} { 
+   * Total Production Cost = t_p_c,
+   * Total Unit Cost = t_u_c,
+   * Target/Required Yield Output = t_r_y_o,
+   * Unit Production Cost = u_p_c, 
+   * REVENUE = revenue,
+   * OVERALL PROFITABILITY = o_p
+   * 
+   * }
+   * 
+   */
   calculations: (profitability, productionPlan, offtake) => {
     // Total Production Cost = Sum of all Total Unit Cost per Category on the Production Plan
     // profitability = { 
@@ -125,11 +141,14 @@ export const SystemService = {
 
     // Total Unit Cost = Unit cost x Quantity Used per Ha x Application Interval x Total # of Ha/Tunnel
     let t_u_c = 0
-    let p_c = 0
     productionPlan?.forEach(category => {
       category._steps.forEach(step => {
         step._costing.forEach(cost => {
-          t_u_c = t_u_c + cost.total_unit_cost
+          if (cost?.include_in_cost) {
+            t_u_c = t_u_c + cost.total_unit_cost
+          } else {
+            t_u_c = t_u_c + 0
+          }
         })
       })
     })
@@ -151,6 +170,16 @@ export const SystemService = {
 
 
   },
+  /**
+   * 
+   * @param {*} ot 
+   * @param {*} plan 
+   * @returns {object} {
+   * total_offtake_offer,
+   * total_cost_of_production,
+   * offtake_gross_profit
+   * }
+   */
   profitabilityCalucation: async (ot, plan) => {
     // Revenue (# of Units X Offer Price) – Production Cost (Total Production Cost) - AGROWEX Licensing Fee (10% of Gross profit = Revenue- Production Cost)
     var tot_cost = 0

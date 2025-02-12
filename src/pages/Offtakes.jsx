@@ -1042,6 +1042,9 @@ const Offtake = () => {
                         </Stack>
                     </Collapse>
                     <Table
+                        onChange={(c) => {
+                            console.log(c)
+                        }}
                         size="small"
                         style={{ height: "100%" }}
                         columns={columns}

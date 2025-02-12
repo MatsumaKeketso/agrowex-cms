@@ -86,12 +86,10 @@ export const Helpers = {
           if (phase === "harvesting" || phase === "delivery") {
             // check if cost is included in cost
             if (cost?.include_in_cost) {
-              docData = {
-                include_in_cost: cost.include_in_cost,
-                used_per_hactor: Number(cost.used_per_hactor),
-                used_per_hactor_unit: cost.used_per_hactor_unit,
-                total_unit_cost: Number(cost.total_unit_cost),
-              }
+              docData.include_in_cost = cost.include_in_cost;
+              docData.used_per_hactor = Number(cost.used_per_hactor);
+              docData.used_per_hactor_unit = cost.used_per_hactor_unit;
+              docData.total_unit_cost = Number(cost.total_unit_cost);
             }
           } else {
             // include in cost does not matter here

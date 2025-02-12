@@ -4,8 +4,8 @@ import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref, set } from 'firebase/database';
 import { firestoreDB, realtimeDB, storage } from '../services/authService';
-import { Box, CardContent, CardHeader, colors, IconButton, Stack, Typography } from '@mui/material';
-import { Avatar, Button, Card, Descriptions, Divider, Empty, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
+import { Box, CardContent, CardHeader, colors, IconButton, ListItem, ListItemText, Stack, Typography, List as MList } from '@mui/material';
+import { Avatar, Button, Card, Descriptions, Typography as ATypography, Divider, Empty, Form, Input, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
 import OfftakeDetails from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -18,7 +18,9 @@ import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 import { Helpers } from '../services/helpers';
-import { getDownloadURL, uploadBytesResumable, ref as sRef } from 'firebase/storage';
+import { getDownloadURL, uploadBytesResumable, ref as sRef, uploadBytes } from 'firebase/storage';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import DocumentService from '../services/documentService';
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
@@ -80,6 +82,7 @@ const FarmerView = ({ record }) => {
   const [viewDoc, setViewDoc] = useState({});
   const [tableSegment, setTableSegment] = useState('Production');
   const [productionComments, setProductionComments] = useState([]);
+  const [productionSearchComments, setProductionSearchComments] = useState([]);
   const [limitedProductionComments, setLimitedProductionComments] = useState([]);
   const [deliveryComments, setDeliveryComments] = useState([]);
   const [productionPlan, setProductionPlan] = useState([]);
@@ -129,6 +132,7 @@ const FarmerView = ({ record }) => {
           setProfitability(profit)
         })
         setProductionComments([])
+        setProductionSearchComments([])
         nestedData.forEach(category => {
           const c_name = category.name
           category._steps.forEach(step => {
@@ -137,18 +141,26 @@ const FarmerView = ({ record }) => {
               if (cost?.comment) {
                 const { subject, comment, actual_amount, file_url, updated_at, cost_name, amount } = cost
                 const _comment = {
+                  comment: comment,
+                  subject: subject,
                   children:
                     <Stack flex={1}><Stack flex={1} gap={1}>
                       <Stack direction={'row'} gap={1} alignItems={'center'}>
                         <Typography flex={1} variant='body2' fontWeight={'bold'}>{subject}</Typography>
                         <Typography variant='caption'>{SystemService.formatTimestamp(updated_at)}</Typography>
                       </Stack>
-                      <Typography variant='body2' color={'GrayText'}>{comment}</Typography>
-                      <Typography variant='caption' color={'GrayText'}>{c_name} • {name} • {cost_name}</Typography>
-                      <Descriptions layout='horizontal' column={1} size={'small'}>
-                        <Descriptions.Item label="Estimated Amount">R{Number(amount).toFixed(2)}</Descriptions.Item>
-                        <Descriptions.Item label="Actual Amount">R{Number(actual_amount).toFixed(2)}</Descriptions.Item>
-                      </Descriptions>
+                      <Stack gap={2} direction={'row'}>
+                        <Stack flex={1}>
+                          <Typography variant='body2' color={'GrayText'}>{comment}</Typography>
+                          <Typography variant='caption' color={'GrayText'}>{c_name} • {name} • {cost_name}</Typography>
+                        </Stack>
+                        <Stack flex={1}>
+                          <Descriptions layout='horizontal' column={1} size={'small'}>
+                            <Descriptions.Item label="Estimated Amount">R{Number(amount).toFixed(2)}</Descriptions.Item>
+                            <Descriptions.Item label="Actual Amount">R{Number(actual_amount).toFixed(2)}</Descriptions.Item>
+                          </Descriptions></Stack>
+                      </Stack>
+
                       <Stack pt={1}>
                         <Documents type={"button"} url={file_url} name={subject} />
                       </Stack>
@@ -159,6 +171,7 @@ const FarmerView = ({ record }) => {
                   ,
                 }
                 setProductionComments(prev => [...prev, _comment])
+                setProductionSearchComments(prev => [...prev, _comment])
               }
 
             });
@@ -166,6 +179,14 @@ const FarmerView = ({ record }) => {
         });
       })
     })
+  }
+  const searchComments = (search_term) => {
+    const search = productionComments.filter((comment) => {
+      return comment.comment.toLowerCase().includes(search_term.toLowerCase()) || comment.subject.toLowerCase().includes(search_term.toLowerCase())
+    })
+    console.log({ search_term, search });
+
+    setProductionSearchComments(search)
   }
   const getAddress = () => {
     FarmerService.getFarmAddress(farm_profile.farm_id).then((a) => {
@@ -222,6 +243,8 @@ const FarmerView = ({ record }) => {
   }
 
   useEffect(() => {
+    console.log({ record });
+
     getAddress()
     getProductionPlan()
     getDocuments()
@@ -233,7 +256,6 @@ const FarmerView = ({ record }) => {
         <Modal style={{
           top: 20,
         }}
-          bodyProps={{ style: { height: '80vh' } }}
           width={1000}
           footer={
             <Segmented
@@ -242,21 +264,44 @@ const FarmerView = ({ record }) => {
               onChange={(value) => {
                 setTableSegment(value)
               }}
-            />} onCancel={() => {
-              setTableModal(false)
-            }} title={`${tableSegment} Tracker Details`} open={tableModal} styles={{ height: '80vh', }}>
-          {tableSegment === 'Production' ? (
-            <Stack py={3} px={1}>
-              <Timeline
-                mode='left'
-                items={productionComments}
-              />
-            </Stack>
-          ) : (
-            <Stack>
-              <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
-            </Stack>
-          )}
+            />}
+          onCancel={() => {
+            setTableModal(false)
+          }}
+          title={`${tableSegment} Tracker Details`}
+          open={tableModal} styles={{ height: '65vh', }}
+        >
+          <Stack p={2}>
+            <Input.Search
+              style={{ maxWidth: 300 }}
+              onChange={(value) => {
+                const search_term = value.target.value
+                if (search_term) {
+                  searchComments(search_term)
+                } else {
+                  setProductionSearchComments(productionComments)
+                }
+              }}
+              placeholder="Search Comments" />
+          </Stack>
+          <Stack maxHeight={'80vh'} overflow={'auto'}>
+            {tableSegment === 'Production' ? (
+              <Stack py={3} px={1}>
+                {productionSearchComments.length === 0 && (<Empty />)}
+                {productionSearchComments.length > 0 && (
+                  <Timeline
+                    mode='left'
+                    items={productionSearchComments}
+                  />
+                )}
+              </Stack>
+            ) : (
+              <Stack>
+                <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
+              </Stack>
+            )}
+          </Stack>
+
         </Modal>
 
         <Stack flex={1} gap={2} p={1} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[200]}>
@@ -382,7 +427,7 @@ const FarmerView = ({ record }) => {
             </Stack> */}
               <Stack spacing={2} direction={'row'} alignItems={'center'}>
                 <Stack flex={1} alignItems={'center'}>
-                  <Progress type="dashboard" percent={productionProgress} />
+                  <Progress type="dashboard" percent={Number(productionProgress).toFixed(0)} />
                   <Stack p={1} >
                     <Typography>Production</Typography>
                   </Stack>
@@ -390,7 +435,8 @@ const FarmerView = ({ record }) => {
                 </Stack>
                 <SwapRightOutlined />
                 <Stack flex={1} alignItems={'center'}>
-                  <Progress type="dashboard" percent={0} />
+
+                  <Progress type="dashboard" percent={Number(0).toFixed(0)} />  {/* = 0 😊 */}
                   <Stack p={1}>
                     <Typography>Delivery</Typography>
                   </Stack>
@@ -464,37 +510,59 @@ const FarmerView = ({ record }) => {
 
 
       </Stack>
-      <Card>
-        <CardContent>
-          <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography>TOTAL INCOME</Typography>
-              {/* profitability = { 
-                total_offtake_offer, 
-                total_cost_of_production,
-                offtake_gross_profit 
-               } */}
-              <Typography>{SystemService.calculations(profitability, productionPlan, offtake).revenue}</Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography>PRODUCTION COST</Typography>
-              <Typography>= R{profitability?.total_cost_of_production}</Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography>AGROWEX SOFTWARE LICENSING</Typography>
-              <Typography>= R{(profitability?.offtake_gross_profit * 0.1).toFixed(2)}</Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="h6" fontWeight="bold">TOTAL PROFIT</Typography>
-              <Typography variant="h6" fontWeight="bold">= R{SystemService.calculations(profitability, productionPlan, offtake).o_p}</Typography>
-            </Stack>
-          </Stack>
-        </CardContent>
+      <Card size='small'>
+        <Stack gap={1} px={2}>
+          <ATypography.Title level={3}>Profitability Breakdown</ATypography.Title>
+          <ATypography>Please note that this is an estimated breakdown of cost and profit for this offtake. It is adjusted throughout the production process for transperancy and fairness ensuring your business attains a sustainable profitability.</ATypography>
+        </Stack>
+        <MList >
+          <ListItem>
+            <ListItemText primary="Total Income" secondary={`${SystemService.formatCurrency((parseFloat(offtake?.offer_price_per_unit) * parseFloat(record.offer_quantity)))}`} />
+          </ListItem>
+          <ListItem>
+            <ListItemText primary="Production Cost" secondary={`${SystemService.formatCurrency(record?.prod_cost)} \n Calc: [${record?.prod_item?.map(String)?.join(" + ")}]`} />
+          </ListItem>
+          <ListItem>
+            <ListItemText primary="Agrowex Software Licensing" secondary={`${SystemService.formatCurrency((((parseFloat(offtake?.offer_price_per_unit) * parseFloat(record.offer_quantity)) + parseFloat(record?.prod_cost)) * .10))} \n Calc: @ 10%`} />
+          </ListItem>
+          <ListItem>
+            <ListItemText primary="Total Profit" secondary={`${SystemService.formatCurrency(((parseFloat(offtake?.offer_price_per_unit) * parseFloat(record.offer_quantity)) + record?.prod_cost + (((parseFloat(offtake?.offer_price_per_unit) * parseFloat(record.offer_quantity)) + parseFloat(record?.prod_cost)) * .10)))} \n Calc: overall cost`} />
+          </ListItem>
+        </MList>
       </Card>
     </Stack>
 
   )
 }
+const document_data = {
+  companyName: "MWAKOBA AND ASSOCIATES COMPANY LIMITED",
+  regNo: "1200867",
+  tin: "129-727-810",
+  address: "P.O BO 32853, DAR ES SALAAM",
+  country: "TANZANIA",
+  phone: "+255 713 315 719",
+  email: "alikomwakoba@gmail.com",
+  recipient: {
+    name: "HESTER HALL",
+    company: "PHOFU MILLING",
+    address: "P.O BOX 144, MHAKAMME WARD",
+    id: "548316311",
+    phone: "+27845829236",
+    email: "hester.lovet@gmail.com"
+  },
+  date: "13TH NOVEMBER, 2024",
+  content: "MWAKOBA AND ASSOCIATES COMPANY LIMITED intent to express our interest in purchasing 10,000 metric tons (MT) of SUGAR BEANS, Non-GMO...",
+  specifications: {
+    commodity: "SUGAR BEANS",
+    quantity: "10,000 METRIC TONS",
+    quality: "SUGAR BEANS - GRADE A Non-GMO",
+    packaging: "50KG",
+    paymentMethod: "Payment term to be sight ESCROW ACCOUNT after all terms and conditions applied as per the contract agreed.",
+    price: "USD $ 997/MT",
+    deliveryTerms: "FOB",
+    destinationPort: "JOHANNESBURG, SOUTH AFRICA"
+  }
+};
 const FarmSubmissions = () => {
   const [finalstage, setFinalStage] = useState(false)
   const [active, setActive] = useState(false)
@@ -625,6 +693,34 @@ const FarmSubmissions = () => {
       setSubmissions(subs)
     }, 1000);
   }
+  const generateSelectedDocument = async (pdfBytes, _updated_offtake) => {
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const storageRef = sRef(storage, `cms-test-pdfs/${Date.now()}.pdf`);
+    // const storageRef = storage().ref(`cms-test-pdfs/${Date.now()}.pdf`);
+    uploadBytes(storageRef, blob).then(() => {
+      getDownloadURL(storageRef).then((url) => {
+        const updated_offtake = {
+          ...offtake,
+          _final_document: {
+            name: 'Letter of Intent for ' + offtake_id,
+            file_url: url,
+            created_at: SystemService.generateTimestamp(),
+            created_by: profile.uid,
+            size: blob.size,
+          }
+        }
+        OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(async () => {
+
+          dispatch(setActiveOfftake(updated_offtake))
+          setFinalStage(false)
+          setLoading(false)
+        })
+      });
+      console.log('Uploaded a blob or file!');
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
   const updateSubmissionSelections = (originalSubmissions, selectedSubmissions) => {
     // Create a Set of selected submission IDs for efficient lookup
     const selectedIds = new Set(selectedSubmissions.map(sub => sub.uid));
@@ -647,7 +743,7 @@ const FarmSubmissions = () => {
   return (
     <Layout >
       {useContext}
-      <Modal title="Status Update" open={finalstage} onOk={() => {
+      <Modal title="Status Update" open={finalstage} onOk={async () => {
         setLoading(true)
         const _status = {
           status_name: 'contracting',
@@ -672,11 +768,11 @@ const FarmSubmissions = () => {
             console.log('Sub updated');
           })
         });
-        OfftakeService.updateOfftake(offtake.offtake_id, updated_offtake).then(() => {
-          dispatch(setActiveOfftake(updated_offtake))
-          setFinalStage(false)
-          setLoading(false)
-        })
+        // Generate letter of intent document
+        const pdfDoc = await DocumentService.generateLetterOfIntent(document_data);
+        const pdfBytes = await pdfDoc.save();
+        // generating web link for the document
+        generateSelectedDocument(pdfBytes, updated_offtake)
       }}
         okButtonProps={{ loading: loading }}
         onCancel={() => {
@@ -746,6 +842,7 @@ const FarmSubmissions = () => {
               <Typography variant='h6' flex={1}>Respondents</Typography>
             </Stack>
             <Typography variant='h6' p={2} flex={1}>{tonsSelected}{offtake?.unit} / {tonsSelected < required ? `${required}${offtake?.unit}` : `${tonsSelected}${offtake?.unit}`}</Typography>
+
             {currentStatus !== 'contracting' && currentStatus !== 'active' && (<Button onClick={() => {
               if (offtake.master_contract) {
                 setFinalStage(true)

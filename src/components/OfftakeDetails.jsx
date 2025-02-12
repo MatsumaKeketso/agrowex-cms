@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardContent, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors } from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, AppBar, Backdrop, CardContent, CardHeader, Chip, Collapse, Divider, Grid, Paper, Stack, Toolbar, Typography, colors, List as MList, ListItem, ListItemText } from '@mui/material';
 import { Button, Card, Descriptions, Empty, Form, Input, message, Modal, Progress, Segmented, Select, Spin, Statistic, Steps, Switch, Table, Upload, Typography as ATypo } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import Statistics, { formatText } from './Statistics';
@@ -309,12 +309,14 @@ const OfftakeDetails = (props) => {
     const location = useLocation();
     const [productionProgress, setProductionProgress] = useState([])
     const [productionPercentage, setProductionPercentage] = useState(0)
+    const [barSteps, setBarSteps] = useState(0)
     const { offtake_id } = useParams()
     const [offtakeForm] = Form.useForm();
     const [contractModelForm] = Form.useForm();
     const { data, setOfftake, closeDrawer, setOfftakeId, showSubmissions = true } = props;
     const offtake = useSelector((state) => state.offtake?.active);
     const [currentStatus, setCurrentStatus] = useState('')
+    const [productionCost, setProductionCost] = useState(0)
     const [contractModel, setContractModel] = useState([])
     const [viewDocuments, setViewDocuments] = useState(false)
     const [production, setProduction] = useState(false)
@@ -431,9 +433,14 @@ const OfftakeDetails = (props) => {
     useEffect(() => {
         OfftakeService.getProductionPlan(ot.offtake_id).then((plan) => {
             if (plan) {
+                setProductionCost(0)
+                plan.forEach(_cost => {
+                    setProductionCost(productionCost + _cost.amount)
+                })
                 Helpers.nestProductionData(plan).then((_d) => {
                     const _data = _d.groupedCategories
                     const progress = (_d?.items_with_comments / plan.length) * 100
+                    setBarSteps(plan.length)
                     setProdPlan(_data)
                     setProductionPercentage(progress)
                     SystemService.profitabilityCalucation(ot, _data).then((data) => {
@@ -450,7 +457,6 @@ const OfftakeDetails = (props) => {
             } else {
                 setShowBack(false)
             }
-
         }
         getAndWatchDocuments()
         const model_options = [
@@ -613,13 +619,25 @@ const OfftakeDetails = (props) => {
                     <Grid container spacing={1} >
 
                         <Grid item flex={1}>
-                            <Card title="Profitability">
-                                <Stack spacing={1}>
-                                    <Typography>Offtake total offer : {SystemService?.formatCurrency(profitability?.total_offtake_offer) | 0}</Typography>
-                                    <Typography>Total production cost : {SystemService?.formatCurrency(profitability?.total_cost_of_production) | 0}</Typography>
-                                    <Typography>Licensing Fee : {SystemService?.formatCurrency(profitability?.offtake_gross_profit * 0.1)}</Typography>
-                                    <Typography>Gross Profit : {SystemService?.formatCurrency(SystemService.calculations(profitability, prodPlan, offtake).o_p)}</Typography>
+                            <Card size='small'>
+                                <Stack gap={1} px={2}>
+                                    <ATypo.Title level={4}>Profitability Breakdown</ATypo.Title>
+                               
                                 </Stack>
+                                <MList >
+                                    <ListItem>
+                                        <ListItemText primary="Total Income" secondary={`${SystemService.formatCurrency((parseFloat(ot?.offer_price_per_unit) * parseFloat(ot.quantity)))}`} />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText primary="Production Cost" secondary={`${SystemService.formatCurrency(parseFloat(productionCost))}`} />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText primary="Agrowex Software Licensing" secondary={`${SystemService.formatCurrency((((parseFloat(ot?.offer_price_per_unit) * parseFloat(ot.quantity)) + parseFloat(productionCost)) * .10))} \n Calc: @ 10%`} />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText primary="Total Profit" secondary={`${SystemService.formatCurrency(((parseFloat(ot?.offer_price_per_unit) * parseFloat(ot.quantity)) + parseFloat(productionCost) + (((parseFloat(ot?.offer_price_per_unit) * parseFloat(ot.quantity)) + parseFloat(productionCost)) * .10)))} \n Calc: overall cost`} />
+                                    </ListItem>
+                                </MList>
                             </Card>
 
                         </Grid>
@@ -800,7 +818,7 @@ const OfftakeDetails = (props) => {
                         </Stack>
                         <Stack px={2}>
                             <Typography>Production Progress</Typography>
-                            <Progress percent={productionPercentage} status="active" />
+                            <Progress steps={barSteps < 100 ? barSteps : 0} percent={Number(productionPercentage).toFixed(0)} status="active" />
                             <Accordion variant='outlined'>
                                 <AccordionSummary>Description</AccordionSummary>
                                 <AccordionDetails>
@@ -855,7 +873,7 @@ const OfftakeDetails = (props) => {
 
                         <Stack px={2}>
                             <Typography>Delivery Progress</Typography>
-                            <Progress percent={0} status="active" />
+                            <Progress percent={Number(0).toFixed(0)} status="active" />
                         </Stack>
                     </Stack>
                 )}

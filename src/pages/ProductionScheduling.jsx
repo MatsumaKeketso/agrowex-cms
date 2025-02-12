@@ -7,7 +7,7 @@ import { OfftakeService } from '../services/offtakeService'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic, Checkbox } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic, Checkbox, FloatButton } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -112,21 +112,21 @@ const ProductionScheduling = () => {
 
   const submitSchedule = (schedule) => {
     const batch = writeBatch(firestoreDB)
-    // will be edited
-    // setLoading(true)
+    // // will be edited
+    setLoading(true)
     var missing_steps = false
     var new_schedule: any = {
       submission_closing_date: 0,
       offtake_start_and_end_date: [0, 0],
       categories: []
     }
-    // format steps duration
-    // add updated at timestamp
+    // // format steps duration
+    // // add updated at timestamp
 
     // TODO
     // // Each categories needs to be in its own document
-    // the uid should always be accessible
-    // deleting categories should be synced with db
+    // // the uid should always be accessible
+    // // deleting categories should be synced with db
     // // update fetch to reflect location
     if (schedule?.categories !== undefined) {
       schedule.categories.forEach((stat, a) => {
@@ -184,8 +184,13 @@ const ProductionScheduling = () => {
         // todo: add helper function to modify the data sent to the server
         // target : new_schedule => modifty using Helpers.updateAllProductionData(offtake_id, new_schedule)
         Helpers.flatNestedData(new_schedule.categories).then(async (_flat_docs) => {
+          console.log(_flat_docs);
+
           const flat_docs = _flat_docs.toAdd
           // set new documents (toAdd)
+          console.log(flat_docs);
+
+          return
           flat_docs.forEach(_doc => {
             // create
             // return
@@ -356,7 +361,16 @@ const ProductionScheduling = () => {
           var step_total_costing = 0
           categoryValues[cateogry]?._steps[step]._costing.forEach(step_cost => {
             if (step_cost) {
-              step_total_costing = step_total_costing + (step_cost?.total_unit_cost * 1 || 0)
+              if (categoryValues[cateogry].phase == "harvesting" || categoryValues[cateogry].phase == "delivery") {
+                if (step_cost?.include_in_cost) {
+                  step_total_costing += (step_cost?.total_unit_cost * 1 || 0)
+                } else {
+                  step_total_costing = step_total_costing + 0
+                }
+              } else {
+                step_total_costing += (step_cost?.total_unit_cost * 1 || 0)
+              }
+
             }
           });
           return step_total_costing
@@ -427,8 +441,17 @@ const ProductionScheduling = () => {
               if (step?._costing) {
                 step?._costing.map((cost, ci) => {
                   if (cost) {
-                    const _amount = cost?.total_unit_cost
-                    amount = (amount + (_amount * 1))
+                    if (_status.phase == "harvesting" || _status.phase == "delivery") {
+                      if (cost?.include_in_cost) {
+                        const _amount = cost?.total_unit_cost
+                        amount = (amount + (_amount * 1))
+                      } else {
+                        amount = amount + 0
+                      }
+                    } else {
+                      const _amount = cost?.total_unit_cost
+                      amount = (amount + (_amount * 1))
+                    }
                   }
                 })
               }
@@ -872,9 +895,15 @@ const ProductionScheduling = () => {
                                                                   )
                                                               }
                                                               <Stack>
-                                                                <Form.Item name={[item.name, 'include_in_cost']} initialValue={false} valuePropName="checked">
-                                                                  <Checkbox >Include in cost</Checkbox>
-                                                                </Form.Item>
+                                                                {
+                                                                  getCategoryPhase(category.name) === 'harvesting' ||
+                                                                    getCategoryPhase(category.name) === 'delivery' ? (
+                                                                    <Form.Item name={[item.name, 'include_in_cost']} initialValue={false} valuePropName="checked">
+                                                                      <Checkbox >Include in cost</Checkbox>
+                                                                    </Form.Item>
+                                                                  ) : null
+                                                                }
+
                                                               </Stack>
 
 
@@ -946,6 +975,7 @@ const ProductionScheduling = () => {
                   )}
                 </Form.List>
               </Form>
+           
             </Stack>
             <Stack direction={'row'} gap={1} p={1} >
               <Stack flex={1}>              </Stack>
@@ -967,6 +997,7 @@ const ProductionScheduling = () => {
               }
             </Stack>
           </Stack>
+          <FloatButton.BackTop />
         </Stack>
 
         <Stack flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto' }}>
