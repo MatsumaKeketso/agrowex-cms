@@ -1,6 +1,6 @@
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { firebaseConfig } from "../db/fc";
-import {  initializeApp } from "firebase/app";
+import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
@@ -23,6 +23,20 @@ export const AuthService = {
 
     })
   },
+  signup: async (email, password) => {
+    return new Promise((res, rej) => {
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const { user } = userCredential;
+          res(user)
+        })
+        .catch((error) => {
+          rej(error)
+        });
+    }
+    )
+  }
+  ,
   getUser: () => {
     return new Promise((res, rej) => {
       onAuthStateChanged(auth, (user) => {

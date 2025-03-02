@@ -28,7 +28,7 @@ const OfftakeChat = () => {
   const [offtakeBackup, setOfftakeBackup] = useState({})
   const [progress, setProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
-  const { offtake_id } = useParams()
+  const { offtake_id, offtake_page } = useParams()
   const [chatform] = Form.useForm()
   const chatEndRef = useRef(null);
   const navigate = useNavigate()
@@ -192,7 +192,7 @@ const OfftakeChat = () => {
         AuthService.getUser().then(user => {
           OfftakeService.getOfftake(offtake_id).then(offtake => {
             OfftakeService.updateOfftake(offtake_id, { ...offtake, schedule: {}, status: updated_status }).then(() => {
-              navigate(`/offtakes/${offtake_id}/schedule`)
+              navigate(`/offtakes${offtake_page}/${offtake_id}/schedule`)
             })
           })
         })
@@ -236,7 +236,7 @@ const OfftakeChat = () => {
 
                 {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'planning' && (
                   <Button size='large' type='text' color={colors.lightGreen[700]} onClick={() => {
-                    navigate(`/offtakes/${offtake_id}/schedule`)
+                    navigate(`/offtakes/${offtake_page}/${offtake_id}/schedule`)
                   }}>Production Planning</Button>
                 )}
                 {

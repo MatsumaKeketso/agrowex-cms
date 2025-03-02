@@ -9,22 +9,14 @@ import { Logo } from '../components/Layout'
 import { AlternateEmailRounded, EmailRounded, MarkEmailRead, Password } from '@mui/icons-material'
 import { ProfileService } from '../services/profileService'
 
-const Signin = () => {
+const Signup = () => {
   const [loading, setLoading] = useState(false)
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const [signinForm] = Form.useForm()
+  const [signupForm] = Form.useForm()
   const getProfile = (user) => {
-    console.log(user.uid);
-    
     ProfileService.getProfile(user.uid).then((profile) => {
-      console.log(profile);
-      
-      if (profile.role === 'admin' && !profile.approved) {
-        navigate('/admin/pending')
-        return
-      }
       dispatch(updateProfile(profile))
       dispatch(toggleOnline(true))
       navigate('/offtakes/1')
@@ -46,28 +38,27 @@ const Signin = () => {
     }).catch(err => {
       setLoading(false)
       console.log(err);
-
     })
   }, [])
   return (
     <Container>
       {contextHolder}
       <Stack px={{ xs: 0, sm: 2, md: 20, lg: 30 }} alignItems={'center'} py={{ xs: 0, sm: 1, md: 3, lg: 5 }}>
-        <Form form={signinForm} layout='vertical' onFinish={(v) => {
-          AuthService.signin(v.email, v.password).then((user) => {
+        <Form form={signupForm} layout='vertical' onFinish={(v) => {
+          AuthService.signup(v.email, v.password).then((user) => {
             console.log(user);
-
-            messageApi.success("Signin success. Welcome Back ☺️");
-            dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }));
-            getProfile(user)
+            messageApi.success("Signup success");
+            // dispatch(updateAuth({ uid: user.uid, displayName: user.displayName, email: user.email }));
+            // getProfile(user)
+            navigate("/admin/create/profile")
           }).catch(err => {
             AuthService.signout().then(() => { messageApi.error('Failed to get profile. Signing out!') })
           })
         }}>
           <Stack width={'100%'} py={10} gap={2} alignItems={'center'}>
             <Logo />
-            <Typography variant="h3">Sign In</Typography>
-            <Typography textAlign={'center'} variant="body2">Welcome Back</Typography>
+            <Typography variant="h3">Sign Up</Typography>
+            <Typography textAlign={'center'} variant="body2">Welcome to Agrowex</Typography>
             <Stack>
               <Form.Item label="Email" name="email" rules={[{ required: true }, { type: 'email' }]}>
                 <Input prefix={<AlternateEmailRounded />} inputMode='email' size='large' />
@@ -76,10 +67,10 @@ const Signin = () => {
                 <Input.Password prefix={<Password />} size='large' />
               </Form.Item>
               <Stack gap={2}>
-                <Button loading={loading} style={{ width: '100%' }} htmlType='submit' type='primary'>Sign In</Button>
+                <Button loading={loading} style={{ width: '100%' }} htmlType='submit' type='primary'>Sign Up</Button>
                 <Button style={{ width: '100%' }} type='text' onClick={() => {
-                  navigate('/signup')
-                }}>Sign Up</Button>
+                  navigate('/')
+                }}>Sign In</Button>
               </Stack>
 
             </Stack>
@@ -90,4 +81,4 @@ const Signin = () => {
   )
 }
 
-export default Signin
+export default Signup

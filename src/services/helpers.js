@@ -79,7 +79,9 @@ export const Helpers = {
           const cost = step._costing[costIndex];
 
           // Create document data combining category, step, and cost info
-          let docData = {};
+          let docData = {
+
+          };
 
           // is there a way to globalise this funtionality?
           // check if cost is for harvesting or delivery
@@ -90,7 +92,7 @@ export const Helpers = {
               docData.used_per_hactor = Number(cost.used_per_hactor);
               docData.used_per_hactor_unit = cost.used_per_hactor_unit;
               docData.total_unit_cost = Number(cost.total_unit_cost);
-            }
+            } else {}
           } else {
             // include in cost does not matter here
             docData = {
@@ -148,7 +150,7 @@ export const Helpers = {
       const { key, phase, name, description, step_name, duration, ...costData } = doc;
 
       // Convert duration timestamps to ISO strings
-      const formattedDuration = duration.map(ts => new Date(ts).toISOString());
+      const formattedDuration = duration?.map(ts => new Date(ts).toISOString());
 
       // Group by phase, name, and description
       const categoryKey = `${phase}-${name}-${description}`;

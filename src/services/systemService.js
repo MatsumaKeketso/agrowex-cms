@@ -2,6 +2,7 @@ import { ref as sRef } from 'firebase/storage';
 import { getDownloadURL, getStorage, uploadBytesResumable } from "firebase/storage";
 import { firestoreDB } from "./authService";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import dayjs from "dayjs";
 const _locales = [
   { value: "af_ZA", label: "Afrikaans (South Africa)" },
   { value: "ar_EG", label: "Arabic (Egypt)" },
@@ -197,7 +198,6 @@ export const SystemService = {
       return { total_offtake_offer, total_cost_of_production, offtake_gross_profit }
     }
   },
-  // // todo update function to pull from db
   getPermissions: async () => {
     const docRef = doc(firestoreDB, "system", "permissions");
     const docSnap = await getDoc(docRef);
@@ -290,7 +290,9 @@ export const SystemService = {
   generateTimestamp: () => {
     return Date.now();
   },
-  // // todo need to add time string for this formating
+  standardiseTimestamp: (date) => {
+    return dayjs(date).valueOf();
+  },
   formatTimestamp: (timestamp) => {
     const date = new Date(timestamp);
     const options = {
@@ -351,8 +353,7 @@ export const SystemService = {
     }
 
     return typeof value;
-  }
-  ,
+  },
   converStringToSentenceCase: (str) => {
     return str.replace(/\b\w/g, c => c.toUpperCase());
   },

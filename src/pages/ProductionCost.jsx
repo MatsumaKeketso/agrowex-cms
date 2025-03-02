@@ -23,7 +23,7 @@ const ProductionCost = () => {
   const [loading, setLoading] = useState(false)
   const [openDrawer, setOpenDrawer] = useState(false)
   const [offtake, setOfftake] = useState({})
-  const { offtake_id } = useParams()
+  const { offtake_id, offtake_page } = useParams()
   const [costingForm] = Form.useForm()
   const [next, setNext] = useState(false)
   const [publish, setPublish] = useState(false)
@@ -36,7 +36,7 @@ const ProductionCost = () => {
     OfftakeService.updateOfftake(offtake_id, ot).then(() => {
       setLoading(false)
       messageApi.success("Offtake updated")
-      navigate("/offtakes")
+      navigate(`/offtakes/${offtake_page}`)
     }).catch(err => {
       setLoading(false)
       messageApi.error(err.message);
@@ -184,7 +184,7 @@ const ProductionCost = () => {
                 <Stack px={15} py={5} gap={4}>
                   <Typography>You need to add steps for Production Plan before you can set up Production Cost.</Typography>
                   <Button type='primary' onClick={() => {
-                    navigate(`/offtakes/${offtake_id}/schedule`);
+                    navigate(`/offtakes/${offtake_page}/${offtake_id}/schedule`);
                   }}>Production Plan</Button>
                 </Stack>
               </Stack>
@@ -325,7 +325,7 @@ const ProductionCost = () => {
               OfftakeService.getStatus.Name(offtake.status) === "submitted" &&
               (
                 <Button type='primary' onClick={async () => {
-                  navigate(`/offtakes/${offtake.offtake_id}/published-chat`)
+                  navigate(`/offtakes/${offtake_page}/${offtake.offtake_id}/published-chat`)
                 }}>Chat to PM</Button>
               )
             }

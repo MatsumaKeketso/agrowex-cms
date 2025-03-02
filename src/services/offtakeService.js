@@ -1,7 +1,7 @@
 import { addDoc, deleteDoc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { collection, doc, setDoc } from "firebase/firestore";
 import { firestoreDB, realtimeDB } from "./authService";
-import { get, push, ref, remove } from "firebase/database";
+import { push, ref } from "firebase/database";
 import { SystemService } from "./systemService";
 import moment from 'moment';
 import { FarmerService } from "./farmerService";
@@ -59,6 +59,47 @@ export const OfftakeService = {
     } catch (error) {
       return error
     }
+  },
+  removeCostingStep: async (offtake_id, categoryIndex, stepId, costId) => {
+    // new operation
+    // delete all documents with category_index === categoryIndex and step_id === stepId and cost_id === costId in the path offtakes/{offtake_id}/_production-plan
+    try {
+      const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+      const q = query(collection(offtakeRef, '_production-plan'), where("category_index", "==", categoryIndex), where("step_index", "==", stepId), where("cost_index", "==", costId))
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref)
+      });
+      return 'success'
+    } catch (error) { return error }
+
+    return
+    // const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
+    // // Fetch the current document
+    // const docSnap = await getDoc(offtakeRef);
+    // if (docSnap.exists()) {
+    //   const currentSteps = docSnap.data().costing.steps;
+    //   const currentSchedule = docSnap.data().schedule.steps;
+
+    //   // Filter out the step with the matching id
+    //   const updatedSteps = currentSteps.filter(step => step.id !== stepId);
+    //   const updatedSchedule = currentSchedule.filter(step => step.id !== stepId);
+
+    //   // Update the document with the modified array
+    //   await updateDoc(offtakeRef, {
+    //     'costing.steps': updatedSteps,
+    //     'schedule.steps': updatedSchedule
+    //   });
+    //   const success = {
+    //     message: 'Document updated'
+    //   }
+    //   return success
+    // } else {
+    //   const error = {
+    //     message: 'Document not found'
+    //   }
+    //   return error
+    // }
   },
   getOfftake: async (offtake_id) => {
     const docRef = doc(firestoreDB, "offtakes", offtake_id);
@@ -265,6 +306,16 @@ export const OfftakeService = {
     console.log('Applications updated successfully!');
     return trackerDocRef.id; // Return the reference to the updated document
   },
+  updateDelivery: async (offtake_id, doc_id, data) => {
+    // Create a reference to the document
+    const trackerDocRef = doc(firestoreDB, 'offtakes', offtake_id, '_farm_applications', doc_id);
+
+    // Update the document with the provided data, merging with existing data
+    await updateDoc(trackerDocRef, data)
+
+    console.log('Applications updated successfully!');
+    return trackerDocRef.id; // Return the reference to the updated document
+  },
   getProductionPlan: async (offtake_id) => {
     try {
       const productionPlanRef = collection(firestoreDB, "offtakes", offtake_id, "_production-plan");
@@ -314,47 +365,6 @@ export const OfftakeService = {
       console.error("Error fetching production plan:", error);
       throw error;
     }
-  },
-  removeCostingStep: async (offtake_id, categoryIndex, stepId, costId) => {
-    // new operation
-    // delete all documents with category_index === categoryIndex and step_id === stepId and cost_id === costId in the path offtakes/{offtake_id}/_production-plan
-    try {
-      const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
-      const q = query(collection(offtakeRef, '_production-plan'), where("category_index", "==", categoryIndex), where("step_index", "==", stepId), where("cost_index", "==", costId))
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach(async (doc) => {
-        await deleteDoc(doc.ref)
-      });
-      return 'success'
-    } catch (error) { return error }
-
-    return
-    // const offtakeRef = doc(firestoreDB, 'offtakes', offtake_id);
-    // // Fetch the current document
-    // const docSnap = await getDoc(offtakeRef);
-    // if (docSnap.exists()) {
-    //   const currentSteps = docSnap.data().costing.steps;
-    //   const currentSchedule = docSnap.data().schedule.steps;
-
-    //   // Filter out the step with the matching id
-    //   const updatedSteps = currentSteps.filter(step => step.id !== stepId);
-    //   const updatedSchedule = currentSchedule.filter(step => step.id !== stepId);
-
-    //   // Update the document with the modified array
-    //   await updateDoc(offtakeRef, {
-    //     'costing.steps': updatedSteps,
-    //     'schedule.steps': updatedSchedule
-    //   });
-    //   const success = {
-    //     message: 'Document updated'
-    //   }
-    //   return success
-    // } else {
-    //   const error = {
-    //     message: 'Document not found'
-    //   }
-    //   return error
-    // }
   },
   sendOMMessage: (offtake_id, message) => {
     const offtake = ref(realtimeDB, `submitted-chat/${offtake_id}`)
@@ -466,9 +476,6 @@ export const OfftakeService = {
   },
   // Arrow function to extract all '_costing' from steps
   extractCostings: (productionPlan) => {
-    console.log('====================================');
-    console.log(productionPlan);
-    console.log('====================================');
     // Get all steps first
     const steps = OfftakeService.extractSteps(productionPlan);
 
@@ -482,14 +489,103 @@ export const OfftakeService = {
   },
   // Arrow function to extract all '_category'
   getPMProfiles: async () => {
-    console.log('Getting profiles');
+    try {
+      // Reference to the agents collection
+      const q = query(
+        agentsCollection,
+        where("role", "==", "pm"), // Directly filter out active agents in query
+        // where("approved", "==", true) // Directly filter out active agents in query
+      );
+
+      // Execute the query
+      const querySnapshot = await getDocs(q);
+
+      // If no documents found, return empty array
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      // Map documents directly to agents, avoiding forEach loop
+      const pmAgents = querySnapshot.docs.map(doc => ({
+        key: doc.id,  // Include document ID
+        ...doc.data()
+      }));
+
+      return pmAgents;
+    } catch (error) {
+      console.error('Error fetching PM profiles:', error);
+      return [];
+    }
+  },
+  getOMProfiles: async () => {
     try {
       console.log('Getting PM profiles');
 
       // Reference to the agents collection
       const q = query(
         agentsCollection,
-        where("role", "==", "pm") // Directly filter out active agents in query
+        where("role", "==", "om"), // Directly filter out active agents in query
+        where("approved", "==", true) // Directly filter out active agents in query
+      );
+
+      // Execute the query
+      const querySnapshot = await getDocs(q);
+
+      // If no documents found, return empty array
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      // Map documents directly to agents, avoiding forEach loop
+      const pmAgents = querySnapshot.docs.map(doc => ({
+        key: doc.id,  // Include document ID
+        ...doc.data()
+      }));
+
+      return pmAgents;
+    } catch (error) {
+      console.error('Error fetching PM profiles:', error);
+      return [];
+    }
+  },
+  getPendingPMProfiles: async () => {
+    try {
+      // Reference to the agents collection
+      const q = query(
+        agentsCollection,
+        where("role", "==", "pm"), // Directly filter out active agents in query
+        where("approved", "==", false)
+      );
+
+      // Execute the query
+      const querySnapshot = await getDocs(q);
+
+      // If no documents found, return empty array
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      // Map documents directly to agents, avoiding forEach loop
+      const pmAgents = querySnapshot.docs.map(doc => ({
+        key: doc.id,  // Include document ID
+        ...doc.data()
+      }));
+
+      return pmAgents;
+    } catch (error) {
+      console.error('Error fetching PM profiles:', error);
+      return [];
+    }
+  },
+  getPendingOMProfiles: async () => {
+    try {
+      console.log('Getting PM profiles');
+
+      // Reference to the agents collection
+      const q = query(
+        agentsCollection,
+        where("role", "==", "om"), // Directly filter out active agents in query
+        where("approved", "==", false) // Directly filter out active agents in query
       );
 
       // Execute the query
@@ -543,7 +639,7 @@ export const OfftakeService = {
   getStatus: {
     Name: (status) => {
       if (status?.length) {
-        // should always receive arrya
+        // should always receive array
         const currentStatus = status[status.length - 1].status_name
         return currentStatus
       } else {
@@ -563,6 +659,7 @@ export const OfftakeService = {
   },
   "_testing": {
     generateStableOfftakes: async () => {
+      return
       const stableOfftake = {
         "weight": 123,
         "quantity": "123",
@@ -710,8 +807,6 @@ export const OfftakeService = {
           console.error(`Error creating offtake ${offtake_id}:`, error);
         }
       }
-
-      console.log("Finished generating stable offtakes and their documents.");
     }
   }
 }

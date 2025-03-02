@@ -4,14 +4,14 @@ import "./index.css";
 import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { ConfigProvider } from "antd";
+import { Button, ConfigProvider, Divider, Result, Typography } from "antd";
 import { store } from "./services/redux/store";
 import "swiper/css";
 // Supports weights 200-800
 import "@fontsource-variable/plus-jakarta-sans";
 // Supports weights 100-900
 import '@fontsource-variable/inter';
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Link, RouterProvider, useParams, useRouteError } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
 import Store from "./pages/Store";
@@ -31,11 +31,40 @@ import ProductionSceduling from "./pages/ProductionScheduling";
 import Signin from "./pages/Signin";
 import ProductionCost from "./pages/ProductionCost";
 import Account from "./pages/Account";
-import { colors } from "@mui/material";
+import { colors, Stack } from "@mui/material";
 import PMChat from "./pages/PMChat";
 import FarmSubmissions from "./pages/FarmSubmissions";
+import Signup from "./pages/Signup";
+import AdminProfile from "./pages/AdminProfile";
+import PendingProfile from "./pages/AdminPending";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
+const ErrorBoundary = (is404) => {
+  const error = useRouteError();
+  console.log({ error });
+  const params = useParams()
+  if (is404) {
+    return (
+      <Result
+        status={"404"}
+        title={error.name}
+        subTitle={error.message}
+        children={
+          <Typography code>{error.stack}</Typography>
+        }
+        extra={<Button type="primary"><Link to={"/"}>Back Home</Link></Button>}
+      />
+    );
+  }
+  return (
+    <Result
+      status={error.status}
+      title={error.status}
+      subTitle={<Typography code >{error.message}</Typography>}
+      extra={<Button type="primary"><Link to={'/'}>Back</Link></Button>}
+    />
+  )
+}
 export const theme = createTheme({
 
   palette: {
@@ -104,85 +133,129 @@ const router = createBrowserRouter([
     element: <Signin />,
   },
   {
+    path: "/signup",
+    element: <Signup />,
+  },
+  {
+    path: "/admin/create/profile",
+    element: <AdminProfile />,
+  },
+  {
+    path: "/admin/pending",
+    element: <PendingProfile />,
+  },
+  {
     path: "/dashboard",
     element: <Home />,
+
   },
   {
     path: "/orders",
     element: <Orders />,
+
   },
   {
     path: "/store",
     element: <Store />,
+
   },
   {
     path: "/products",
     element: <Products />,
+
   },
+  // {
+  //   path: "/offtakes",
+  //   element: <Offtake />,
+
+  // },
+
   {
-    path: "/offtakes",
+    path: "/offtakes/:offtake_page",
     element: <Offtake />,
+
   },
+
   {
-    path: "/offtakes/:offtake_id/chat",
+    path: "/offtakes/:offtake_page/:offtake_id/chat",
     element: <OfftakeChat />,
+
   },
   {
-    path: "/offtakes/:offtake_id/published-chat",
+    path: "/offtakes/:offtake_page/:offtake_id/published-chat",
     element: <PMChat />,
+
   },
   {
-    path: "/offtakes/:offtake_id/schedule",
+    path: "/offtakes/:offtake_page/:offtake_id/schedule",
     element: <ProductionSceduling />,
+    errorElement: <ErrorBoundary />
+
   },
   {
-    path: "/offtakes/:offtake_id/submissions",
+    path: "/offtakes/:offtake_page/:offtake_id/submissions",
     element: <FarmSubmissions />,
+
   },
   {
-    path: "/offtakes/:offtake_id/costing",
+    path: "/offtakes/:offtake_page/:offtake_id/costing",
     element: <ProductionCost />,
+
   },
   {
     path: "/account",
     element: <Account />,
+
   },
   {
     path: "/warehouse",
     element: <Warehouse />,
+
   },
   {
     path: "/messages",
     element: <Messages />,
+
   },
   {
     path: "/suppliers",
     element: <Suppliers />,
+
   },
   {
     path: "/market",
     element: <Market />,
+
   },
   {
     path: "/farms",
     element: <Farms />,
+
   },
   {
     path: "/drivers",
     element: <Drivers />,
+
   },
   {
     path: "/reconcile",
     element: <Reconcile />,
+
   },
   {
     path: "/requests",
     element: <Requests />,
+
   },
   {
     path: "/faq",
     element: <FAQs />,
+
   },
+  {
+    path: "*",
+    element: <ErrorBoundary is404={true} />
+  }
 ]);
 // linearGradientButton
 root.render(
@@ -193,11 +266,16 @@ root.render(
         theme={{
           token: {
             colorPrimary: theme.palette.primary.main,
-            borderRadius: 30
           },
           components: {
             Statistic: {
               contentFontSize: 18
+            },
+            Button: {
+              borderRadius: 30
+            },
+            Badge: {
+              borderRadius: 30
             },
             Segmented: {
               borderRadius: 16,
@@ -210,7 +288,8 @@ root.render(
             },
             Input: {
               colorTextDisabled: theme.palette.grey[900],
-              colorTextPlaceholder: theme.palette.grey[400]
+              colorTextPlaceholder: theme.palette.grey[400],
+              borderRadius: 30,
             },
             Progress: {
               defaultColor: theme.palette.primary.main

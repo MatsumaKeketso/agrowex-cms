@@ -7,7 +7,7 @@ import { OfftakeService } from '../services/offtakeService'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveOfftake } from '../services/offtake/offtakeSlice'
 // import 'antd/dist/antd.css';
-import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic, Checkbox, FloatButton } from 'antd'
+import { Card, DatePicker, Form, Input, message, Modal, Space, Button, Timeline, Spin, Empty, InputNumber, Select, Statistic, Checkbox, FloatButton, Upload } from 'antd'
 import { ArrowDownwardRounded, CloseOutlined, CloseRounded } from '@mui/icons-material'
 import toObject from 'dayjs/plugin/toObject'
 import dayjs from 'dayjs'
@@ -19,6 +19,9 @@ import { AuthService, firestoreDB } from '../services/authService'
 import { SystemService } from '../services/systemService'
 import { Helpers } from '../services/helpers'
 import { doc, runTransaction, writeBatch } from 'firebase/firestore'
+import * as XLSX from 'xlsx';
+import ExcelSVG from '../assets/excel.svg'
+import { SystemLogo } from '../assets/Logos'
 dayjs.extend(weekday);
 dayjs.extend(localeData)
 const yield_options = [
@@ -85,7 +88,7 @@ const ProductionScheduling = () => {
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [offtake, setOfftake] = useState({})
-  const { offtake_id } = useParams()
+  const { offtake_id, offtake_page } = useParams()
   const [scheduleForm] = Form.useForm()
   const [publish, setPublish] = useState(false)
   const [next, setNext] = useState(false)
@@ -100,6 +103,8 @@ const ProductionScheduling = () => {
   const prod_res_cap = Form.useWatch("prod_res_cap", scheduleForm)
   // const required_yield_output = Form.useWatch("required_yield_output", scheduleForm)
   const redux_offtake = useSelector((state) => state.offtake?.active);
+
+
   const formatter = (value) => {
     if (isNaN(value)) return 0;
     return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -426,7 +431,66 @@ const ProductionScheduling = () => {
       }
     })
   }
+  const handleExcelFile = (file) => {
+    // setLoading(true)
 
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        console.log('workbook');
+        console.log(workbook);
+
+        // Assume we're reading the first sheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (jsonData.length < 2) {
+          message.error('The Excel file does not contain enough data');
+          setLoading(false);
+          return;
+        }
+
+        // Assuming first row is headers
+        const headers = jsonData[0];
+        const firstRow = jsonData[1];
+
+        // Create an object mapping headers to values
+        const formData = {};
+        headers.forEach((header, index) => {
+          if (header && firstRow[index] !== undefined) {
+            formData[header] = firstRow[index];
+          }
+        });
+        console.log({ formData });
+
+        // Set form values
+        // form.setFieldsValue(formData);
+
+        // setFileInfo({
+        //   name: file.name,
+        //   rows: jsonData.length - 1, // Excluding header row
+        //   columns: headers.length
+        // });
+
+        // message.success(`Successfully loaded data from ${file.name}`);
+      } catch (error) {
+        console.error('Error parsing Excel file:', error);
+        message.error('Error reading the Excel file. Please make sure it\'s a valid Excel document.');
+      }
+
+      setLoading(false);
+    }
+
+    reader.onerror = () => {
+      // message.error('Error reading the file');
+      setLoading(false);
+    };
+
+    reader.readAsArrayBuffer(file);
+    return false;
+  }
   // prod_res_cap
   useEffect(() => {
     scheduleForm.setFieldValue("required_yield_output", (yield_output_per_unit * prod_res_cap))
@@ -587,7 +651,7 @@ const ProductionScheduling = () => {
               OfftakeService.updateOfftake(offtake_id, ot).then(() => {
                 setLoading(false)
                 messageApi.success("Offtake updated")
-                navigate("/offtakes")
+                navigate(`/offtakes/${offtake_page}`)
               }).catch(err => {
                 setLoading(false)
                 messageApi.error(err.message);
@@ -624,9 +688,11 @@ const ProductionScheduling = () => {
         }}>
           <AppBar sx={{ zIndex: 10 }} variant='outlined' position='sticky'>
             <Toolbar>
-              <Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>
-              <Stack flex={1} direction={'row'} gap={1}>
-                <Typography flex={1} variant='h6' p={2}>Production Plan</Typography>
+              <Button onClick={() => { navigate(`/offtakes/${offtake_page}`) }} icon={<ArrowLeftOutlined />} ></Button>
+              <Stack flex={1} direction={'row'} alignItems={'center'} gap={1}>
+                <Typography variant='h6' p={2}>Production Plan</Typography>
+
+                <Stack flex={1} />
                 <Typography variant='subtitle1' p={2}>Production Cost :  {SystemService.formatCurrency(productionCost)}</Typography>
               </Stack>
               <Button disabled={!disableForm} icon={<DownloadOutlined />} onClick={() => {
@@ -965,9 +1031,30 @@ const ProductionScheduling = () => {
 
                       <Stack py={2} gap={2} direction={'row'} alignItems={'center'}>
                         <Divider sx={{ flex: 1, color: colors.green[400] }}>
+
                           <Button disabled={disableForm} type='default' onClick={() => add()} >
                             + Add Category
                           </Button>
+                          <Upload maxCount={1} accept='.xlsx,.xls' showUploadList={false} name='file'
+                            onChange={(info) => {
+                              const file = info.file.originFileObj
+                              if (file) {
+                                // Check if the file is an Excel file
+                                const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                                  file.type === 'application/vnd.ms-excel';
+
+                                if (isExcel) {
+                                  console.log(isExcel);
+
+                                  handleExcelFile(file)
+                                } else {
+                                  messageApi.error('Please select only Excel files (.xlsx or .xls)')
+                                }
+                              }
+                            }}>
+                            <Button icon={<SystemLogo.Excel />} type='text' color='primary' >Populate from Excel</Button>
+                          </Upload>
+
                         </Divider>
 
                       </Stack>
@@ -975,7 +1062,7 @@ const ProductionScheduling = () => {
                   )}
                 </Form.List>
               </Form>
-           
+
             </Stack>
             <Stack direction={'row'} gap={1} p={1} >
               <Stack flex={1}>              </Stack>
@@ -1004,7 +1091,7 @@ const ProductionScheduling = () => {
           <OfftakeDetails setOfftakeId={() => { }} />
         </Stack>
       </Stack>
-    </Layout>
+    </Layout >
   )
 }
 

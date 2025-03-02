@@ -4,16 +4,16 @@ import { OfftakeService } from '../services/offtakeService'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref, set } from 'firebase/database';
 import { firestoreDB, realtimeDB, storage } from '../services/authService';
-import { Box, CardContent, CardHeader, colors, IconButton, ListItem, ListItemText, Stack, Typography, List as MList } from '@mui/material';
-import { Avatar, Button, Card, Descriptions, Typography as ATypography, Divider, Empty, Form, Input, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload } from 'antd';
-import OfftakeDetails from '../components/OfftakeDetails';
+import { Box, CardContent, CardHeader, colors, IconButton, ListItem, ListItemText, Stack, Typography, List as MList, Backdrop, CircularProgress, Chip } from '@mui/material';
+import { Avatar, Button, Card, Descriptions, Typography as ATypography, Divider, Empty, Form, Input, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload, DatePicker, InputNumber, Badge, Tag } from 'antd';
+import OfftakeDetails, { getDaysBetween } from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounded, SwipeRightAltOutlined } from '@mui/icons-material';
 import StatusTag from '../components/StatusTag';
 import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
-import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined, TruckOutlined } from '@ant-design/icons';
 import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
@@ -21,11 +21,16 @@ import { Helpers } from '../services/helpers';
 import { getDownloadURL, uploadBytesResumable, ref as sRef, uploadBytes } from 'firebase/storage';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import DocumentService from '../services/documentService';
+import dayjs from "dayjs";
+const { RangePicker } = DatePicker;
 export const FarmSubmissionColumns = [
   {
     title: 'Farm Name',
     dataIndex: ['farm_profile', 'farm_name'],
     key: 'farm_name',
+    render: (v, r) => {
+      return (<Stack direction={'row'} gap={1}>{v} {r?.selected ? (<Chip sx={{ alignSelf: 'self-start' }} size='small' variant='outlined' color='success' label="Selected"></Chip>) : null}</Stack>)
+    }
   },
   {
     title: 'Stock Available',
@@ -37,7 +42,7 @@ export const FarmSubmissionColumns = [
     dataIndex: ['offer_quantity'], // Accessing nested property
     key: 'offer_quantity',
     render: (v, r) => {
-      return <>{v}{r.unit}</>
+      return <>{v}QTY</>
     }
   },
   {
@@ -50,32 +55,7 @@ export const FarmSubmissionColumns = [
   },
 ];
 
-const deliveryColumns = [
-  {
-    title: 'Date',
-    dataIndex: 'stepAndDate',
-    key: 'stepAndDate',
-  },
-  {
-    title: 'Comment',
-    dataIndex: 'comments',
-    key: 'comments',
-    render: (text) => {
-      const truncatedText = text ? text.substring(0, 48).trim() : text;
-      return (
-        <Tooltip title={text}>
-          <div style={{ maxHeight: '48px', overflow: 'hidden' }}>
-            {truncatedText}
-            {/* {text.length > 48 && '...'} */}
-          </div>
-        </Tooltip>
-      )
-    }
-  },
-];
-
-
-const FarmerView = ({ record }) => {
+const FarmerView = ({ record, getRespondents }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -89,32 +69,84 @@ const FarmerView = ({ record }) => {
   const [address, setAddress] = useState({});
   const [profitability, setProfitability] = useState({});
   const [tableModal, setTableModal] = useState(false);
+  const [showSupplyForm, setShowSupplyForm] = useState(false);
   const [productionProgress, setProductionProgress] = useState(0);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
+  const [delInt, setDelInt] = useState(0);
   const offtake = useSelector((state) => state.offtake.active);
   const user = useSelector((state) => state.user.profile);
+  const params = useParams();
+  const [supplyForm] = Form.useForm()
   const navigate = useNavigate();
   const { farm_profile } = record
   // todo: get the rest of attachments on the offer
-  const deliveryUpdates = [
+
+  const deliveryColumns = [
     {
-      key: '1',
-      DeliveryDate: '02 Jan 2024',
-      Size: '2 ton',
-      Comment: 'We Are Currently Preparing A Land Of 15 Hectors Using A Tractor And Disk Harrow And Grass Slasher. We Should Be Completing On The 15th Of May 2024',
-      Produce: 'Tomato',
-      Image: 'View',
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (text, r) => {
+        return (
+          <Stack direction={'row'} gap={1}>
+            <Spin size='small' spinning={text === 'pending'} />
+            {text !== "pending" && <TruckOutlined />}
+            <Tag>{text ? text : 'pending'}</Tag>
+          </Stack>
+        )
+      }
     },
     {
-      key: '2',
-      DeliveryDate: '02 Apr 2024',
-      Size: '2 ton',
-      Comment: 'We Are Currently Preparing A Land Of 15 Hectors Using A Tractor And Disk Harrow And Grass Slasher. We Should Be Completing On The 15th Of May 1034',
-      Produce: 'Tomato',
-      Image: 'View',
+      title: 'Duration',
+      dataIndex: 'delivery_interval',
+      key: 'delivery_interval',
+      render: (text, r) => {
+        return (
+          <Stack>
+            <Typography variant='body2'>{SystemService.formatTimestamp(r.delivery_interval[0])} - {SystemService.formatTimestamp(r.delivery_interval[1])}</Typography>
+          </Stack>
+        )
+      }
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'expected_supply_amount',
+      key: 'expected_supply_amount',
+      render: (text, r) => {
+        return (
+          <Stack>
+            <Typography variant='body2'>{text}{record.unit}</Typography>
+          </Stack>
+        )
+      }
     },
   ];
+  const validateNumber = (_, value) => {
+    if (value <= 0) {
+      return Promise.reject(new Error("Number must be greater than 0"));
+    }
+    return Promise.resolve();
+  };
+  const handleExpectedSupply = (values) => {
+    var i = []
+    values.intervals.forEach(interval => {
+      const { delivery_interval, expected_supply_amount } = interval
+      const _interval = {
+        delivery_interval: [SystemService.standardiseTimestamp(delivery_interval[0]), SystemService.standardiseTimestamp(delivery_interval[1])],
+        expected_supply_amount: expected_supply_amount
 
+      }
+      i.push(_interval)
+    });
+    const updated_application = {
+      supply_requirements: i
+    }
+    OfftakeService.updateDelivery(offtake.offtake_id, record.uid, updated_application).then(() => {
+      setShowSupplyForm(false)
+      getRespondents(offtake)
+      message.success("Supply requirements updated successfully")
+    })
+  }
   const limit = (count, array) => {
     return array.slice(0, count);
   }
@@ -127,14 +159,21 @@ const FarmerView = ({ record }) => {
 
         const progress = (nD?.items_with_comments / plan.length) * 100
         setProductionProgress(progress)
-
+        if (progress === 100) {
+          setTableSegment('Delivery')
+          if (!record?.supply_requirements) {
+            setShowSupplyForm(true)
+          } else {
+            setDeliveryComments(record?.supply_requirements)
+          }
+        }
         SystemService.profitabilityCalucation(offtake, nestedData).then((profit) => {
           setProfitability(profit)
         })
         setProductionComments([])
         setProductionSearchComments([])
         nestedData.forEach(category => {
-          const c_name = category.name
+          const c_name = category?.name
           category._steps.forEach(step => {
             const { name } = step
             step._costing.forEach(cost => {
@@ -203,7 +242,7 @@ const FarmerView = ({ record }) => {
         const metadata = {
           contentType: file.type
         };
-        const storageRef = sRef(storage, 'cms-documents/farmer_attachments/' + file.name);
+        const storageRef = sRef(storage, 'cms-documents/farmer_attachments/' + file?.name);
         const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
         // Listen for state changes, errors, and completion of the upload.
@@ -241,18 +280,62 @@ const FarmerView = ({ record }) => {
       }
     })
   }
+  const getDeliveryComments = () => {
+  }
+  const calCulateDeliveryBatch = () => {
+    const delivery_frequency = `${offtake?.delivery_frequency}`.toLowerCase()
+    const supply_duration = getDaysBetween(offtake?.supply_duration)
+    const split = supply_duration.split(" ")
+    const frequencyMap = {
+      "daily": 1,
+      "weekly": 7,
+      "biweekly": 14,
+      "monthly": 30,
+      "quarterly": 90,
+      "semiannually": 182,
+      "annually": 365
+    };
 
+    const _delivery_interval = parseInt(split[0]) / frequencyMap[delivery_frequency]
+    const a = parseInt(_delivery_interval.toFixed(0))
+    // push default items in form
+    const data = []
+    for (let index = 0; index < a; index++) {
+      const _def_data = {
+        status: "pending",
+        expected_supply_amount: 0
+      }
+      data.push(_def_data)
+    }
+    console.log(data);
+
+    supplyForm.setFieldValue('intervals', data.map((d) => {
+      return {
+        status: d.status,
+        expected_supply_amount: d.expected_supply_amount
+      }
+    }))
+
+  }
   useEffect(() => {
-    console.log({ record });
-
     getAddress()
     getProductionPlan()
     getDocuments()
+    calCulateDeliveryBatch()
     // loadMoreData();
+
   }, []);
   return (
-    <Stack gap={2}>
-      <Stack direction={'row'} >
+    <Stack gap={2} sx={{
+      position: 'relative', // This is crucial
+      bgcolor: 'background.paper',
+      border: '1px solid #ddd',
+      p: 1,
+      borderRadius: 4,
+      overflow: 'hidden' // Optional: prevents content from flowing outside
+    }}>
+
+      <Stack direction={'row'}>
         <Modal style={{
           top: 20,
         }}
@@ -295,16 +378,63 @@ const FarmerView = ({ record }) => {
                   />
                 )}
               </Stack>
-            ) : (
+            ) : ( // Delivery
               <Stack>
-                <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
+                <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={deliveryComments} />
               </Stack>
             )}
           </Stack>
 
         </Modal>
 
-        <Stack flex={1} gap={2} p={1} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[200]}>
+        <Backdrop
+          sx={{
+            color: '#fff',
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            // The following overrides make the backdrop target the parent container
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pt: 10,
+            alignItems: 'flex-start',
+            backdropFilter: 'blur(5px)',
+          }}
+          open={showSupplyForm}
+        >
+          <Card title="Delivery" size='small' actions={[<Button onClick={() => { supplyForm.submit() }} type='primary'>Save</Button>]} >
+
+            <Form layout='vertical' form={supplyForm} onFinish={(v) => { handleExpectedSupply(v) }} >
+              <Form.List
+                name="intervals"
+              >
+                {(fields, { add, remove }, { errors }) => (
+                  <Stack gap={1}>
+                    {fields.map((field, index) => (
+                      <Stack gap={2}>
+                        <Card hoverable title={`Delivery ${field.name + 1}`} size='small'>
+                          <Stack flex={1} gap={2}>
+                            <Form.Item hidden initialValue={'pending'} rules={[{ required: true }]} name={[field.name, "status"]} label="Status">
+                              <Input />
+                            </Form.Item>
+                            <Form.Item rules={[{ required: true }]} name={[field.name, "delivery_interval"]} label="Delivery Interval">
+                              <RangePicker />
+                            </Form.Item>
+                            <Form.Item rules={[{ required: true }, { validator: validateNumber }]} name={[field.name, "expected_supply_amount"]} label="Expected Supply Amount">
+                              <InputNumber style={{ width: '100%' }} suffix={offtake?.unit} />
+                            </Form.Item>
+                          </Stack>
+                        </Card>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </Form.List>
+            </Form>
+          </Card>
+        </Backdrop>
+        <Stack flex={1} gap={2} p={1} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[100]}>
           {/* Profile */}
           <Stack p={2} gap={2}>
             <Stack gap={2}>
@@ -315,7 +445,7 @@ const FarmerView = ({ record }) => {
                   <Typography variant='subtitle1'>{farm_profile?.farm_type}</Typography>
                   <Stack>
                     <Button onClick={() => {
-                      navigate(`/offtakes/${offtake.offtake_id}/chat`)
+                      navigate(`/offtakes/${params.offtake_page}/${offtake.offtake_id}/chat`)
                     }} style={{ alignSelf: 'start' }}>Chat</Button>
                   </Stack>
                 </Stack>
@@ -350,7 +480,7 @@ const FarmerView = ({ record }) => {
                 uploadAttachment(file).then((url) => {
                   const _doc = {
                     uploaded_by: user.uid,
-                    name: file.name,
+                    name: file?.name,
                     url: url,
                     type: file.type,
                     size: file.size,
@@ -373,8 +503,8 @@ const FarmerView = ({ record }) => {
             </Stack>
 
           }>
-            <Stack>
-              <Stack direction={'row'} gap={1}  >
+            <Stack flex={1}>
+              <Stack direction={'row'} gap={1} flex={1}  >
                 <Stack flex={1} >
                   <InfiniteScroll
                     dataLength={farm_profile?.certificates?.length || 0}
@@ -392,7 +522,7 @@ const FarmerView = ({ record }) => {
                             avatar={<IconButton size='small'>
                               <AttachFileRounded />
                             </IconButton>}
-                            title={document.name}
+                            title={document?.name}
                           />
                           <Stack direction={'row'} gap={1}>
                             <Button disabled={viewDoc.url === document.url} onClick={() => {
@@ -406,9 +536,10 @@ const FarmerView = ({ record }) => {
                     />
                   </InfiniteScroll>
                 </Stack>
-                {viewDoc?.name && (<Stack height={'100%'}>
-                  <Documents url={viewDoc.url} name={viewDoc.name} />
-                </Stack>)}
+                {viewDoc?.name && (
+                  <Stack flex={1} height={'100%'}>
+                    <Documents url={viewDoc.url} name={viewDoc.name} />
+                  </Stack>)}
 
               </Stack>
             </Stack>
@@ -470,8 +601,8 @@ const FarmerView = ({ record }) => {
 
                 </Stack>
               ) : (
-                <Stack width={'100%'} py={3}>
-                  <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={[]} />
+                <Stack width={'100%'} py={3} >
+                  <Table style={{ flex: 1, width: '100%' }} columns={deliveryColumns} dataSource={deliveryComments} />
                   <Stack p={1}>
                     <Button onClick={() => {
                       setTableModal(true)
@@ -573,7 +704,7 @@ const FarmSubmissions = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [required, setRequired] = useState(0)
   const [tonsSelected, setTons] = useState(0)
-  const { offtake_id } = useParams()
+  const { offtake_id, offtake_page } = useParams()
   const offtake = useSelector((state) => state.offtake?.active);
   const profile = useSelector((state) => state.user?.profile);
   const [messageAPI, useContext] = message.useMessage()
@@ -629,7 +760,8 @@ const FarmSubmissions = () => {
     console.log({ keysArray, submissions });
     const a = submissions
       .filter(sub => keysArray.includes(sub.key)) // Filter the farms by the keys in the array
-      .reduce((total, sub) => total + (sub.offer_quantity * offtake.weight), 0); // Sum the requestedOffer values
+      .reduce((total, sub) => total + (sub.offer_quantity), 0); // Sum the requestedOffer values
+    // .reduce((total, sub) => total + (sub.offer_quantity * offtake.weight), 0); // Sum the requestedOffer values
     console.log(a);
     return a
   };
@@ -808,7 +940,7 @@ const FarmSubmissions = () => {
           OfftakeService.updateOfftake(ot.offtake_id, { ...ot, status: updated_status }).then(() => {
             setActive(false)
             setLoading(false)
-            navigate('/offtakes')
+            navigate(`/offtakes/${offtake_page}`)
           })
         })
       }} okButtonProps={{ loading: loading }}
@@ -836,12 +968,12 @@ const FarmSubmissions = () => {
         <Stack flex={1} sx={{ overflow: 'auto' }}>
           <Stack pl={2} direction={'row'} gap={1} alignItems={'center'}>
             <Button onClick={() => {
-              navigate(`/offtakes`)
+              navigate(`/offtakes/${offtake_page}`)
             }} icon={<ArrowLeftOutlined />}></Button>
             <Stack gap={0} p={2} flex={1}>
               <Typography variant='h6' flex={1}>Respondents</Typography>
             </Stack>
-            <Typography variant='h6' p={2} flex={1}>{tonsSelected}{offtake?.unit} / {tonsSelected < required ? `${required}${offtake?.unit}` : `${tonsSelected}${offtake?.unit}`}</Typography>
+            <Typography variant='h6' p={2} flex={1}>{tonsSelected}QTY / {`${required}QTY`} [{offtake?._commodity_details?.quantity * offtake?._commodity_details?.weight}{offtake?._commodity_details?.matrix} @ {offtake?._commodity_details?.weight}{offtake?._commodity_details?.matrix}]</Typography>
 
             {currentStatus !== 'contracting' && currentStatus !== 'active' && (<Button onClick={() => {
               if (offtake.master_contract) {
@@ -878,8 +1010,8 @@ const FarmSubmissions = () => {
               }
             }]}
             expandable={{
-              expandedRowRender: (record) => <FarmerView record={record} />,
-              rowExpandable: (record) => record.name !== 'Not Expandable',
+              expandedRowRender: (record) => <FarmerView record={record} getRespondents={getRespondents} />,
+              rowExpandable: (record) => record?.name !== 'Not Expandable',
             }} />
         </Stack>
         <Stack position={'sticky'} flex={0.5} gap={2} p={1} sx={{ overflowY: 'auto' }}>

@@ -41,12 +41,17 @@ const UserProfile = ({ user_id }) => {
     }, [])
 
     return (<>
-        {user?.name ? (<Typography variant="body2">{user?.name} {user?.surname}</Typography>) : (<Typography variant="body2">Loading...</Typography>)}
+        {user?.name ? (<Typography variant="body2">{user?.name} {user?.surname}</Typography>) : (
+            <Stack direction={'row'} gap={1} alignItems={'center'}>
+                <Spin size="small" />
+                <Typography variant="body2">Loading...</Typography>
+            </Stack>
+        )}
     </>)
 }
 const _columns = [
     {
-        title: 'Offtake Id',
+        title: ' ',
         dataIndex: 'offtake_id',
         key: 'offtake_id',
         responsive: ['lg'],
@@ -58,18 +63,30 @@ const _columns = [
         title: 'Customer',
         dataIndex: ['_address', 'alias_name'],
         key: 'alias_name',
+        responsive: ['md'],
         render: (v, r) => {
             return (<UserProfile user_id={r.uid} />)
         }
     },
-    // {
-    //     title: 'Amount',
-    //     dataIndex: 'amount',
-    //     key: 'amount',
-    // },
+    {
+        title: 'Comodity Name',
+        dataIndex: 'commodity_name',
+        key: 'commodity_name',
+        render: (v, r) => {
+            return (
+
+                <Stack direction={'row'} alignItems={'center'} gap={1}>
+                    <Avatar sx={{ width: 20, height: 20 }} src={r?._commodity_meta?.img} />
+                    <ATypo.Text>{v || "..."}</ATypo.Text>
+                </Stack>
+
+            )
+        }
+    },
     {
         title: 'Supply Duration',
         dataIndex: 'supply_duration',
+        width: 250,
         key: 'supply_duration',
         render: (v, t) => {
             return <>
@@ -80,6 +97,7 @@ const _columns = [
     {
         title: 'Order Date',
         dataIndex: 'start_date',
+        width: 130,
         key: 'start_date',
         render: (v, r) => {
             if (r.offtake_start_and_end_date) {
@@ -113,27 +131,30 @@ const _columns = [
 const AgentListItem = ({ agent, index, onViewClick, activeAgent, agentDataLoading, drawerCollapsed }) => {
     switch (drawerCollapsed) {
         case true:
-            return (<Button onClick={() => { onViewClick() }} icon={<Avatar src={agent.img} />} />)
+            return (<Stack borderRadius={99} mb={1} bgcolor={activeAgent === agent.uid ? colors.green[500] : colors.grey[200]} p={1}><Button onClick={() => { onViewClick() }} icon={<Avatar src={agent.img} />} /></Stack>)
             break;
         case false:
             return (
-                <Card
-                    style={{
-                        width: '100%',
-                        background: activeAgent === agent.uid ? colors.green[300] : 'white'
-                    }}
-                    actions={[
-                        <Button type="text" icon={<EllipsisOutlined key="ellipsis" />}></Button>,
-                        <Button loading={agentDataLoading} onClick={() => { onViewClick() }} style={{ width: '90%' }}
-                        >view offtakes</Button>
-                    ]}
-                >
-                    <Card.Meta
-                        avatar={<Avatar src={agent.img} />}
-                        title={`${agent.fullnames}`}
-                        description={`${agent.email}`}
-                    />
-                </Card>
+                <Stack p={1}>
+                    <Card
+                        style={{
+                            width: '100%',
+                            background: activeAgent === agent.uid ? colors.green[300] : 'white'
+                        }}
+                        actions={[
+                            <Button type="text" icon={<EllipsisOutlined key="ellipsis" />}></Button>,
+                            <Button loading={agentDataLoading} onClick={() => { onViewClick() }} style={{ width: '90%' }}
+                            >view offtakes</Button>
+                        ]}
+                    >
+                        <Card.Meta
+                            avatar={<Avatar src={agent.img} />}
+                            title={`${agent.fullnames}`}
+                            description={`${agent.email}`}
+                        />
+                    </Card>
+                </Stack>
+
             )
             break;
 
@@ -345,9 +366,6 @@ const AgentForm = ({ activeAgent, form }) => {
     return (
         <Card
             title="User Profile"
-            extra={<Button onClick={() => {
-                generateProfiles()
-            }}>Reset Defaults</Button>}
         >
             <Form
                 form={form}
@@ -377,6 +395,7 @@ const AgentForm = ({ activeAgent, form }) => {
                             </div>
                         )}
                     </Upload>
+
                 </Form.Item>
                 <Form.Item
                     name="fullnames"
@@ -458,7 +477,6 @@ const AgentForm = ({ activeAgent, form }) => {
                     <Input placeholder="Region" />
                 </Form.Item>
 
-
                 <Stack pt={5}>
                     <Form.Item>
                         <Button type="primary" htmlType="submit" block>
@@ -466,7 +484,6 @@ const AgentForm = ({ activeAgent, form }) => {
                         </Button>
                     </Form.Item>
                 </Stack>
-
             </Form>
         </Card>
     )
@@ -485,10 +502,12 @@ const Offtake = () => {
     const [activeAgent, setActiveAgent] = useState('')
     const [activeAgentProfile, setActiveAgentProfile] = useState({})
     const [agentProfiles, setAgentProfiles] = useState([])
+    const [pendingAgentProfiles, setPendingAgentProfiles] = useState([])
     const [agentDataLoading, setDataLoading] = useState(false)
     const [permissions, setPermissions] = useState({})
     const [drawerCollapsed, setDrawerCollapsed] = useState(false)
     const [settingsContent, setSettingsContent] = useState("permissions")
+    const [activeTabKey, setActiveTabKey] = useState('approved');
     const [agentForm] = Form.useForm()
     const navigate = useNavigate();
     const params = useParams()
@@ -533,7 +552,7 @@ const Offtake = () => {
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
                             localStorage.setItem(r.offtake_id, r)
-                            navigate(`/offtakes/${r.offtake_id}/schedule`)
+                            navigate(`/offtakes/${params.offtake_page}/${r.offtake_id}/schedule`)
                         }}>View More</Button>
                     </Stack>)
                     break;
@@ -542,7 +561,7 @@ const Offtake = () => {
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
                             localStorage.setItem(r.offtake_id, r)
-                            navigate(`/offtakes/${r.offtake_id}/chat`)
+                            navigate(`/offtakes/${params.offtake_page}/${r.offtake_id}/chat`)
                         }}>View More</Button>
                     </Stack>)
                     break;
@@ -551,7 +570,7 @@ const Offtake = () => {
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
                             localStorage.setItem(r.offtake_id, r)
-                            navigate(`/offtakes/${r.offtake_id}/submissions`)
+                            navigate(`/offtakes/${params.offtake_page}/${r.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>)
                     break;
@@ -560,7 +579,7 @@ const Offtake = () => {
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
                             localStorage.setItem(r.offtake_id, r)
-                            navigate(`/offtakes/${r.offtake_id}/submissions`)
+                            navigate(`/offtakes/${params.offtake_page}/${r.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>)
                     break;
@@ -568,8 +587,9 @@ const Offtake = () => {
                     return (<Stack>
                         <Button onClick={() => {
                             dispatch(setActiveOfftake(r))
-                            localStorage.setItem(r.offtake_id, r)
+                            // localStorage.setItem(r.offtake_id, r)
                             setOfftakeBackup(r)
+                            navigate(`/offtakes/${params.offtake_page}`)
                             setOpenOfftake(true)
                         }}>View More</Button>
                     </Stack>)
@@ -654,7 +674,9 @@ const Offtake = () => {
             </Form.Item>
         ));
     };
-
+    const onTabChange = (key) => {
+        setActiveTabKey(key);
+    };
     const setOfftakeId = (id) => {
         setOfftake_id(id)
     }
@@ -671,9 +693,12 @@ const Offtake = () => {
         if (user.profile.role == "om") {
             //get profiles
             OfftakeService.getPMProfiles().then(res => {
-                setAgentProfiles(res)
-                setActiveAgent(res[0].uid)
-                setPageLoading(false)
+              
+                if (res.length > 0) {
+                    setAgentProfiles(res)
+                    setActiveAgent(res[0].uid)
+                    setPageLoading(false)
+                }
             })
         } else if (user.profile.role == "pm") {
             // procurement manage
@@ -681,6 +706,8 @@ const Offtake = () => {
             // must get all inprogress offtakes
             // todo: move permissions to firebase
             OfftakeService.getOfftakes().then(data => {
+          
+                
                 setPageLoading(false)
                 const f_offtakes = []
                 data.map((_offtake => {
@@ -703,9 +730,14 @@ const Offtake = () => {
             SystemService.getPermissions().then(_permissions => {
                 setPermissions(_permissions)
                 AgentService.getAgentProfiles().then(res => {
-                    console.log(res);
+                  
 
                     setAgentProfiles(res)
+                    setPageLoading(false)
+                })
+                AgentService.getPendingAgentProfiles().then(res => {
+              
+                    setPendingAgentProfiles(res)
                     setPageLoading(false)
                 })
             })
@@ -736,7 +768,6 @@ const Offtake = () => {
         getStableOfftakes()
     }, [user.profile.role])
     useEffect(() => {
-        console.log(user.profile.role);
         setUserRole(user.profile.role)
     }, [])
     return (
@@ -903,10 +934,10 @@ const Offtake = () => {
                         Pipeline
                     </Button> */}
                     {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'negotiation' ? (<Button type="primary" onClick={() => {
-                        navigate(`/offtakes/${offtakeBackup.offtake_id}/chat`);
+                        navigate(`/offtakes/${params.offtake_page}/${offtakeBackup.offtake_id}/chat`);
                     }} > Open Chat</Button>) : null}
                     {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'planning' ? (<Button type="primary" onClick={() => {
-                        navigate(`/offtakes/${offtakeBackup.offtake_id}/schedule`);
+                        navigate(`/offtakes/${params.offtake_page}/${offtakeBackup.offtake_id}/schedule`);
                     }} > Open Production Plan</Button>) : null}
                     {OfftakeService.getStatus.Name(offtakeBackup?.status) === 'submitted' ? (<Button type="primary" onClick={() => {
                         if (offtake?.contract_model) { dispatch(setPublishState(true)) } else {
@@ -949,9 +980,8 @@ const Offtake = () => {
                             <Header style={{ fontWeight: 'bold' }}>
                                 Agents
                             </Header>
-                            <Content>
+                            <Content style={{ height: "83vh", overflowY: 'auto' }}>
                                 <List
-                                    style={{ padding: 20 }}
                                     itemLayout="vertical"
                                     dataSource={agentProfiles}
                                     renderItem={(agent: any, index) => {
@@ -976,6 +1006,7 @@ const Offtake = () => {
                                         )
                                     }}
                                 />
+                                <Stack height={50} width={'100%'} />
                             </Content>
                         </ANTDLayout>
 
@@ -1009,7 +1040,6 @@ const Offtake = () => {
                         <Segmented
                             options={filterSegmentOptions}
                             onChange={(value) => {
-                                console.log(value); // string
                                 filterOfftakesByStatus(value)
                             }}
                         />
@@ -1042,8 +1072,11 @@ const Offtake = () => {
                         </Stack>
                     </Collapse>
                     <Table
+                        pagination={{
+                            current: parseInt(params?.offtake_page)
+                        }}
                         onChange={(c) => {
-                            console.log(c)
+                            navigate(`/offtakes/${c.current}`)
                         }}
                         size="small"
                         style={{ height: "100%" }}
@@ -1072,12 +1105,11 @@ const Offtake = () => {
                                         <Typography variant="subtitle1">Settings</Typography>
                                     </Stack>
                                     <List
-                                        className="demo-loadmore-list"
                                         itemLayout="horizontal"
                                         dataSource={[{ title: 'Permissions', value: 'permissions', icon: <SettingOutlined /> }, { title: 'Accounts', value: 'accounts', icon: <UserSwitchOutlined /> }]}
                                         renderItem={(item) => (
                                             <List.Item
-                                                style={{ background: settingsContent === item.value ? colors.grey[300] : 'white' }}
+                                                style={{ background: settingsContent === item.value ? colors.grey[300] : 'white', paddingLeft: 15, paddingTop: 18 }}
                                                 actions={[<Button onClick={() => {
                                                     setSettingsContent(item.value)
                                                 }}>View</Button>]}
@@ -1093,19 +1125,19 @@ const Offtake = () => {
                                 </Stack>
 
                             </Sider>
-                            <ANTDLayout>
-                                <Content>
+                            <ANTDLayout style={{ minHeight: "83vh", maxHeight: "83vh", overflowY: 'auto' }}>
+                                <Content >
                                     {settingsContent === "permissions" ? (
-                                        <Stack bgcolor={'white'}>
+                                        <Stack bgcolor={'white'} sx={{ minHeight: "83vh", maxHeight: "83vh", overflowY: 'auto', pr: 1 }}>
                                             <Card title="Permissions Configuration">
                                                 <ANTDCollapse defaultActiveKey={['1', '2']}>
                                                     <ANTDCollapse.Panel header="Operation Manager Permissions" key="1">
-                                                        <Form layout="horizontal">
+                                                        <Form disabled layout="horizontal">
                                                             {renderStatusToggles('om')}
                                                         </Form>
                                                     </ANTDCollapse.Panel>
                                                     <ANTDCollapse.Panel header="Procurement Manager Permissions" key="2">
-                                                        <Form layout="horizontal">
+                                                        <Form disabled layout="horizontal">
                                                             {renderStatusToggles('pm')}
                                                         </Form>
                                                     </ANTDCollapse.Panel>
@@ -1115,41 +1147,104 @@ const Offtake = () => {
                                     ) : null}
                                     {settingsContent === "accounts" ? (
                                         <Stack bgcolor={'white'}>
-                                            <Card title="Accounts">
-                                                <ANTDLayout>
-                                                    <Sider width={700}>
-                                                        <Stack p={0}>
+                                            <Card
+                                                title="Accounts"
+                                                tabList={[
+                                                    {
+                                                        key: 'approved',
+                                                        tab: 'Approved',
+                                                    },
+                                                    {
+                                                        key: 'pending',
+                                                        tab: 'Pending',
+                                                    },
+                                                ]
+                                                }
+                                                activeTabKey={activeTabKey}
+                                                onTabChange={key => {
+                                                    onTabChange(key);
+                                                }}
+                                            >
+                                                {activeTabKey === 'approved' && (
+                                                    <ANTDLayout>
+                                                        <Sider width={700}>
+                                                            <Stack p={0}>
+                                                                <List
+                                                                    className="demo-loadmore-list"
+                                                                    itemLayout="horizontal"
+                                                                    dataSource={agentProfiles}
+                                                                    renderItem={(item) => (
+                                                                        <List.Item
+                                                                            style={{ background: settingsContent === item.value ? colors.grey[300] : 'white' }}
+                                                                            actions={[<Button onClick={() => {
+                                                                                setActiveAgentProfile(item)
+                                                                            }}>View</Button>]}
+                                                                        >
+                                                                            <List.Item.Meta
+                                                                                avatar={<Avatar src={item.img}></Avatar>}
+                                                                                title={item.fullnames}
+                                                                                description={`${item.province}, ${item.region}`}
+                                                                            />
+                                                                            <Typography variant="body1">{item.email}</Typography>
+                                                                        </List.Item>
+                                                                    )}
+                                                                />
+                                                            </Stack>
+                                                        </Sider>
+                                                        <Content>
+                                                            <ANTDLayout>
+                                                                <Content>
+                                                                    <AgentForm form={agentForm} activeAgent={activeAgentProfile} />
+                                                                </Content>
+                                                            </ANTDLayout>
+                                                        </Content>
+                                                    </ANTDLayout>
+                                                )}
+                                                {activeTabKey === 'pending' && (
+                                                    <ANTDLayout>
+                                                        <Sider width={700}>
+                                                            <Stack p={0}>
+                                                                <List
+                                                                    className="demo-loadmore-list"
+                                                                    itemLayout="horizontal"
+                                                                    dataSource={pendingAgentProfiles}
+                                                                    renderItem={(item) => (
+                                                                        <List.Item
+                                                                            style={{ background: settingsContent === item.value ? colors.grey[300] : 'white' }}
+                                                                            actions={[
+                                                                                <Button onClick={() => {
+                                                                                    setActiveAgentProfile(item)
+                                                                                }}>View</Button>,
+                                                                                <Button
+                                                                                    color="primary"
+                                                                                    onClick={() => {
+                                                                                        AgentService.approveAgentProfile(item.uid).then(res => {
+                                                                                            getStableOfftakes()
+                                                                                        })
+                                                                                    }}
+                                                                                >Approve</Button>]}
+                                                                        >
+                                                                            <List.Item.Meta
+                                                                                avatar={<Avatar src={item.img}></Avatar>}
+                                                                                title={item.fullnames}
+                                                                                description={`${item.province}, ${item.region}`}
+                                                                            />
+                                                                            <Typography variant="body1">{item.email}</Typography>
+                                                                        </List.Item>
+                                                                    )}
+                                                                />
+                                                            </Stack>
+                                                        </Sider>
+                                                        <Content>
+                                                            <ANTDLayout>
+                                                                <Content>
+                                                                    <AgentForm form={agentForm} activeAgent={activeAgentProfile} />
+                                                                </Content>
+                                                            </ANTDLayout>
+                                                        </Content>
+                                                    </ANTDLayout>
 
-                                                            <List
-                                                                className="demo-loadmore-list"
-                                                                itemLayout="horizontal"
-                                                                dataSource={agentProfiles}
-                                                                renderItem={(item) => (
-                                                                    <List.Item
-                                                                        style={{ background: settingsContent === item.value ? colors.grey[300] : 'white' }}
-                                                                        actions={[<Button onClick={() => {
-                                                                            setActiveAgentProfile(item)
-                                                                        }}>View</Button>]}
-                                                                    >
-                                                                        <List.Item.Meta
-                                                                            avatar={<Avatar src={item.img}></Avatar>}
-                                                                            title={item.fullnames}
-                                                                            description={`${item.province}, ${item.region}`}
-                                                                        />
-                                                                        <Typography variant="body1">{item.email}</Typography>
-                                                                    </List.Item>
-                                                                )}
-                                                            />
-                                                        </Stack>
-                                                    </Sider>
-                                                    <Content>
-                                                        <ANTDLayout>
-                                                            <Content>
-                                                                <AgentForm form={agentForm} activeAgent={activeAgentProfile} />
-                                                            </Content>
-                                                        </ANTDLayout>
-                                                    </Content>
-                                                </ANTDLayout>
+                                                )}
                                             </Card>
                                         </Stack>
 

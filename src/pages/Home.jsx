@@ -28,7 +28,7 @@ import {
   salesOvertimeColumns,
   salesOvertimeData,
 } from "../services/api";
-import { Radio, Table } from "antd";
+import { Card, Radio, Table } from "antd";
 import { Area } from "@ant-design/charts";
 const salesOvertime = [
   {
@@ -228,7 +228,7 @@ const Home = () => {
               <StatsCard />
             </Stack>
             <Stack
-            
+
               flex={1}
               spacing={2}
             >
@@ -237,9 +237,9 @@ const Home = () => {
                 <Stack>
                   <Typography variant="h6">Sales Overtime</Typography>
                 </Stack>
-                <Stack>
+                <Stack direction={'row'} gap={2}>
                   <Box
-                    width={"100%"}
+                    width={700}
                     height={250}
                     alignItems={"center"}
                     justifyItems={"center"}
@@ -247,19 +247,23 @@ const Home = () => {
                     justifyContent={"center"}
                     textAlign={"center"}
                   >
-                    <Area {...config} />
+                    <Area {...config} style={{width: '100%'}} />
                   </Box>
-                  <Stack>
-                    <Table
-                      title={() => (
-                        <Typography variant="subtitle1" fontWeight={"bold"}>
-                          Locations
-                        </Typography>
-                      )}
-                      columns={salesOvertimeColumns}
-                      dataSource={salesOvertimeData}
+                  <Stack flex={1}>
+                    <Card size="small">
+                      <Table
+                        style={{ width: '100%' }}
+                        title={() => (
+                          <Typography variant="subtitle1" fontWeight={"bold"}>
+                            Locations
+                          </Typography>
+                        )}
+                        columns={salesOvertimeColumns}
+                        dataSource={salesOvertimeData}
                       // onChange={onChange}
-                    />
+                      />
+                    </Card>
+
                   </Stack>
                 </Stack>
               </Stack>
@@ -279,7 +283,7 @@ const Home = () => {
                       justifyContent={"center"}
                       textAlign={"center"}
                     >
-                      <Area {...config} />
+                      <Area style={{width: '100%'}} {...config} />
                     </Box>
                     <Stack>
                       <Table
@@ -290,7 +294,7 @@ const Home = () => {
                         )}
                         columns={liveSalesColumns}
                         dataSource={liveSalesData}
-                        // onChange={onChange}
+                      // onChange={onChange}
                       />
                     </Stack>
                   </Stack>
@@ -309,7 +313,7 @@ const Home = () => {
                     justifyContent={"center"}
                     textAlign={"center"}
                   >
-                    <Area {...config} />
+                    <Area style={{width: '100%'}} {...config} />
                   </Box>
                   <Stack>
                     <Table
@@ -320,7 +324,7 @@ const Home = () => {
                       )}
                       columns={salesOvertimeColumns}
                       dataSource={salesOvertimeData}
-                      // onChange={onChange}
+                    // onChange={onChange}
                     />
                   </Stack>
                 </Stack>

@@ -101,15 +101,11 @@ const MenuAppBar = ({ links = [], active }) => {
   const [localeList, setLocaleList] = useState([]);
   const [messageApi, contextHolder] = message.useMessage();
   const navigation = useSelector((state) => state.navigation);
-  const handleMenu = (event) => { };
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const handleClose = () => { };
-
   const showDrawer = () => {
     setOpen(true);
   };
-
   const onClose = () => {
     setOpen(false);
   };
@@ -272,10 +268,10 @@ const ProfileMenu = () => {
         }}>My Account</MenuItem>
         <MenuItem onClick={() => {
           AuthService.signout().then(() => {
+            navigate('/');
             dispatch(updateProfile({}))
             dispatch(updateAuth({}))
             dispatch(toggleOnline(false))
-            navigate('/');
           })
         }}>Logout</MenuItem>
       </Menu>

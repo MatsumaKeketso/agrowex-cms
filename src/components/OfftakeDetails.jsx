@@ -310,7 +310,7 @@ const OfftakeDetails = (props) => {
     const [productionProgress, setProductionProgress] = useState([])
     const [productionPercentage, setProductionPercentage] = useState(0)
     const [barSteps, setBarSteps] = useState(0)
-    const { offtake_id } = useParams()
+    const { offtake_id, offtake_page } = useParams()
     const [offtakeForm] = Form.useForm();
     const [contractModelForm] = Form.useForm();
     const { data, setOfftake, closeDrawer, setOfftakeId, showSubmissions = true } = props;
@@ -418,7 +418,7 @@ const OfftakeDetails = (props) => {
         const locations = location.pathname.split('/')
         setPage(locations[3])
         if (!offtake_id) {
-            navigate('/offtakes')
+            navigate(`/offtakes/${offtake_page}`)
         }
         setOfftakeId(offtake_id)
         if (permissions) {
@@ -512,7 +512,7 @@ const OfftakeDetails = (props) => {
                 {/* Offtake header */}
                 <Stack direction={'row'}>
                     <Stack flex={1} direction={'row'} flexWrap={'wrap'} gap={2} alignItems={'center'}>
-                        {showBack && (<Button onClick={() => { navigate("/offtakes") }} icon={<ArrowLeftOutlined />} ></Button>)}
+                        {showBack && (<Button onClick={() => { navigate(`/offtakes/${offtake_page}`) }} icon={<ArrowLeftOutlined />} ></Button>)}
                         <Stack flex={1}>
                             <Typography variant='h5'>{ot?.title}</Typography>
                             <ATypo.Text copyable >{ot?.offtake_id}</ATypo.Text>
@@ -536,7 +536,7 @@ const OfftakeDetails = (props) => {
                     <Divider ></Divider>
                     <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
                         <Button color={colors.green[400]} type={page === 'schedule' ? 'primary' : 'default'} onClick={() => {
-                            navigate(`/offtakes/${ot.offtake_id}/schedule`);
+                            navigate(`/offtakes/${offtake_page}/${ot.offtake_id}/schedule`);
                         }}>Production Plan</Button>
                         {/* Removed to because processes are merged */}
                         {/* <Button color={colors.green[400]} type={page === 'costing' ? 'default' : 'text'} onClick={() => {
@@ -548,7 +548,7 @@ const OfftakeDetails = (props) => {
                                 currentStatus === 'contracting' ||
                                 currentStatus === 'active' ||
                                 currentStatus === 'submitted') {
-                                navigate(`/offtakes/${ot.offtake_id}/chat`);
+                                navigate(`/offtakes/${offtake_page}/${ot.offtake_id}/chat`);
                             }
                             // else if (currentStatus === 'submitted') {
                             //     navigate(`/offtakes/${ot.offtake_id}/published-chat`)
@@ -557,7 +557,7 @@ const OfftakeDetails = (props) => {
                         {currentStatus === 'active' && showSubmissions && (
                             <Button type={page === 'submissions' ? 'primary' : 'default'} onClick={() => {
                                 "/offtakes/:offtake_id/submissions"
-                                navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                                navigate(`/offtakes/${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                             }}>View Respondents</Button>
                         )}
                     </Stack>
@@ -622,7 +622,7 @@ const OfftakeDetails = (props) => {
                             <Card size='small'>
                                 <Stack gap={1} px={2}>
                                     <ATypo.Title level={4}>Profitability Breakdown</ATypo.Title>
-                               
+
                                 </Stack>
                                 <MList >
                                     <ListItem>
@@ -748,7 +748,7 @@ const OfftakeDetails = (props) => {
                         </Stack>
                         <Button type='primary' onClick={() => {
                             "/offtakes/:offtake_id/submissions"
-                            navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                            navigate(`/offtakes/${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>
                     <Table dataSource={farms} columns={[
@@ -782,7 +782,7 @@ const OfftakeDetails = (props) => {
                                 </Stack>
                                 <Button type='primary' onClick={() => {
                                     "/offtakes/:offtake_id/submissions"
-                                    navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                                    navigate(`/offtakes${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                                 }}>View More</Button>
                             </Stack>
                         </Card>
@@ -920,7 +920,7 @@ const OfftakeDetails = (props) => {
                         </Stack>
                         <Button type='default' onClick={() => {
                             "/offtakes/:offtake_id/submissions"
-                            navigate(`/offtakes/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                            navigate(`/offtakes${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                         }}>View More</Button>
                     </Stack>
                 </Stack>)}
@@ -998,7 +998,7 @@ const OfftakeDetails = (props) => {
                                 <PermissionControl label={"Production Method"} name="production_method" value={production_method} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
-                                <PermissionControl label={"Total Order Quanitity"} name="quantity" value={`${quantity}${unit}`} form={offtakeForm} />
+                                <PermissionControl label={"Total Order Quanitity"} name="quantity" value={`${quantity}qty`} form={offtakeForm} />
                             </Grid>
                             <Grid flex={1} item xs={12} md={12} lg={6} p={1}>
                                 <PermissionControl label={"Delivery Frequency"} name="delivery_frequency" form={offtakeForm} value={delivery_frequency} />
@@ -1045,12 +1045,13 @@ const OfftakeDetails = (props) => {
                 {documents.length === 0 &&
                     (
                         <Empty
-                            description="No Documents"
-                            children={
-                                <Stack direction={'row'} alignContent={'center'} spacing={1} justifyContent={'center'}>
-                                    <Button type='primary'>Request a required Document</Button>
-                                    <Button>Request an additional Document</Button>
-                                </Stack>
+                            imageStyle={{
+                                height: 60,
+                            }}
+                            description={
+                                <span>
+                                    No Documents Uploaded
+                                </span>
                             }
                         />)
                 }
