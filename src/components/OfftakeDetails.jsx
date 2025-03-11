@@ -556,7 +556,7 @@ const OfftakeDetails = (props) => {
                         }}>Chat </Button>
                         {currentStatus === 'active' && showSubmissions && (
                             <Button type={page === 'submissions' ? 'primary' : 'default'} onClick={() => {
-                                "/offtakes/:offtake_id/submissions"
+                                // "/offtakes/:offtake_id/submissions"
                                 navigate(`/offtakes/${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                             }}>View Respondents</Button>
                         )}

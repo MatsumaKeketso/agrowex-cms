@@ -23,6 +23,8 @@ import {
   MailOutlined,
   MessageRounded,
   MoreVertRounded,
+  SettingsOutlined,
+  SettingsRounded,
 } from "@mui/icons-material";
 import { AuthService } from "../services/authService";
 import { toggleOnline, updateAuth, updateProfile } from "../services/user/userSlice";
@@ -204,6 +206,12 @@ const MenuAppBar = ({ links = [], active }) => {
 
           <Stack spacing={1} direction={"row"} alignItems={"center"}>
 
+            <IconButton
+              onClick={() => navigate("/settings")}
+              sx={{ alignSelf: "flex-start" }}
+            >
+              <SettingsRounded />
+            </IconButton>
             <IconButton
               onClick={() => navigate("/messages")}
               sx={{ alignSelf: "flex-start" }}

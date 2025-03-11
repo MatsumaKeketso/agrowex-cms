@@ -18,7 +18,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import Layout from "../components/Layout";
 import StatsCard from "../components/StatsCard";
@@ -42,6 +42,7 @@ import {
 } from "antd";
 import CustomTabPanel, { a11yProps } from "../components/CustomTabPanel";
 import { theme } from "..";
+import StoreService from "../services/storeService";
 const { Dragger } = Upload;
 const ProductForm = ({ open, onClose }) => {
   const ProductForm = [
@@ -98,6 +99,7 @@ const ProductForm = ({ open, onClose }) => {
 const Store = () => {
   const [tab, setTab] = React.useState(0);
   const [drawer, setDrawer] = React.useState(false);
+  const [pageLoading, setPageLoading] = React.useState(true);
   const [openCategoryDrawer, setOpenCategoryDrawer] = useState(false);
   const [products, setProducts] = useState([]);
   const handleTabChange = (event, newValue) => {
@@ -167,49 +169,13 @@ const Store = () => {
   // Filter `option.label` match the user type `input`
   const filterOption = (input, option) =>
     (option?.label ?? "").toLowerCase().includes(input.toLowerCase());
-  useState(() => {
-    const dataSource = [
-      // Example data
-      {
-        key: "1",
-        image: "product1.jpg",
-        productName: "Product 1",
-        price: "$50.00",
-        description: "Lorem ipsum dolor sit amet.",
-        sizes: ["Small", "Medium", "Large"],
-        supplier: "Supplier A",
-      },
-      {
-        key: "1",
-        image: "product1.jpg",
-        productName: "Product 1",
-        price: "$50.00",
-        description: "Lorem ipsum dolor sit amet.",
-        sizes: ["Small", "Medium", "Large"],
-        supplier: "Supplier A",
-      },
-      {
-        key: "1",
-        image: "product1.jpg",
-        productName: "Product 1",
-        price: "$50.00",
-        description: "Lorem ipsum dolor sit amet.",
-        sizes: ["Small", "Medium", "Large"],
-        supplier: "Supplier A",
-      },
-      {
-        key: "1",
-        image: "product1.jpg",
-        productName: "Product 1",
-        price: "$50.00",
-        description: "Lorem ipsum dolor sit amet.",
-        sizes: ["Small", "Medium", "Large"],
-        supplier: "Supplier A",
-      },
-      // Add more data as needed
-    ];
-    setProducts(dataSource);
-  }, []);
+  useEffect(() => {
+    StoreService.getAll().then((data) => {
+      console.log(data);
+      setProducts(data)
+      setPageLoading(false)
+    })
+  }, [])
   return (
     <Layout>
       <Stack flex={1} p={2} spacing={2}>
@@ -365,7 +331,7 @@ const Store = () => {
                   height={"100%"}
                   alignItems={"center"}
                   alignSelf={"flex-end"}
-                  // pb={1}
+                // pb={1}
                 >
                   <Paper elevation={0}>
                     <Stack
@@ -394,14 +360,14 @@ const Store = () => {
                 }}
                 size="small"
                 columns={tableColumns}
-                dataSource={products}
+                // dataSource={products}
               ></Table>
             </CustomTabPanel>
             <CustomTabPanel value={tab} index={1}>
               <Table
                 size="small"
                 columns={tableColumns}
-                dataSource={products}
+                // dataSource={products}
               ></Table>
             </CustomTabPanel>
           </Box>

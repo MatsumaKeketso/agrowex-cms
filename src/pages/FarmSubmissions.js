@@ -22,6 +22,7 @@ import { getDownloadURL, uploadBytesResumable, ref as sRef, uploadBytes } from '
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import DocumentService from '../services/documentService';
 import dayjs from "dayjs";
+import DeliveryDatePicker from '../components/DeliveryDatePicker';
 const { RangePicker } = DatePicker;
 export const FarmSubmissionColumns = [
   {
@@ -103,7 +104,7 @@ const FarmerView = ({ record, getRespondents }) => {
       render: (text, r) => {
         return (
           <Stack>
-            <Typography variant='body2'>{SystemService.formatTimestamp(r.delivery_interval[0])} - {SystemService.formatTimestamp(r.delivery_interval[1])}</Typography>
+            <Typography variant='body2'>{SystemService.formatTimestamp(r.delivery_interval[0])}</Typography>
           </Stack>
         )
       }
@@ -132,7 +133,8 @@ const FarmerView = ({ record, getRespondents }) => {
     values.intervals.forEach(interval => {
       const { delivery_interval, expected_supply_amount } = interval
       const _interval = {
-        delivery_interval: [SystemService.standardiseTimestamp(delivery_interval[0]), SystemService.standardiseTimestamp(delivery_interval[1])],
+        status: interval.status,
+        delivery_interval: [SystemService.standardiseTimestamp(delivery_interval)],
         expected_supply_amount: expected_supply_amount
 
       }
@@ -404,8 +406,8 @@ const FarmerView = ({ record, getRespondents }) => {
           open={showSupplyForm}
         >
           <Card title="Delivery" size='small' actions={[<Button onClick={() => { supplyForm.submit() }} type='primary'>Save</Button>]} >
-
-            <Form layout='vertical' form={supplyForm} onFinish={(v) => { handleExpectedSupply(v) }} >
+            <DeliveryDatePicker />
+            <Form layout='vertical' style={{ width: 300 }} form={supplyForm} onFinish={(v) => { handleExpectedSupply(v) }} >
               <Form.List
                 name="intervals"
               >
@@ -416,10 +418,10 @@ const FarmerView = ({ record, getRespondents }) => {
                         <Card hoverable title={`Delivery ${field.name + 1}`} size='small'>
                           <Stack flex={1} gap={2}>
                             <Form.Item hidden initialValue={'pending'} rules={[{ required: true }]} name={[field.name, "status"]} label="Status">
-                              <Input />
+                              <Input style={{ width: '100%' }} />
                             </Form.Item>
                             <Form.Item rules={[{ required: true }]} name={[field.name, "delivery_interval"]} label="Delivery Interval">
-                              <RangePicker />
+                              <DatePicker />
                             </Form.Item>
                             <Form.Item rules={[{ required: true }, { validator: validateNumber }]} name={[field.name, "expected_supply_amount"]} label="Expected Supply Amount">
                               <InputNumber style={{ width: '100%' }} suffix={offtake?.unit} />
@@ -434,7 +436,7 @@ const FarmerView = ({ record, getRespondents }) => {
             </Form>
           </Card>
         </Backdrop>
-        <Stack flex={1} gap={2} p={1} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[100]}>
+        <Stack flex={1} gap={2} p={1} direction={OfftakeService.getStatus.Name(offtake.status) === 'active' ? "column" : 'row'} overflow={'hidden'} borderRadius={2} bgcolor={colors.grey[100]}>
           {/* Profile */}
           <Stack p={2} gap={2}>
             <Stack gap={2}>
@@ -473,7 +475,7 @@ const FarmerView = ({ record, getRespondents }) => {
           </Stack>
 
           {/* Attachments */}
-          <Card title="Attachments" extra={
+          <Card style={{ minWidth: "50%" }} title="Attachments" extra={
             <Stack >
               <Upload showUploadList={false} onChange={(info) => {
                 const file = info.file.originFileObj;

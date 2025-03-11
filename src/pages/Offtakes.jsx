@@ -598,10 +598,10 @@ const Offtake = () => {
 
         }
     },]
-    const filterOfftakesByStatus = (filterValue) => {
+    const filterOfftakesByStatus = async (filterValue) => {
         // Assign "inprogress" status to offtakes without a status property
 
-        const updatedOfftakes = offtakesReset.map(offtake => {
+        const updatedOfftakes = await offtakesReset.map(offtake => {
             return offtake;
         });
 
@@ -612,9 +612,10 @@ const Offtake = () => {
             setPageLoading(false)
             return
         }
-
         // Otherwise, filter the offtakes based on the status
-        const filtered = updatedOfftakes.filter(offtake => OfftakeService.getStatus.Name(offtake.status) === filterValue);
+        const filtered = await offtakesReset.filter((_ot) => OfftakeService.getStatus.Name(_ot.status) === filterValue);
+        console.log({ filterValue, filtered });
+
         setOfftakes(filtered)
     };
     const closeDrawer = (id) => {
@@ -693,7 +694,7 @@ const Offtake = () => {
         if (user.profile.role == "om") {
             //get profiles
             OfftakeService.getPMProfiles().then(res => {
-              
+
                 if (res.length > 0) {
                     setAgentProfiles(res)
                     setActiveAgent(res[0].uid)
@@ -706,8 +707,8 @@ const Offtake = () => {
             // must get all inprogress offtakes
             // todo: move permissions to firebase
             OfftakeService.getOfftakes().then(data => {
-          
-                
+
+
                 setPageLoading(false)
                 const f_offtakes = []
                 data.map((_offtake => {
@@ -730,13 +731,13 @@ const Offtake = () => {
             SystemService.getPermissions().then(_permissions => {
                 setPermissions(_permissions)
                 AgentService.getAgentProfiles().then(res => {
-                  
+
 
                     setAgentProfiles(res)
                     setPageLoading(false)
                 })
                 AgentService.getPendingAgentProfiles().then(res => {
-              
+
                     setPendingAgentProfiles(res)
                     setPageLoading(false)
                 })

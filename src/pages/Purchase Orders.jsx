@@ -39,139 +39,23 @@ import {
   Typography as AntTypography,
   Avatar as AntAvatar,
   List as AntList,
-  Button as AntButton,
   Card,
   Col,
-  Image,
   Space,
   Row,
   Descriptions,
   Spin,
-  Segmented,
 } from "antd";
 import { AddRounded, ShoppingCartOutlined } from "@mui/icons-material";
 import Search from "antd/es/input/Search";
 import OrdersService from "../services/ordersService";
-import { EyeOutlined, FilePdfOutlined, ClockCircleOutlined, UserOutlined, EnvironmentOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, EnvironmentOutlined, FileTextOutlined, UserOutlined } from "@ant-design/icons";
 import { set } from "firebase/database";
-import moment from 'moment';
 // import type { ColumnsType } from 'antd/es/table';
 const { Text, Title } = AntTypography
-const formatDate = (timestamp) => {
-  return moment(timestamp).format('MMM DD, YYYY HH:mm');
-};
-const renderStatus = (statuses) => {
-  var latestStatus = 'Processing'
-  if (statuses) {
-    latestStatus = statuses[statuses?.length - 1];
-  }
-  const statusColors = {
-    'Order Placed': 'blue',
-    'Processing': 'orange',
-    'Shipped': 'purple',
-    'Delivered': 'green',
-    'Cancelled': 'red',
-  };
 
-  return (
-    <Tag color={statusColors[latestStatus?.status] || 'default'}>
-      {latestStatus?.status}
-    </Tag>
-  );
-};
 const OrderDetailsView = ({ orderData }) => {
   // Sample data you provided
-  const _orderData = {
-    "totalPrice": "2244.00",
-    "farmerUids": [
-      "x7WKCRSJr0SBKWnDDEhzbD0aSr03",
-      "VTzn3UGQhwZWDwL4yFA8rsjPbUA3"
-    ],
-    "deliveryFee": "150.00",
-    "deliveryAddress": "Southgate Mall, Cnr Columbine Ave & Rifle Range Rd, Mondeor, Johannesburg, Gauteng 2082, South Africa",
-    "buyerUid": "x7WKCRSJr0SBKWnDDEhzbD0aSr03",
-    "finalTotal": 2394,
-    "productList": [
-      {
-        "livestock": "Bees",
-        "produceKind": "By-Product",
-        "weight": 1,
-        "productImg": "https://sc01.alicdn.com/kf/UTB8wQQ8jiaMiuJk43PTq6ySmXXaf.jpg",
-        "quantity": 3,
-        "key": "Il7MthAKKQEVa5PvJS3C",
-        "totalPrice": "264.00",
-        "id": "Il7MthAKKQEVa5PvJS3C",
-        "produceCategory": "Livestock",
-        "type": "Beeswax",
-        "productCode": 1604339165576,
-        "price": "R88.00",
-        "farmerUid": "VTzn3UGQhwZWDwL4yFA8rsjPbUA3"
-      },
-      {
-        "produceKind": "By-Product",
-        "quantity": 2,
-        "productCode": 1604339135406,
-        "farmerUid": "VTzn3UGQhwZWDwL4yFA8rsjPbUA3",
-        "totalPrice": "156.00",
-        "id": "Pf1HIMYS5l0rbUPbizeX",
-        "productImg": "https://thehealthyfish.com/wp-content/uploads/2016/08/frozentilapiafishmyths_1280px_728904722cfe4b608df1234aefd6fb04-1280x720.jpeg",
-        "livestock": "Fish",
-        "key": "Pf1HIMYS5l0rbUPbizeX",
-        "weight": 3,
-        "price": "R78.00",
-        "type": "Fish Bones",
-        "produceCategory": "Livestock"
-      },
-      {
-        "totalPrice": "435.00",
-        "produceCategory": "Livestock",
-        "productImg": "https://p1.pxfuel.com/preview/332/477/68/meat-lamb-t-bone-steak-hille-gourmets-royalty-free-thumbnail.jpg",
-        "type": "Lamp Horns",
-        "price": "R145.00",
-        "farmerUid": "VTzn3UGQhwZWDwL4yFA8rsjPbUA3",
-        "key": "hgwb2cf7kEKSgHi2nkBq",
-        "produceKind": "By-Product",
-        "quantity": 3,
-        "productCode": 1604339078603,
-        "livestock": "Sheep",
-        "weight": 7,
-        "id": "hgwb2cf7kEKSgHi2nkBq"
-      },
-      {
-        "productCode": 1604338942040,
-        "type": "Leghorn Chicken",
-        "key": "iNl5pj2bTCbOOEVVp4gb",
-        "produceCategory": "Livestock",
-        "weight": 166,
-        "produceKind": "Livestock",
-        "livestock": "Chicken",
-        "price": "R89.00",
-        "id": "iNl5pj2bTCbOOEVVp4gb",
-        "farmerUid": "VTzn3UGQhwZWDwL4yFA8rsjPbUA3",
-        "productImg": "https://www.backyardchickens.com/content/type/61/id/6922143/width/200/height/400",
-        "quantity": 1,
-        "totalPrice": "89.00"
-      },
-      {
-        "price": "R1,300.00",
-        "key": "zWyQnyzmnUCPyE25jcvK",
-        "weight": 430,
-        "quantity": 1,
-        "produceCategory": "Livestock",
-        "id": "zWyQnyzmnUCPyE25jcvK",
-        "productCode": 1604312473569,
-        "produceKind": "Livestock",
-        "farmerUid": "VTzn3UGQhwZWDwL4yFA8rsjPbUA3",
-        "livestock": "Goat",
-        "productImg": "https://www.israel21c.org/wp-content/uploads/2020/06/shutterstock_794370853-1000x657.jpg",
-        "type": "Fibre Goats",
-        "totalPrice": "1300.00"
-      }
-    ],
-    "invoiceNumber": "AGRO-1604400141559",
-    "timeStamp": "1604400141559",
-    "offtake_id": "1604400141559"
-  };
 
   // Format timestamp to readable date
   const formatDate = (timestamp) => {
@@ -353,59 +237,8 @@ const OrderDetailsView = ({ orderData }) => {
     </Stack>
   );
 };
-const expandableConfig = {
-  expandedRowRender: (record) => {
-    return (
-      <Table
-        columns={[
-          {
-            title: 'Product',
-            dataIndex: '_commodity_meta',
-            key: 'product',
-            render: (product) => (
-              <Stack spacing={1}>
-                <Image width={50} src={Array.isArray(product?.img) ? product?.img[0] : product?.img} />
-                <Text strong>{product?.name}</Text>
-              </Stack>
-            ),
-          },
-          {
-            title: 'Category',
-            dataIndex: 'category',
-            key: 'category',
-          },
-          {
-            title: 'Quantity',
-            dataIndex: '_commodity_details',
-            key: 'quantity',
-            render: (quantity) => (
-              <Text>{quantity?.quantity} {quantity?.matrix} ({quantity?.weight} kg)</Text>
-            ),
-          },
-          {
-            title: 'Price',
-            dataIndex: '_price_details',
-            key: 'price',
-            render: (_price_details) => (
-              <Stack spacing={1}>
-                <Text strong>Final: R {_price_details?.final_price || "-.--"}</Text>
-                <Text type="secondary">Original: R {_price_details?.origin_price || "-.--"}</Text>
-                <Text type="secondary">Service Fee: R {_price_details?.service_fee || "-.--"}</Text>
-              </Stack>
-            ),
-          },
-        ]}
-        dataSource={record?.items?.map((item) => ({ ...item, key: item?.id })) || []}
-
-      />
-    );
-  }
-
-};
-const Orders = () => {
+const PurchaseOrders = () => {
   const [orders, setOrders] = useState([]);
-  const [paidOrders, setPaidOrders] = useState([]);
-  const [unpaidOrders, setUnpaidOrders] = useState([]);
   const [order, setOrder] = useState({})
   const [tab, setTab] = React.useState(0);
   const [pageLoading, setPageLoading] = useState(true)
@@ -417,80 +250,77 @@ const Orders = () => {
   const handleChange = (event, newValue) => {
     setTab(newValue);
   };
-  const handleOrderSwitch = (value) => {
-    switch (value) {
-      case 'unpaid':
-        break;
-      default:
-      case 'unpaid':
-        break;
-        break;
-    }
-  }
-  // const finalTotal = parseFloat(orderData.totalPrice) + orderData.deliveryFee;
 
-  // Format timestamp to readable date
-  const formatDate = (timestamp) => {
-    const date = new Date(parseInt(timestamp));
-    return date.toLocaleString();
-  };
-  const handleViewOrderDetails = (id) => {
-    console.log(`View details for order ${id}`);
-    // Implement navigation or modal display logic
-  };
+
   const columns = [
     {
-      title: 'Invoice',
-      dataIndex: 'invoice_number',
-      key: 'invoice_number',
-      render: (text) => <Text strong>{text}</Text>,
+      title: "Invoice Number",
+      width: 130,
+      dataIndex: "invoiceNumber",
+      key: "invoiceNumber",
+      fixed: "left",
     },
     {
-      title: 'Total Price',
-      dataIndex: '_price_details',
-      key: 'total_price',
-      render: (_total) => (
-
-        < Stack spacing={1} >
-          <Text strong>Total: R {_total?.total.toFixed(2)} </Text>
-          <Text type="secondary">VAT: R {_total?.vat_amount.toFixed(2)} R</Text>
-          <Text type="secondary">Delivery Fee: {_total?.delivery_fee?.toFixed(2)} R</Text>
-        </Stack >
-      ),
+      title: "Offtake ID",
+      width: 100,
+      dataIndex: "offtake_id",
+      key: "offtake_id",
     },
     {
-      title: 'Delivery Address',
-      dataIndex: '_delivery_address',
-      key: 'delivery_address',
-      render: (delivery_address) => (
-        <Stack spacing={1}>
-          <Text strong>{delivery_address?.street_address}</Text>
-          <Text>{delivery_address?.city}, {delivery_address?.province}, {delivery_address?.country}</Text>
-        </Stack>
-      ),
+      title: "Location",
+      dataIndex: "deliveryAddress",
+      key: "deliveryAddress",
+      width: 150,
+      render: (v, r) => {
+        return (
+          <AntTypography.Text copyable ellipsis>{v}</AntTypography.Text>
+        )
+      }
     },
     {
-      title: 'Order Status',
-      dataIndex: 'statuses',
-      key: 'status',
-      render: (statuses) => {
-        console.log(statuses);
+      title: "Amount",
+      dataIndex: "totalPrice",
+      key: "totalPrice",
+      width: 150,
+    },
+    {
+      title: "Date",
+      dataIndex: "timeStamp",
+      key: "timeStamp",
+      width: 150,
+    },
+    {
+      title: "Product Count",
+      dataIndex: "productList",
+      key: "productList",
+      width: 150,
+      render: (v, r) => {
+        console.log({ v, r });
 
         return (
-          <Tag color="blue">{statuses ? statuses[0].status : "-- --"}</Tag>
+          <Stack>
+            <AntTypography>{v?.length || 0}</AntTypography>
+          </Stack>
         )
       },
     },
+    {
+      title: "Actions",
+      key: "operation",
+      width: 150,
+      fixed: "right",
+      render: (v, r) => {
+        return <Button onClick={() => {
+          setOrder(r)
+          setOpen(true)
+        }}>View</Button>;
+      },
+    },
   ];
-
-
   useEffect(() => {
     OrdersService.getAll().then((data) => {
-      setOrders([])
-      Object.keys(data).map((key) => {
-        data[key].key = key;
-        setOrders(prev => [...prev, data[key]])
-      });
+      console.log(data);
+      setOrders(data)
       setPageLoading(false)
     })
   }, [])
@@ -570,13 +400,7 @@ const Orders = () => {
           spacing={2}
           alignItems={"center"}
         >
-          <Typography variant="h5">Orders</Typography>
-          <Segmented
-            options={[{ label: 'All', value: 'all' }, { label: 'Paid', value: 'paid', disabled: true }, { label: 'Unpaid', value: 'unpaid', disabled: true }]}
-            onChange={(value) => {
-              console.log(value); // string
-            }}
-          />
+          <Typography variant="h5">Purchase Orders</Typography>
           <Box flex={1}></Box>
           {/* <Button
             variant="contained"
@@ -606,13 +430,11 @@ const Orders = () => {
           </Drawer>
 
           <Table
-            size="small"
+
+            style={{ height: "100%" }}
             columns={columns}
-            dataSource={orders} // Wrap your data in an array if it's a single object
-            rowKey="key"
-            loading={pageLoading}
-            expandable={expandableConfig}
-            scroll={{ y: 580 }}
+            dataSource={orders}
+            scroll={{ x: 1500, y: 550 }}
           />
         </Stack>
         <Divider />
@@ -625,5 +447,4 @@ const Orders = () => {
     </Layout>
   );
 };
-
-export default Orders;
+export default PurchaseOrders;

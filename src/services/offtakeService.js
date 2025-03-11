@@ -15,10 +15,6 @@ export const OfftakeService = {
   getOfftakes: async () => {
     // check for form completion first before fetch
     const q = query(offtakesCollection, where("form_completion_status", "==", "complete"))
-    const firestore_id = {
-      costing: 123,
-      costing: 456,
-    }
     const querySnapshot = await getDocs(q);
     const offtakes = [];
     querySnapshot.forEach((doc) => {

@@ -37,6 +37,8 @@ import FarmSubmissions from "./pages/FarmSubmissions";
 import Signup from "./pages/Signup";
 import AdminProfile from "./pages/AdminProfile";
 import PendingProfile from "./pages/AdminPending";
+import PurchaseOrders from "./pages/Purchase Orders";
+import Settings from "./pages/Settings";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 const ErrorBoundary = (is404) => {
@@ -47,12 +49,12 @@ const ErrorBoundary = (is404) => {
     return (
       <Result
         status={"404"}
-        title={error.name}
-        subTitle={error.message}
+        title={error?.name || "Error"}
+        subTitle={error?.message || "Something went wrong"}
         children={
-          <Typography code>{error.stack}</Typography>
+          <Typography code>{error?.stack}</Typography>
         }
-        extra={<Button type="primary"><Link to={"/"}>Back Home</Link></Button>}
+        extra={<Button type="primary"><Link to={"/dashboard"}>Back Home</Link></Button>}
       />
     );
   }
@@ -152,7 +154,12 @@ const router = createBrowserRouter([
   {
     path: "/orders",
     element: <Orders />,
-
+    errorElement: <ErrorBoundary />
+  },
+  {
+    path: "/purchase-orders",
+    element: <PurchaseOrders />,
+    errorElement: <ErrorBoundary />
   },
   {
     path: "/store",
@@ -162,7 +169,7 @@ const router = createBrowserRouter([
   {
     path: "/products",
     element: <Products />,
-
+    errorElement: <ErrorBoundary />
   },
   // {
   //   path: "/offtakes",
@@ -215,7 +222,10 @@ const router = createBrowserRouter([
   {
     path: "/messages",
     element: <Messages />,
-
+  },
+  {
+    path: "/settings",
+    element: <Settings />,
   },
   {
     path: "/suppliers",
@@ -266,16 +276,12 @@ root.render(
         theme={{
           token: {
             colorPrimary: theme.palette.primary.main,
+            borderRadius: 16
           },
           components: {
+
             Statistic: {
               contentFontSize: 18
-            },
-            Button: {
-              borderRadius: 30
-            },
-            Badge: {
-              borderRadius: 30
             },
             Segmented: {
               borderRadius: 16,
@@ -286,10 +292,14 @@ root.render(
               itemSelectedColor: theme.palette.common.white,
               itemColor: theme.palette.primary.main
             },
+            Dropdown: {
+              borderRadiusLG: 10
+            },
             Input: {
               colorTextDisabled: theme.palette.grey[900],
               colorTextPlaceholder: theme.palette.grey[400],
-              borderRadius: 30,
+              borderRadius: 16,
+
             },
             Progress: {
               defaultColor: theme.palette.primary.main

@@ -7,6 +7,7 @@ const initialState = {
     // follow ANTD menu structure
     { label: "Dashboard", key: "dashboard", icon: getNavIcon("home") },
     { label: "Orders", key: "orders", icon: getNavIcon("orders") },
+    // { label: "Purchase Orders", key: "purchase-orders", icon: getNavIcon("orders") },
     { label: "Offtakes", key: "offtakes/1", icon: getNavIcon("offtakes") },
     { label: "Store", key: "store", icon: getNavIcon("store") },
     { label: "Products", key: "products", icon: getNavIcon("products") },
