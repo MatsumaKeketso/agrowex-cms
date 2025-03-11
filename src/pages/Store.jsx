@@ -9,7 +9,6 @@ const { Dragger } = Upload;
 
 const { Text } = Typography;
 const expandedRowRender = (record) => {
-  if (!record._commodity_meta || record._commodity_meta.length === 0) return null;
   return (
     <Table
       columns={[
@@ -31,7 +30,7 @@ const expandedRowRender = (record) => {
           render: (meta) => <Tag color="blue">{meta?.productCategory || "-.--"}</Tag>,
         },
       ]}
-      dataSource={record._commodity_meta.map((item, index) => ({ ...item, key: index }))}
+      dataSource={[]}
       pagination={false}
     />
   );
@@ -133,11 +132,7 @@ const Store = () => {
       ),
     },
   ];
-  const expandableConfig = {
-    expandedRowRender,
-    rowExpandable: (record) => record._commodity_meta && record._commodity_meta.length > 0,
-  };
-  
+
 
   // Filter `option.label` match the user type `input`
   const filterOption = (input, option) =>
@@ -152,11 +147,10 @@ const Store = () => {
   return (
     <Layout>
       <Table
-      scroll={{y: 700}}
-        loading={pageLoading}
         columns={columns}
         dataSource={stores}
-        expandable={expandableConfig}
+        expandable={{ expandedRowRender }}
+        pagination={{ pageSize: 5 }}
       />
     </Layout>
   );
