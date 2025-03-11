@@ -1,7 +1,7 @@
 import { collection, getDocs, query } from "firebase/firestore";
 import { firestoreDB } from "./authService";
 
-const agroStoreCollection = collection(firestoreDB, "agroStore");
+const agroStoreCollection = collection(firestoreDB, "commodities");
 const StoreService = {
   getAll: async () => {
     // check for form completion first before fetch
