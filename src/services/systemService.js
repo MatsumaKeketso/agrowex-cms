@@ -293,7 +293,7 @@ export const SystemService = {
   standardiseTimestamp: (date) => {
     return dayjs(date).valueOf();
   },
-  formatTimestamp: (timestamp) => {
+  formatTimestamp: (timestamp, hour = true) => {
     const date = new Date(timestamp);
     const options = {
       day: 'numeric',
@@ -301,7 +301,7 @@ export const SystemService = {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: hour
     };
     return date.toLocaleDateString('en-GB', options).replace(',', '')
     //  ' at ' + 

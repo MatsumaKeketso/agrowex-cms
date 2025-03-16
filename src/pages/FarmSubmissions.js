@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ref, set } from 'firebase/database';
 import { firestoreDB, realtimeDB, storage } from '../services/authService';
 import { Box, CardContent, CardHeader, colors, IconButton, ListItem, ListItemText, Stack, Typography, List as MList, Backdrop, CircularProgress, Chip } from '@mui/material';
-import { Avatar, Button, Card, Descriptions, Typography as ATypography, Divider, Empty, Form, Input, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload, DatePicker, InputNumber, Badge, Tag } from 'antd';
+import { Avatar, Button, Card, Descriptions, Typography as ATypography, Divider, Empty, Form, Input, List, message, Modal, Popconfirm, Progress, Segmented, Skeleton, Spin, Statistic, Table, Timeline, Tooltip, Upload, DatePicker, InputNumber, Badge, Tag, Space, Select, Calendar } from 'antd';
 import OfftakeDetails, { getDaysBetween } from '../components/OfftakeDetails';
 import { useDispatch, useSelector } from 'react-redux';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -13,7 +13,7 @@ import { ArrowDownwardRounded, AttachFileRounded, Fullscreen, RemoveRedEyeRounde
 import StatusTag from '../components/StatusTag';
 import { SystemService } from '../services/systemService';
 import { setActiveOfftake } from '../services/offtake/offtakeSlice';
-import { ArrowLeftOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined, TruckOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, MinusCircleOutlined, PauseOutlined, PlayCircleOutlined, SwapRightOutlined, TruckOutlined } from '@ant-design/icons';
 import Documents from '../components/Documents';
 import { FarmerService } from '../services/farmerService';
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
@@ -22,7 +22,7 @@ import { getDownloadURL, uploadBytesResumable, ref as sRef, uploadBytes } from '
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import DocumentService from '../services/documentService';
 import dayjs from "dayjs";
-import DeliveryDatePicker from '../components/DeliveryDatePicker';
+// import DeliveryDatePicker from '../components/DeliveryDatePicker';
 const { RangePicker } = DatePicker;
 export const FarmSubmissionColumns = [
   {
@@ -58,28 +58,29 @@ export const FarmSubmissionColumns = [
 
 const FarmerView = ({ record, getRespondents }) => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [viewDoc, setViewDoc] = useState({});
   const [tableSegment, setTableSegment] = useState('Production');
   const [productionComments, setProductionComments] = useState([]);
   const [productionSearchComments, setProductionSearchComments] = useState([]);
-  const [limitedProductionComments, setLimitedProductionComments] = useState([]);
   const [deliveryComments, setDeliveryComments] = useState([]);
   const [productionPlan, setProductionPlan] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [address, setAddress] = useState({});
   const [profitability, setProfitability] = useState({});
   const [tableModal, setTableModal] = useState(false);
   const [showSupplyForm, setShowSupplyForm] = useState(false);
   const [productionProgress, setProductionProgress] = useState(0);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
-  const [delInt, setDelInt] = useState(0);
+
   const offtake = useSelector((state) => state.offtake.active);
   const user = useSelector((state) => state.user.profile);
   const params = useParams();
   const [supplyForm] = Form.useForm()
+  const [deliveryForm] = Form.useForm()
   const navigate = useNavigate();
   const { farm_profile } = record
+  const formDeliveries = Form.useWatch("deliveries", deliveryForm)
   // todo: get the rest of attachments on the offer
 
   const deliveryColumns = [
@@ -99,20 +100,21 @@ const FarmerView = ({ record, getRespondents }) => {
     },
     {
       title: 'Duration',
-      dataIndex: 'delivery_interval',
-      key: 'delivery_interval',
+      dataIndex: 'duration',
+      key: 'duration',
       render: (text, r) => {
+    
         return (
           <Stack>
-            <Typography variant='body2'>{SystemService.formatTimestamp(r.delivery_interval[0])}</Typography>
+            <Typography variant='body2'>{SystemService.formatTimestamp(text[0], false)} - {SystemService.formatTimestamp(text[1], false)}</Typography>
           </Stack>
         )
       }
     },
     {
-      title: 'Amount',
-      dataIndex: 'expected_supply_amount',
-      key: 'expected_supply_amount',
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      key: 'quantity',
       render: (text, r) => {
         return (
           <Stack>
@@ -128,27 +130,7 @@ const FarmerView = ({ record, getRespondents }) => {
     }
     return Promise.resolve();
   };
-  const handleExpectedSupply = (values) => {
-    var i = []
-    values.intervals.forEach(interval => {
-      const { delivery_interval, expected_supply_amount } = interval
-      const _interval = {
-        status: interval.status,
-        delivery_interval: [SystemService.standardiseTimestamp(delivery_interval)],
-        expected_supply_amount: expected_supply_amount
 
-      }
-      i.push(_interval)
-    });
-    const updated_application = {
-      supply_requirements: i
-    }
-    OfftakeService.updateDelivery(offtake.offtake_id, record.uid, updated_application).then(() => {
-      setShowSupplyForm(false)
-      getRespondents(offtake)
-      message.success("Supply requirements updated successfully")
-    })
-  }
   const limit = (count, array) => {
     return array.slice(0, count);
   }
@@ -319,7 +301,11 @@ const FarmerView = ({ record, getRespondents }) => {
     }))
 
   }
+  const removeFreq = (updatedList) => {
+
+  }
   useEffect(() => {
+
     getAddress()
     getProductionPlan()
     getDocuments()
@@ -327,6 +313,12 @@ const FarmerView = ({ record, getRespondents }) => {
     // loadMoreData();
 
   }, []);
+  // TODO WILL PROBABLY USE FOR DELETE
+  // useEffect(() => {
+  //   // console.log('====================================');
+  //   // console.log(formDeliveries);
+  //   // console.log('====================================');
+  // }, [formDeliveries])
   return (
     <Stack gap={2} sx={{
       position: 'relative', // This is crucial
@@ -405,33 +397,75 @@ const FarmerView = ({ record, getRespondents }) => {
           }}
           open={showSupplyForm}
         >
-          <Card title="Delivery" size='small' actions={[<Button onClick={() => { supplyForm.submit() }} type='primary'>Save</Button>]} >
-            <DeliveryDatePicker />
-            <Form layout='vertical' style={{ width: 300 }} form={supplyForm} onFinish={(v) => { handleExpectedSupply(v) }} >
-              <Form.List
-                name="intervals"
-              >
-                {(fields, { add, remove }, { errors }) => (
-                  <Stack gap={1}>
-                    {fields.map((field, index) => (
-                      <Stack gap={2}>
-                        <Card hoverable title={`Delivery ${field.name + 1}`} size='small'>
-                          <Stack flex={1} gap={2}>
-                            <Form.Item hidden initialValue={'pending'} rules={[{ required: true }]} name={[field.name, "status"]} label="Status">
-                              <Input style={{ width: '100%' }} />
+          <Card style={{ width: 500 }} title="Delivery Schedule Planner" size='small' actions={[<Button onClick={() => { deliveryForm.submit() }} type='primary'>Save</Button>]} >
+            <DeliveryDatePicker formDeliveries={formDeliveries} updatedList={deliveries} onScheduleChange={(v = []) => {
+              setDeliveries(v)
+              deliveryForm.setFieldValue("deliveries", v.map((date) => {
+                return { duration: [date.startDate, date.endDate] }
+              }))
+            }} />
+            <Form form={deliveryForm} onFinish={(values) => {
+              const { deliveries } = values
+              deliveries.map((item, i) => {
+                const { duration, status } = item
+                deliveries[i].duration = [SystemService.standardiseTimestamp(duration[0]), SystemService.standardiseTimestamp(duration[1])]
+                deliveries[i].status = status ? status : "pending"
+              })
+              const payload = { ...record, supply_requirements: deliveries, updated_at: SystemService.generateTimestamp() }
+              delete payload.farm_profile
+              // console.log(payload);
+              OfftakeService.updateDelivery(offtake?.offtake_id, payload?.key, payload).then(() => {
+                setShowSupplyForm(false)
+                deliveryForm.resetFields()
+                getRespondents(offtake)
+                message.success("Supply requirements updated successfully")
+              })
+
+            }} layout='vertical'>
+              <Form.List name="deliveries">
+                {(fields, { add, remove }, { errors }) => {
+                  return (
+                    <Stack gap={4}>
+                      {fields.map((field, index) => (
+                        <Stack direction={'row'} gap={2}  >
+                          <Spin />
+                          <Stack gap={2}>
+                            <Form.Item hidden name={[field.name, "status"]} initialValue="pending">
+                              <Input disabled />
                             </Form.Item>
-                            <Form.Item rules={[{ required: true }]} name={[field.name, "delivery_interval"]} label="Delivery Interval">
-                              <DatePicker />
+                            <Form.Item
+                              label="Duration"
+                              name={[field.name, 'duration']}
+                              noStyle
+                            >
+                              {/* <Calendar fullscreen={false} onPanelChange={() => {}} /> */}
+                              <DatePicker.RangePicker variant='borderless' style={{ width: '100%' }} />
                             </Form.Item>
-                            <Form.Item rules={[{ required: true }, { validator: validateNumber }]} name={[field.name, "expected_supply_amount"]} label="Expected Supply Amount">
-                              <InputNumber style={{ width: '100%' }} suffix={offtake?.unit} />
-                            </Form.Item>
+                            <Stack direction={'row'} gap={2} >
+
+                              <Form.Item
+                                rules={[
+                                  {
+                                    required: true,
+                                  },
+                                ]}
+                                name={[field.name, 'quantity']}
+                                noStyle
+                              >
+                                <InputNumber addonAfter={offtake?.unit || "kg"} placeholder="Quantity" style={{ width: '100%' }} />
+                              </Form.Item>
+                              {/* <Button onClick={() => remove(field.name)} icon={<MinusCircleOutlined
+                              className="dynamic-delete-button"
+                            />} shape='circle' /> */}
+
+                            </Stack>
                           </Stack>
-                        </Card>
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
+                        </Stack>
+
+                      ))}
+                    </Stack>
+                  )
+                }}
               </Form.List>
             </Form>
           </Card>
@@ -511,7 +545,6 @@ const FarmerView = ({ record, getRespondents }) => {
                   <InfiniteScroll
                     dataLength={farm_profile?.certificates?.length || 0}
                     height={400}
-
                     endMessage={<Divider plain> We've reached the end of the list' 🤐</Divider>}
                     scrollableTarget="scrollableDiv"
                   >
@@ -663,7 +696,7 @@ const FarmerView = ({ record, getRespondents }) => {
           </ListItem>
         </MList>
       </Card>
-    </Stack>
+    </Stack >
 
   )
 }
@@ -695,6 +728,175 @@ const document_data = {
     deliveryTerms: "FOB",
     destinationPort: "JOHANNESBURG, SOUTH AFRICA"
   }
+};
+const FREQUENCY_OPTIONS = [
+  { label: 'Daily', value: 'daily', days: 1 },
+  { label: 'Weekly', value: 'weekly', days: 7 },
+  { label: 'Bi-Weekly', value: 'biweekly', days: 14 },
+  { label: 'Monthly', value: 'monthly', days: 30 },
+  { label: 'Quarterly', value: 'quarterly', days: 90 },
+];
+
+const DeliveryDatePicker = ({ onScheduleChange, updatedList = [], formDeliveries }) => {
+  const [frequency, setFrequency] = useState('');
+  const [selectedDates, setSelectedDates] = useState([]);
+  const [disabledDates, setDisabledDates] = useState([]);
+  const [intervals, setIntervals] = useState(0);
+  const [stop, setStop] = useState(false)
+  const [disablePick, setDisablePick] = useState(false)
+  const [form] = Form.useForm();
+  const offtake = useSelector((state) => state?.offtake?.active);
+  // Get days to add based on frequency
+  const getDaysToAdd = (freq) => {
+    const selectedFreq = FREQUENCY_OPTIONS.find(option => option.value === freq);
+    return selectedFreq ? selectedFreq.days : 7; // Default to weekly
+  };
+
+  // Handle frequency change
+  const handleFrequencyChange = (value) => {
+    setFrequency(value);
+    // Reset selections when frequency changes
+    setSelectedDates([]);
+    setDisabledDates([]);
+    form.setFieldsValue({ deliveryDate: null });
+  };
+
+  // Disable dates function for DatePicker
+  const disabledDate = (current) => {
+    // Can't select days before today
+    if (current && current < dayjs().startOf('day')) {
+      return true;
+    }
+
+    // Check if date is in disabled range
+    return disabledDates.some(dateRange => {
+      return current >= dateRange.start && current <= dateRange.end;
+    });
+  };
+
+  // Handle date selection
+  const handleDateChange = (date) => {
+    if (!date) return;
+
+    const daysToAdd = getDaysToAdd(frequency);
+    const startDate = dayjs(date);
+    const endDate = startDate.add(daysToAdd - 1, 'day');
+
+    // Add to selected dates
+    const newSelectedDate = {
+      startDate: startDate,
+      endDate: endDate,
+    };
+
+    const updatedSelectedDates = [...selectedDates, newSelectedDate];
+    setSelectedDates(updatedSelectedDates);
+
+    // Update disabled date ranges
+    const newDisabledRange = {
+      start: startDate,
+      end: endDate,
+    };
+
+    setDisabledDates([...disabledDates, newDisabledRange]);
+
+    // Notify parent component about the change
+    if (onScheduleChange) {
+      onScheduleChange(updatedSelectedDates);
+    }
+
+    // Reset the date field
+    form.setFieldsValue({ deliveryDate: null });
+  };
+
+  // Handle form submission
+  const handleSubmit = (values) => {
+    console.log('Form submitted with values:', values);
+    // Additional form submission logic if needed
+  };
+
+  const handleRemoveDate = (index) => {
+    const updatedSelectedDates = [...selectedDates];
+    const updatedDisabledDates = [...disabledDates];
+
+    updatedSelectedDates.splice(index, 1);
+    updatedDisabledDates.splice(index, 1);
+
+    setSelectedDates(updatedSelectedDates);
+    setDisabledDates(updatedDisabledDates);
+
+    // Notify parent component about the change
+    if (onScheduleChange) {
+      onScheduleChange(updatedSelectedDates);
+    }
+  };
+  useEffect(() => {
+    if (offtake) {
+      const totalDays = `${getDaysBetween(offtake.supply_duration)}`.replace(" days", "")
+      const f = offtake?.delivery_frequency
+      const frequencyNumber = FREQUENCY_OPTIONS.filter((item) => item.value === `${f}`.toLowerCase())
+      const theMath = (parseInt(totalDays).toFixed(0) / frequencyNumber[0].days).toFixed(0)
+      setIntervals(parseInt(theMath))
+      form.setFieldValue("frequency", `${f}`.toLowerCase())
+      setFrequency(`${f}`.toLowerCase())
+      console.log({ theMath, frequencyNumber, totalDays });
+
+    }
+  }, [])
+  useEffect(() => {
+    if (stop) {
+      const currentDeliveries = formDeliveries?.length || 0
+      if (currentDeliveries === intervals) {
+        setDisablePick(true)
+      } else {
+        setDisablePick(false)
+      }
+    }
+    setStop(true)
+  }, [updatedList])
+  return (
+    <Form
+      style={{ width: '100%' }}
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+    >
+      <Space className="w-full" direction="vertical" size="large">
+        <Form.Item
+          name="frequency"
+          // label="Delivery Frequency"
+          initialValue={frequency}
+          style={{ width: '100%' }}
+        >
+          <Select
+            size='large'
+            variant='borderless'
+            disabled
+            style={{ width: '100%' }}
+          >
+            {FREQUENCY_OPTIONS.map(option => (
+              <Select.Option key={option.value} value={option.value}>
+                {option.label} ({option.days} day{option.days > 1 ? 's' : ''})
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+
+          name="deliveryDate"
+          label="Select Delivery Date"
+          style={{ width: '100%' }}
+          tooltip="Dates will be blocked based on the selected frequency"
+        >
+          <DatePicker
+            disabled={disablePick}
+            onChange={handleDateChange}
+            disabledDate={disabledDate}
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+      </Space>
+    </Form>
+  );
 };
 const FarmSubmissions = () => {
   const [finalstage, setFinalStage] = useState(false)
@@ -813,7 +1015,7 @@ const FarmSubmissions = () => {
         const docRef = doc(firestoreDB, "users", sub.id);
         const farm_profile = await getDoc(docRef); // farmer info
         if (farm_profile.exists()) {
-          subs.push({ ...sub.data(), key: sub.id, farm_profile: { ...farm_profile.data(), farm_id: farm_profile.id } })
+          subs.push({ ...sub.data(), key: sub.id, uid: sub.id, farm_profile: { ...farm_profile.data(), farm_id: farm_profile.id } })
           if (sub.data().selected) {
             setTons(tonsSelected + (sub.data().offer_quantity * 1))
           }
@@ -834,7 +1036,7 @@ const FarmSubmissions = () => {
     uploadBytes(storageRef, blob).then(() => {
       getDownloadURL(storageRef).then((url) => {
         const updated_offtake = {
-          ...offtake,
+          ..._updated_offtake,
           _final_document: {
             name: 'Letter of Intent for ' + offtake_id,
             file_url: url,
@@ -889,19 +1091,29 @@ const FarmSubmissions = () => {
         // update unselected submission to false
         updatedSubmissions.forEach(sub => {
           const _sub = {
-            "unit": sub.unit,
+            "unit": sub.unit || "--",
             "is_stock_available": sub.is_stock_available,
             "comments": sub.comments,
             "offer_quantity": sub.offer_quantity,
             "timestamp": sub.timestamp,
             "selected": sub.selected,
             "uid": sub.uid,
-            "id": sub.id
+            "id": sub.id,
+            "address": sub.address || {}
           }
+          console.log(_sub);
+          console.log({ o: offtake.offtake_id });
+          Object.keys(_sub).forEach((key) => {
+            if (!_sub[key]) {
+              messageAPI.error("submission data corrupt")
+            }
+          })
+
           OfftakeService.updateSubmission(offtake.offtake_id, sub.uid, _sub).then(() => {
             console.log('Sub updated');
           })
         });
+
         // Generate letter of intent document
         const pdfDoc = await DocumentService.generateLetterOfIntent(document_data);
         const pdfBytes = await pdfDoc.save();

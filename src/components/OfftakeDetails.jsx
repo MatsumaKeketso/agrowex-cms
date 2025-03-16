@@ -241,7 +241,7 @@ const MasterContractDialog = ({ open, onClose }) => {
                 uploadFile(`master_contract/${offtake.offtake_id}`, originFileObj)
                 setPop(1)
             }
-        },
+        }
     };
 
     return (
@@ -378,7 +378,7 @@ const OfftakeDetails = (props) => {
             OfftakeService.getMasterContract(ot.offtake_id, ot.master_contract).then((contract) => {
                 // console.log(contract);
                 if (contract) {
-                    setMasterContract(contract)
+                    setMasterContract(contract[0])
                 }
             })
         } else if (typeof property === "object" && property !== null) {
@@ -782,7 +782,7 @@ const OfftakeDetails = (props) => {
                                 </Stack>
                                 <Button type='primary' onClick={() => {
                                     "/offtakes/:offtake_id/submissions"
-                                    navigate(`/offtakes${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
+                                    navigate(`/offtakes/${offtake_page}/${offtake_id ? offtake_id : ot.offtake_id}/submissions`)
                                 }}>View More</Button>
                             </Stack>
                         </Card>
