@@ -363,7 +363,7 @@ const expandableConfig = {
             dataIndex: '_commodity_meta',
             key: 'product',
             render: (product) => (
-              <Stack spacing={1}>
+              <Stack spacing={1} direction={'row'} alignItems={'center'}>
                 <Image width={50} src={Array.isArray(product?.img) ? product?.img[0] : product?.img} />
                 <Text strong>{product?.name}</Text>
               </Stack>
@@ -483,13 +483,13 @@ const Orders = () => {
     },
   ];
 
+  // quote_doc_url
 
   useEffect(() => {
     OrdersService.getAll().then((data) => {
       setOrders([])
       Object.keys(data).map((key) => {
-        data[key].key = key;
-        setOrders(prev => [...prev, data[key]])
+        setOrders((prev) => [...prev, { ...data[key], key: key }])
       });
       setPageLoading(false)
     })
@@ -574,7 +574,7 @@ const Orders = () => {
           <Segmented
             options={[{ label: 'All', value: 'all' }, { label: 'Paid', value: 'paid', disabled: true }, { label: 'Unpaid', value: 'unpaid', disabled: true }]}
             onChange={(value) => {
-              console.log(value); // string
+              // console.log(value); // string
             }}
           />
           <Box flex={1}></Box>
@@ -608,7 +608,7 @@ const Orders = () => {
           <Table
             size="small"
             columns={columns}
-            dataSource={orders} // Wrap your data in an array if it's a single object
+            dataSource={orders}
             rowKey="key"
             loading={pageLoading}
             expandable={expandableConfig}

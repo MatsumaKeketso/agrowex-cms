@@ -189,13 +189,8 @@ const ProductionScheduling = () => {
         // todo: add helper function to modify the data sent to the server
         // target : new_schedule => modifty using Helpers.updateAllProductionData(offtake_id, new_schedule)
         Helpers.flatNestedData(new_schedule.categories).then(async (_flat_docs) => {
-          console.log(_flat_docs);
-
           const flat_docs = _flat_docs.toAdd
           // set new documents (toAdd)
-          console.log(flat_docs);
-
-          return
           flat_docs.forEach(_doc => {
             // create
             // return
@@ -410,16 +405,29 @@ const ProductionScheduling = () => {
                   step_name: name,
                   duration: [start, end],
                   _costing: step?._costing ? step?._costing?.map((cost) => {
-                    return { // costs
-                      key: cost.key,
-                      cost_name: cost.cost_name,
-                      amount: cost.amount,
-                      interval: cost.interval,
-                      used_per_hactor: cost?.used_per_hactor,
-                      used_per_hactor_unit: cost?.used_per_hactor_unit,
-                      total_unit_cost: cost?.total_unit_cost,
-                      include_in_cost: cost?.include_in_cost ? cost.include_in_cost : false
+                    if (cost?.include_in_cost) {
+                      return { // costs
+                        key: cost.key,
+                        cost_name: cost.cost_name,
+                        amount: cost.amount,
+                        interval: cost.interval,
+                        used_per_hactor: cost?.used_per_hactor,
+                        used_per_hactor_unit: cost?.used_per_hactor_unit,
+                        total_unit_cost: cost?.total_unit_cost,
+                        include_in_cost: cost?.include_in_cost ? cost.include_in_cost : false
+                      }
+                    } else {
+                      return { // costs
+                        key: cost.key,
+                        cost_name: cost.cost_name,
+                        amount: cost.amount,
+                        interval: cost.interval,
+                        used_per_hactor: cost?.used_per_hactor,
+                        used_per_hactor_unit: cost?.used_per_hactor_unit,
+                        total_unit_cost: cost?.total_unit_cost
+                      }
                     }
+
                   }) : []
                 }
               }) : []
@@ -964,8 +972,8 @@ const ProductionScheduling = () => {
                                                                 {
                                                                   getCategoryPhase(category.name) === 'harvesting' ||
                                                                     getCategoryPhase(category.name) === 'delivery' ? (
-                                                                    <Form.Item name={[item.name, 'include_in_cost']} initialValue={false} valuePropName="checked">
-                                                                      <Checkbox >Include in cost</Checkbox>
+                                                                    <Form.Item name={[item.name, 'include_in_cost']} initialValue={true} valuePropName="checked">
+                                                                      <Checkbox  >Include in cost</Checkbox>
                                                                     </Form.Item>
                                                                   ) : null
                                                                 }
